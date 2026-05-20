@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>川越城下絵図 — ImmersaMap ベクターデモ</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1008; --parchment:#f2e8d0; --gold:#d4a017;
+  --gold-light:#f0c040; --sepia:#8b6914; --rust:#c0392b;
+  --panel-bg:rgba(18,12,4,0.92); --panel-border:rgba(212,160,23,0.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;background:var(--ink);font-family:'Noto Serif JP',serif;}
+#map{position:fixed;inset:0;z-index:1;}
+
+/* TOP BAR */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:20;
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(to bottom,rgba(18,12,4,.95),transparent);pointer-events:none;}
+.logo{font-family:'Cinzel',serif;font-size:15px;letter-spacing:.15em;
+  color:var(--gold-light);text-shadow:0 0 15px rgba(212,160,23,.4);}
+.subtitle{font-size:11px;color:var(--sepia);letter-spacing:.12em;
+  background:var(--panel-bg);border:1px solid var(--panel-border);
+  padding:4px 10px;border-radius:2px;}
+
+/* LEGEND */
+#legend{position:fixed;bottom:20px;left:14px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-border);
+  border-radius:6px;padding:14px;backdrop-filter:blur(10px);min-width:160px;}
+.legend-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold-light);
+  letter-spacing:.15em;margin-bottom:10px;}
+.legend-item{display:flex;align-items:center;gap:8px;
+  margin-bottom:6px;font-size:11px;color:var(--parchment);cursor:pointer;
+  transition:opacity .2s;}
+.legend-item:hover{opacity:.7;}
+.legend-item.hidden{opacity:.3;}
+.legend-swatch{width:28px;height:4px;border-radius:2px;flex-shrink:0;}
+.legend-swatch.polygon{height:14px;border-radius:2px;opacity:.6;}
+.legend-swatch.circle{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* LAYER CONTROLS */
+#layer-ctrl{position:fixed;top:58px;right:14px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-border);
+  border-radius:6px;padding:12px;backdrop-filter:blur(10px);}
+.ctrl-title{font-size:10px;color:var(--sepia);letter-spacing:.15em;
+  margin-bottom:8px;text-transform:uppercase;font-family:'Cinzel',serif;}
+.layer-toggle{display:flex;align-items:center;gap:8px;
+  margin-bottom:6px;font-size:11px;color:var(--parchment);cursor:pointer;}
+.layer-toggle input[type=checkbox]{accent-color:var(--gold);width:14px;height:14px;}
+
+/* OPACITY */
+.opacity-row{margin-top:10px;padding-top:10px;border-top:1px solid rgba(212,160,23,.15);}
+.opacity-label{font-size:10px;color:var(--sepia);margin-bottom:4px;
+  display:flex;justify-content:space-between;}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;
+  background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--val,80%),
+    rgba(212,160,23,.2) var(--val,80%));border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  border-radius:50%;background:var(--gold);border:2px solid var(--ink);cursor:pointer;}
+
+/* POPUP */
+.map-popup .leaflet-popup-content-wrapper{
+  background:var(--panel-bg);border:1px solid var(--panel-border);
+  border-radius:6px;color:var(--parchment);backdrop-filter:blur(10px);}
+.map-popup .leaflet-popup-tip{background:var(--panel-bg);}
+.popup-name{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-light);margin-bottom:4px;}
+.popup-type{font-size:10px;color:var(--sepia);letter-spacing:.1em;margin-bottom:6px;}
+.popup-desc{font-size:11px;color:var(--parchment);line-height:1.6;opacity:.85;}
+
+/* INFO BADGE */
+#info{position:fixed;bottom:20px;right:14px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-border);
+  border-radius:6px;padding:10px 14px;backdrop-filter:blur(10px);
+  font-size:11px;color:var(--sepia);letter-spacing:.08em;text-align:center;}
+#info a{color:var(--gold);text-decoration:none;}
+
+.leaflet-control-zoom a{background:var(--panel-bg)!important;
+  color:var(--parchment)!important;border-color:var(--panel-border)!important;}
+.leaflet-control-attribution{display:none!important;}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="topbar">
+  <div class="logo">ImmersaMap</div>
+  <div class="subtitle">川越城下絵図 — ベクターレイヤーデモ</div>
+</div>
+
+<div id="layer-ctrl">
+  <div class="ctrl-title">レイヤー</div>
+  <label class="layer-toggle"><input type="checkbox" id="chk-roads"      checked> 道路・街道</label>
+  <label class="layer-toggle"><input type="checkbox" id="chk-rivers"     checked> 河川</label>
+  <label class="layer-toggle"><input type="checkbox" id="chk-boundaries" checked> 城郭境界</label>
+  <label class="layer-toggle"><input type="checkbox" id="chk-places"     checked> 地名・ポイント</label>
+  <label class="layer-toggle"><input type="checkbox" id="chk-overlay"    checked> 古地図画像</label>
+  <div class="opacity-row">
+    <div class="opacity-label"><span>古地図の濃さ</span><span id="op-val">70%</span></div>
+    <input type="range" id="op-slider" min="0" max="100" value="70" style="--val:70%">
+  </div>
+</div>
+
+<div id="legend">
+  <div class="legend-title">凡例</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#d4a017;height:3px;"></div>主要街道</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#c0392b;height:2px;border-style:dashed;"></div>防衛道路</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#2980b9;"></div>河川</div>
+  <div class="legend-item"><div class="legend-swatch polygon" style="background:#8b4513;border:2px solid #d4a017;"></div>城郭</div>
+  <div class="legend-item"><div class="legend-swatch circle" style="background:#e74c3c;"></div>城・門</div>
+  <div class="legend-item"><div class="legend-swatch circle" style="background:#d4a017;"></div>辻・街道</div>
+  <div class="legend-item"><div class="legend-swatch circle" style="background:#2980b9;"></div>河川名</div>
+</div>
+
+<div id="info">
+  <div>📍 川越市 / 江戸時代</div>
+  <div style="margin-top:4px;font-size:10px;">ベクターレイヤー + 古地図画像オーバーレイ</div>
+</div>
+
+<script>
+// ============================================================
+// GeoJSONデータ（Claude解析結果）
+// ============================================================
+const GEOJSON = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"name":"江戸街道","layer":"roads","type":"主要街道","description":"川越と江戸を結ぶ主要街道。現在の国道16号・川越街道の原型"},
+      "geometry": {"type":"LineString","coordinates":[[139.482216,35.915654],[139.482988,35.917865],[139.483759,35.920077],[139.484273,35.921349],[139.484787,35.922773],[139.485147,35.923754]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"現在の一番街（蔵造りの街）","layer":"roads","type":"主要道路","description":"現在の川越一番街（蔵造りの街並み）の原型となった町人通り"},
+      "geometry": {"type":"LineString","coordinates":[[139.484302,35.925888],[139.484555,35.92607],[139.484806,35.925799],[139.485057,35.925527],[139.485308,35.925256]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"鍵型道路","layer":"roads","type":"防衛道路","description":"城下町特有の鍵型（L字型）道路。敵の侵入を遅らせる防衛設計"},
+      "geometry": {"type":"LineString","coordinates":[[139.484261,35.919534],[139.484254,35.918323],[139.483733,35.915841],[139.483726,35.914782]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"新河岸川","layer":"rivers","description":"江戸への物資輸送に使われた重要な水路。川越の繁栄を支えた"},
+      "geometry": {"type":"LineString","coordinates":[[139.487042,35.935718],[139.486871,35.932704],[139.486909,35.930683],[139.48679,35.927917],[139.486672,35.925151],[139.486558,35.923141]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"川越城 城郭","layer":"boundaries","type":"城郭","description":"川越城の本丸・二の丸を囲む堀と土塁"},
+      "geometry": {"type":"Polygon","coordinates":[[[139.486184,35.927963],[139.486168,35.925391],[139.485796,35.922443],[139.485116,35.918913],[139.484602,35.917489],[139.484512,35.919262],[139.484782,35.922016],[139.485462,35.925547],[139.485979,35.927424],[139.486184,35.927963]]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"川越城","layer":"places","type":"城郭","description":"川越藩主松平家の居城。現在も本丸御殿が現存する"},
+      "geometry": {"type":"Point","coordinates":[139.48539,35.922272]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"大手門","layer":"places","type":"門","description":"川越城の正門。現在の大手町付近"},
+      "geometry": {"type":"Point","coordinates":[139.485552,35.923925]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"札の辻","layer":"places","type":"辻","description":"高札が立てられた重要な交差点。城下の情報発信地点"},
+      "geometry": {"type":"Point","coordinates":[139.485585,35.929069]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"T字路","layer":"places","type":"辻","description":"防衛のため意図的に設けられたT字路"},
+      "geometry": {"type":"Point","coordinates":[139.483412,35.921062]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"江戸街道","layer":"places","type":"街道","description":"江戸へ続く主要街道"},
+      "geometry": {"type":"Point","coordinates":[139.482983,35.917109]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name":"新河岸川","layer":"places","type":"河川","description":"江戸へ通じる舟運の要路"},
+      "geometry": {"type":"Point","coordinates":[139.486909,35.930683]}
+    }
+  ]
+};
+
+// 古地図画像のbounds（川越エリア）
+const OLD_MAP_BOUNDS = [
+  [35.912, 139.479],
+  [35.937, 139.490]
+];
+const OLD_MAP_URL = 'https://immersamap.github.io/kawagoe.jpg'; // 将来のURL
+
+// ============================================================
+// レイヤースタイル
+// ============================================================
+const STYLES = {
+  roads: {
+    '主要街道': { color:'#d4a017', weight:4, opacity:.9 },
+    '主要道路': { color:'#f0c040', weight:3, opacity:.85 },
+    '防衛道路': { color:'#c0392b', weight:2.5, opacity:.8, dashArray:'8,4' },
+    default:    { color:'#d4a017', weight:2, opacity:.7 },
+  },
+  rivers: { color:'#2980b9', weight:4, opacity:.8 },
+  boundaries: {
+    '城郭': { color:'#d4a017', weight:2.5, fillColor:'#8b4513', fillOpacity:.25 },
+    default: { color:'#888', weight:1.5, fillColor:'#555', fillOpacity:.1 },
+  },
+  places: {
+    '城郭': { radius:10, color:'#e74c3c', fillColor:'#c0392b', fillOpacity:.9, weight:2 },
+    '門':   { radius:7,  color:'#e67e22', fillColor:'#d35400', fillOpacity:.9, weight:2 },
+    '辻':   { radius:6,  color:'#d4a017', fillColor:'#f0c040', fillOpacity:.9, weight:2 },
+    '街道': { radius:5,  color:'#d4a017', fillColor:'#d4a017', fillOpacity:.7, weight:1.5 },
+    '河川': { radius:6,  color:'#2980b9', fillColor:'#3498db', fillOpacity:.8, weight:2 },
+    default:{ radius:5,  color:'#888',    fillColor:'#aaa',    fillOpacity:.7, weight:1.5 },
+  }
+};
+
+function popupHtml(p) {
+  return `<div class="popup-name">${p.name}</div>
+          <div class="popup-type">${p.type || p.layer}</div>
+          <div class="popup-desc">${p.description || ''}</div>`;
+}
+
+// ============================================================
+// 地図初期化
+// ============================================================
+const map = L.map('map', { center:[35.923,139.485], zoom:15 });
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom:19 }).addTo(map);
+
+// 古地図オーバーレイ（将来：実画像URL）
+// const oldMapOverlay = L.imageOverlay(OLD_MAP_URL, OLD_MAP_BOUNDS, {opacity:0.7}).addTo(map);
+
+// レイヤーグループ
+const layerGroups = { roads:L.layerGroup(), rivers:L.layerGroup(),
+                      boundaries:L.layerGroup(), places:L.layerGroup() };
+Object.values(layerGroups).forEach(lg => lg.addTo(map));
+
+// ============================================================
+// GeoJSON描画
+// ============================================================
+GEOJSON.features.forEach(f => {
+  const p = f.properties;
+  const geom = f.geometry;
+  const lg = layerGroups[p.layer];
+  if (!lg) return;
+
+  if (geom.type === 'LineString') {
+    const coords = geom.coordinates.map(c => [c[1],c[0]]);
+    let style = p.layer === 'rivers'
+      ? STYLES.rivers
+      : (STYLES.roads[p.type] || STYLES.roads.default);
+    L.polyline(coords, style).bindPopup(popupHtml(p), {className:'map-popup'}).addTo(lg);
+
+  } else if (geom.type === 'Polygon') {
+    const coords = geom.coordinates[0].map(c => [c[1],c[0]]);
+    const style = STYLES.boundaries[p.type] || STYLES.boundaries.default;
+    L.polygon(coords, style).bindPopup(popupHtml(p), {className:'map-popup'}).addTo(lg);
+
+  } else if (geom.type === 'Point') {
+    const ll = [geom.coordinates[1], geom.coordinates[0]];
+    const style = STYLES.places[p.type] || STYLES.places.default;
+    const marker = L.circleMarker(ll, style)
+      .bindPopup(popupHtml(p), {className:'map-popup'})
+      .addTo(lg);
+    // 地名ラベル
+    marker.bindTooltip(p.name, {
+      permanent: true, direction:'top',
+      className:'', offset:[0,-8]
+    });
+  }
+});
+
+// ============================================================
+// レイヤー表示切替
+// ============================================================
+['roads','rivers','boundaries','places'].forEach(layer => {
+  document.getElementById(`chk-${layer}`).addEventListener('change', function() {
+    if (this.checked) map.addLayer(layerGroups[layer]);
+    else map.removeLayer(layerGroups[layer]);
+  });
+});
+
+// 古地図オーバーレイ切替（将来用）
+document.getElementById('chk-overlay').addEventListener('change', function() {
+  // oldMapOverlay が追加されたら有効化
+});
+
+// 不透明度スライダー
+const slider = document.getElementById('op-slider');
+slider.addEventListener('input', () => {
+  const v = slider.value;
+  slider.style.setProperty('--val', v+'%');
+  document.getElementById('op-val').textContent = v+'%';
+  // oldMapOverlay?.setOpacity(v/100);
+});
+</script>
+</body>
+</html>
