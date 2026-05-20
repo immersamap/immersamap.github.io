@@ -14,58 +14,72 @@
   --sepia:#8b6914; --gold:#d4a017; --gold-light:#f0c040; --rust:#c0392b;
   --panel-bg:rgba(18,12,4,0.95); --panel-border:rgba(212,160,23,0.35);
   --glow:rgba(212,160,23,0.15); --success:#2ecc71; --error:#e74c3c;
-  --step-active:#d4a017; --step-done:#2ecc71;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
   background:var(--ink);color:var(--parchment);}
 
-/* ── HEADER ── */
+/* HEADER */
 .header{background:var(--panel-bg);border-bottom:1px solid var(--panel-border);
   padding:14px 20px;display:flex;align-items:center;gap:16px;
-  position:sticky;top:0;z-index:50;}
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
 .header-back{color:var(--sepia);text-decoration:none;font-size:13px;
-  letter-spacing:.1em;transition:color .2s;}
+  letter-spacing:.1em;transition:color .2s;white-space:nowrap;}
 .header-back:hover{color:var(--gold);}
-.header-title{font-family:'Cinzel',serif;font-size:16px;letter-spacing:.15em;
-  color:var(--gold-light);}
-.header-sub{font-size:11px;color:var(--sepia);letter-spacing:.1em;margin-left:auto;}
+.header-title{font-family:'Cinzel',serif;font-size:16px;letter-spacing:.15em;color:var(--gold-light);}
+.header-sub{font-size:11px;color:var(--sepia);letter-spacing:.1em;margin-left:auto;white-space:nowrap;}
 
-/* ── STEP INDICATOR ── */
-.steps{display:flex;align-items:center;padding:20px;gap:0;}
+/* STEP INDICATOR */
+.steps{display:flex;align-items:flex-start;padding:20px 20px 0;gap:0;}
 .step-item{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;}
 .step-item:not(:last-child)::after{content:'';position:absolute;top:16px;
-  left:50%;width:100%;height:1px;background:rgba(212,160,23,.2);}
-.step-circle{width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(212,160,23,.3);
-  display:flex;align-items:center;justify-content:center;font-size:13px;
-  background:var(--ink);z-index:1;transition:all .3s;color:var(--sepia);font-family:'Cinzel',serif;}
+  left:50%;width:100%;height:1px;background:rgba(212,160,23,.15);}
+.step-circle{width:32px;height:32px;border-radius:50%;
+  border:1.5px solid rgba(212,160,23,.25);
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  background:var(--ink);z-index:1;transition:all .3s;color:var(--sepia);
+  font-family:'Cinzel',serif;}
 .step-item.active .step-circle{border-color:var(--gold);color:var(--gold);
   box-shadow:0 0 10px var(--glow);}
-.step-item.done .step-circle{border-color:var(--step-done);background:rgba(46,204,113,.1);
-  color:var(--step-done);}
-.step-label{font-size:9px;color:var(--sepia);letter-spacing:.08em;margin-top:5px;
-  text-align:center;line-height:1.4;}
+.step-item.done .step-circle{border-color:var(--success);background:rgba(46,204,113,.1);
+  color:var(--success);}
+.step-label{font-size:9px;color:var(--sepia);letter-spacing:.06em;
+  margin-top:5px;text-align:center;line-height:1.4;}
 .step-item.active .step-label{color:var(--gold);}
-.step-item.done .step-label{color:var(--step-done);}
+.step-item.done .step-label{color:var(--success);}
 
-/* ── CONTENT ── */
-.content{max-width:600px;margin:0 auto;padding:0 20px 60px;}
+/* CONTENT */
+.content{max-width:680px;margin:0 auto;padding:20px 20px 80px;}
 
-/* ── STEP PANELS ── */
+/* STEP PANELS */
 .step-panel{display:none;}
 .step-panel.active{display:block;}
 
-/* ── CARD ── */
+/* CARD */
 .card{background:rgba(255,255,255,.03);border:1px solid var(--panel-border);
   border-radius:8px;padding:20px;margin-bottom:16px;}
-.card-title{font-size:13px;color:var(--gold-light);letter-spacing:.1em;
+.card-title{font-size:14px;color:var(--gold-light);letter-spacing:.1em;
   margin-bottom:4px;display:flex;align-items:center;gap:8px;}
-.card-desc{font-size:12px;color:var(--parchment2);line-height:1.7;margin-bottom:16px;opacity:.8;}
+.card-desc{font-size:12px;color:var(--parchment2);line-height:1.8;
+  margin-bottom:16px;opacity:.85;}
+
+/* START MODE SELECTION (Step0) */
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.mode-card{border:1.5px solid rgba(212,160,23,.25);border-radius:8px;
+  padding:24px 16px;text-align:center;cursor:pointer;transition:all .3s;
+  background:rgba(212,160,23,.03);}
+.mode-card:hover{border-color:var(--gold);background:rgba(212,160,23,.07);
+  transform:translateY(-2px);}
+.mode-card.selected{border-color:var(--gold);background:rgba(212,160,23,.1);
+  box-shadow:0 0 16px rgba(212,160,23,.15);}
+.mode-icon{font-size:36px;margin-bottom:12px;}
+.mode-title{font-size:13px;color:var(--gold-light);margin-bottom:6px;
+  font-family:'Cinzel',serif;letter-spacing:.08em;}
+.mode-desc{font-size:11px;color:var(--parchment2);line-height:1.6;opacity:.8;}
 
 /* DROP ZONE */
 .drop-zone{border:1.5px dashed rgba(212,160,23,.35);border-radius:6px;
-  padding:40px 20px;text-align:center;cursor:pointer;transition:all .25s;
-  position:relative;}
+  padding:40px 20px;text-align:center;cursor:pointer;transition:all .25s;}
 .drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);background:rgba(212,160,23,.04);}
 .drop-zone-icon{font-size:36px;margin-bottom:12px;}
 .drop-zone-text{font-size:13px;color:var(--parchment2);margin-bottom:6px;}
@@ -78,11 +92,77 @@ html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
 .file-preview-info{padding:8px 12px;font-size:11px;color:var(--sepia);
   background:rgba(0,0,0,.3);}
 
+/* GEOREF MAP */
+#georef-map-wrap{position:relative;border-radius:6px;overflow:hidden;
+  border:1px solid var(--panel-border);margin-bottom:12px;}
+#georef-map{width:100%;height:320px;}
+.map-overlay-controls{position:absolute;top:8px;right:8px;z-index:500;
+  display:flex;flex-direction:column;gap:6px;}
+.map-ctrl-btn{background:var(--panel-bg);border:1px solid var(--panel-border);
+  color:var(--parchment);font-size:11px;padding:6px 10px;border-radius:3px;
+  cursor:pointer;backdrop-filter:blur(8px);white-space:nowrap;
+  letter-spacing:.06em;transition:all .2s;}
+.map-ctrl-btn:hover{border-color:var(--gold);color:var(--gold);}
+.map-ctrl-btn.active{background:rgba(212,160,23,.2);border-color:var(--gold);color:var(--gold-light);}
+
+/* 重ね合わせスライダー */
+.overlay-slider-wrap{background:rgba(0,0,0,.5);border:1px solid var(--panel-border);
+  border-radius:4px;padding:8px 12px;margin-bottom:12px;display:none;}
+.overlay-slider-label{font-size:10px;color:var(--parchment2);margin-bottom:6px;
+  display:flex;justify-content:space-between;}
+.overlay-slider-label span:last-child{color:var(--gold);font-family:'Cinzel',serif;}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;
+  background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--val,70%),
+    rgba(212,160,23,.2) var(--val,70%));
+  border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;background:var(--gold);border:2px solid var(--ink);
+  box-shadow:0 0 8px rgba(212,160,23,.6);cursor:pointer;}
+
+/* 制御点 */
+.georef-tip{background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);
+  border-radius:4px;padding:10px 14px;margin-bottom:10px;}
+.georef-tip p{font-size:11px;color:var(--parchment2);line-height:1.8;}
+.georef-tip strong{color:var(--gold-light);}
+.cp-list-wrap{margin-top:10px;}
+.cp-list-label{font-size:10px;color:var(--sepia);margin-bottom:6px;
+  display:flex;justify-content:space-between;align-items:center;}
+.cp-item{display:flex;align-items:center;gap:8px;padding:6px 0;
+  border-bottom:1px solid rgba(212,160,23,.1);}
+.cp-item:last-child{border-bottom:none;}
+.cp-num{width:22px;height:22px;border-radius:50%;background:var(--rust);
+  color:white;font-size:10px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:'Cinzel',serif;}
+.cp-text{font-size:11px;color:var(--parchment2);flex:1;line-height:1.5;}
+.cp-del{background:none;border:none;color:var(--sepia);cursor:pointer;
+  font-size:14px;padding:2px 6px;transition:color .2s;}
+.cp-del:hover{color:var(--rust);}
+.cp-empty{font-size:11px;color:var(--sepia);padding:8px 0;}
+.cp-need{font-size:10px;color:var(--gold);margin-top:6px;}
+
+/* DRAWING CANVAS (白紙作成用) */
+#draw-wrap{position:relative;border:1px solid var(--panel-border);
+  border-radius:6px;overflow:hidden;margin-bottom:12px;background:#f2e8d0;}
+#draw-canvas{display:block;cursor:crosshair;touch-action:none;}
+.draw-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.draw-tool{padding:6px 12px;border:1px solid rgba(212,160,23,.3);border-radius:3px;
+  background:transparent;color:var(--parchment2);font-size:11px;cursor:pointer;
+  transition:all .2s;font-family:'Noto Serif JP',serif;}
+.draw-tool:hover,.draw-tool.active{border-color:var(--gold);color:var(--gold);
+  background:rgba(212,160,23,.1);}
+.color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:all .2s;flex-shrink:0;}
+.color-swatch.active{border-color:var(--gold);box-shadow:0 0 6px rgba(212,160,23,.4);}
+.size-btn{padding:4px 10px;border:1px solid rgba(212,160,23,.3);border-radius:3px;
+  background:transparent;color:var(--parchment2);font-size:11px;cursor:pointer;
+  transition:all .2s;}
+.size-btn.active{border-color:var(--gold);color:var(--gold);}
+
 /* FORM */
 .form-group{margin-bottom:14px;}
 .form-label{font-size:11px;color:var(--parchment2);letter-spacing:.1em;
   margin-bottom:6px;display:block;}
-.form-label .required{color:var(--rust);margin-left:3px;}
+.required{color:var(--rust);margin-left:3px;}
 .form-input,.form-select,.form-textarea{width:100%;
   background:rgba(255,255,255,.05);border:1px solid rgba(212,160,23,.3);
   border-radius:4px;padding:10px 12px;color:var(--parchment);font-size:13px;
@@ -93,27 +173,13 @@ html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .form-hint{font-size:10px;color:var(--sepia);margin-top:4px;line-height:1.5;}
 
-/* GEOREF MAP */
-#georef-map{width:100%;height:280px;border-radius:6px;
-  border:1px solid var(--panel-border);overflow:hidden;}
-.georef-instruction{background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);
-  border-radius:4px;padding:10px 14px;margin-bottom:12px;}
-.georef-instruction p{font-size:11px;color:var(--parchment2);line-height:1.7;}
-.georef-instruction strong{color:var(--gold-light);}
-
-/* 制御点リスト */
-.control-points-list{margin-top:12px;}
-.cp-item{display:flex;align-items:center;gap:8px;padding:6px 0;
-  border-bottom:1px solid rgba(212,160,23,.1);}
-.cp-item:last-child{border-bottom:none;}
-.cp-num{width:20px;height:20px;border-radius:50%;background:var(--rust);
-  color:white;font-size:10px;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;font-family:'Cinzel',serif;}
-.cp-text{font-size:11px;color:var(--parchment2);flex:1;}
-.cp-del{background:none;border:none;color:var(--sepia);cursor:pointer;
-  font-size:14px;padding:2px 6px;transition:color .2s;}
-.cp-del:hover{color:var(--rust);}
-.cp-empty{font-size:11px;color:var(--sepia);padding:8px 0;}
+/* PRICE */
+.price-toggle{display:flex;border:1px solid var(--panel-border);border-radius:4px;overflow:hidden;margin-bottom:12px;}
+.price-btn{flex:1;padding:9px;background:transparent;border:none;
+  color:var(--parchment2);font-size:12px;cursor:pointer;transition:all .2s;
+  font-family:'Noto Serif JP',serif;}
+.price-btn.active{background:rgba(212,160,23,.15);color:var(--gold-light);}
+.price-btn:not(:last-child){border-right:1px solid var(--panel-border);}
 
 /* BUTTONS */
 .btn{padding:12px 24px;border-radius:3px;font-family:'Cinzel',serif;
@@ -122,45 +188,37 @@ html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
   color:var(--gold-light);}
 .btn-primary:hover{background:rgba(212,160,23,.25);box-shadow:0 0 15px rgba(212,160,23,.2);}
 .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
-.btn-secondary{background:transparent;border:1px solid rgba(212,160,23,.3);
-  color:var(--sepia);}
+.btn-secondary{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--sepia);}
 .btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
 .btn-row{display:flex;gap:10px;margin-top:8px;}
 .btn-row .btn{flex:1;}
 
 /* PROGRESS */
-.progress-section{margin-top:16px;display:none;}
+.progress-section{margin-top:14px;display:none;}
 .progress-label{font-size:11px;color:var(--parchment2);margin-bottom:6px;
   display:flex;justify-content:space-between;}
 .progress-track{background:rgba(212,160,23,.1);border-radius:2px;height:4px;overflow:hidden;}
 .progress-fill{height:100%;background:var(--gold);border-radius:2px;
   transition:width .4s ease;width:0%;}
-.status-text{font-size:12px;color:var(--parchment2);margin-top:8px;text-align:center;
-  min-height:18px;}
+.status-text{font-size:12px;margin-top:8px;text-align:center;min-height:18px;color:var(--parchment2);}
 .status-text.success{color:var(--success);}
 .status-text.error{color:var(--error);}
 
-/* SUCCESS CARD */
-.success-card{text-align:center;padding:30px 20px;}
-.success-icon{font-size:48px;margin-bottom:16px;}
-.success-title{font-family:'Cinzel',serif;font-size:20px;color:var(--gold-light);
-  margin-bottom:8px;}
-.success-desc{font-size:13px;color:var(--parchment2);line-height:1.7;margin-bottom:24px;}
-.success-url{background:rgba(255,255,255,.05);border:1px solid var(--panel-border);
-  border-radius:4px;padding:10px 14px;font-size:11px;color:var(--sepia);
-  word-break:break-all;margin-bottom:20px;}
+/* SUMMARY */
+.summary-grid{display:grid;gap:6px;
+  background:rgba(0,0,0,.2);border-radius:4px;padding:14px;margin-bottom:16px;}
+.summary-row{display:flex;font-size:12px;line-height:1.8;}
+.summary-key{color:var(--sepia);width:80px;flex-shrink:0;}
+.summary-val{color:var(--gold-light);}
 
-/* PRICE TOGGLE */
-.price-toggle{display:flex;border:1px solid var(--panel-border);border-radius:4px;overflow:hidden;margin-bottom:12px;}
-.price-btn{flex:1;padding:9px;background:transparent;border:none;
-  color:var(--parchment2);font-size:12px;cursor:pointer;transition:all .2s;
-  font-family:'Noto Serif JP',serif;}
-.price-btn.active{background:rgba(212,160,23,.15);color:var(--gold-light);}
-.price-btn:not(:last-child){border-right:1px solid var(--panel-border);}
-#price-input-wrap{display:none;}
+/* SUCCESS */
+.success-card{text-align:center;padding:32px 20px;}
+.success-icon{font-size:52px;margin-bottom:16px;}
+.success-title{font-family:'Cinzel',serif;font-size:20px;color:var(--gold-light);margin-bottom:8px;}
+.success-desc{font-size:13px;color:var(--parchment2);line-height:1.8;margin-bottom:24px;}
 
 /* LOADING */
-#loading{position:fixed;inset:0;z-index:90;background:var(--ink);
+#loading{position:fixed;inset:0;z-index:999;background:var(--ink);
   display:flex;align-items:center;justify-content:center;transition:opacity .5s ease;}
 #loading.hidden{opacity:0;pointer-events:none;}
 .loader-ring{width:48px;height:48px;border-radius:50%;
@@ -168,91 +226,136 @@ html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
   animation:spin .9s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-.leaflet-control-zoom a{background:var(--panel-bg)!important;
-  color:var(--parchment)!important;border-color:var(--panel-border)!important;}
 .leaflet-control-attribution{display:none!important;}
-
-/* レスポンシブ */
 @media(max-width:480px){
+  .mode-cards{grid-template-columns:1fr;}
   .form-row{grid-template-columns:1fr;}
 }
 </style>
 </head>
 <body>
-
 <div id="loading"><div class="loader-ring"></div></div>
 
-<!-- HEADER -->
 <div class="header">
   <a href="./index.html" class="header-back">← 戻る</a>
   <div class="header-title">地図を作る</div>
-  <div class="header-sub" id="step-label">Step 1/4</div>
+  <div class="header-sub" id="step-label">Step 1 / 4</div>
 </div>
 
-<!-- STEP INDICATOR -->
 <div class="steps">
-  <div class="step-item active" id="si-1">
-    <div class="step-circle">1</div>
-    <div class="step-label">画像<br>アップロード</div>
-  </div>
-  <div class="step-item" id="si-2">
-    <div class="step-circle">2</div>
-    <div class="step-label">位置<br>合わせ</div>
-  </div>
-  <div class="step-item" id="si-3">
-    <div class="step-circle">3</div>
-    <div class="step-label">地図情報<br>入力</div>
-  </div>
-  <div class="step-item" id="si-4">
-    <div class="step-circle">4</div>
-    <div class="step-label">公開</div>
-  </div>
+  <div class="step-item active" id="si-1"><div class="step-circle">1</div><div class="step-label">素材<br>選択</div></div>
+  <div class="step-item" id="si-2"><div class="step-circle">2</div><div class="step-label">位置<br>合わせ</div></div>
+  <div class="step-item" id="si-3"><div class="step-circle">3</div><div class="step-label">地図情報<br>入力</div></div>
+  <div class="step-item" id="si-4"><div class="step-circle">4</div><div class="step-label">公開</div></div>
 </div>
 
 <div class="content">
 
-  <!-- STEP 1: 画像アップロード -->
+  <!-- STEP 1: 素材選択 -->
   <div class="step-panel active" id="panel-1">
     <div class="card">
-      <div class="card-title">🖼 古地図の画像をアップロード</div>
-      <div class="card-desc">
-        手持ちの古地図・絵地図・架空地図の画像ファイルを選んでください。<br>
-        JPG・PNG・GIF形式に対応。大きいほど精細なタイルになります（推奨：2000px以上）。
+      <div class="card-title">🗺 どのように地図を作りますか？</div>
+      <div class="card-desc">手持ちの古地図画像を使う方法と、ブラウザ上で新規作成する方法があります。</div>
+      <div class="mode-cards">
+        <div class="mode-card selected" id="mode-upload" onclick="selectMode('upload')">
+          <div class="mode-icon">🖼</div>
+          <div class="mode-title">画像をアップロード</div>
+          <div class="mode-desc">手持ちの古地図・絵地図の画像ファイルを使います。写真・スキャン画像に対応。</div>
+        </div>
+        <div class="mode-card" id="mode-draw" onclick="selectMode('draw')">
+          <div class="mode-icon">✏️</div>
+          <div class="mode-title">白紙から作成</div>
+          <div class="mode-desc">ブラウザ上で線を描いて地図を作ります。架空地図・オリジナル地図に最適。</div>
+        </div>
       </div>
+    </div>
+
+    <!-- 画像アップロードUI -->
+    <div class="card" id="upload-ui">
+      <div class="card-title">📁 古地図の画像を選択</div>
       <div class="drop-zone" id="drop-zone">
         <div class="drop-zone-icon">🗺</div>
         <div class="drop-zone-text">タップして画像を選択</div>
-        <div class="drop-zone-sub">またはここにドラッグ＆ドロップ</div>
+        <div class="drop-zone-sub">JPG・PNG・GIF対応 ／ 推奨2000px以上</div>
       </div>
       <input type="file" id="file-input" accept="image/*">
       <div class="file-preview" id="file-preview" style="display:none;">
-        <img id="preview-img" src="" alt="プレビュー">
+        <img id="preview-img" src="" alt="">
         <div class="file-preview-info" id="preview-info"></div>
       </div>
     </div>
+
+    <!-- 白紙作成UI -->
+    <div class="card" id="draw-ui" style="display:none;">
+      <div class="card-title">✏️ 地図を描く</div>
+      <div class="card-desc">下のキャンバスに自由に地図を描いてください。完成したら「次へ」を押します。</div>
+      <div class="draw-toolbar">
+        <button class="draw-tool active" id="tool-pen"   onclick="setTool('pen')">✏️ ペン</button>
+        <button class="draw-tool"        id="tool-erase" onclick="setTool('erase')">🧹 消しゴム</button>
+        <button class="draw-tool"        id="tool-line"  onclick="setTool('line')">📏 直線</button>
+        <button class="draw-tool"        id="tool-text"  onclick="setTool('text')">🔤 文字</button>
+        <button class="draw-tool"        onclick="clearCanvas()">🗑 全消し</button>
+        <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
+          <div class="color-swatch active" style="background:#1a1008;" onclick="setColor('#1a1008',this)"></div>
+          <div class="color-swatch" style="background:#c0392b;" onclick="setColor('#c0392b',this)"></div>
+          <div class="color-swatch" style="background:#2980b9;" onclick="setColor('#2980b9',this)"></div>
+          <div class="color-swatch" style="background:#27ae60;" onclick="setColor('#27ae60',this)"></div>
+          <div class="color-swatch" style="background:#8b6914;" onclick="setColor('#8b6914',this)"></div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="size-btn active" onclick="setSize(2,this)">細</button>
+          <button class="size-btn"        onclick="setSize(5,this)">中</button>
+          <button class="size-btn"        onclick="setSize(12,this)">太</button>
+        </div>
+      </div>
+      <div id="draw-wrap">
+        <canvas id="draw-canvas" width="640" height="400"></canvas>
+      </div>
+    </div>
+
     <div class="btn-row">
       <button class="btn btn-primary" id="btn-1-next" disabled>次へ：位置合わせ →</button>
     </div>
   </div>
 
-  <!-- STEP 2: ジオリファレンス（位置合わせ） -->
+  <!-- STEP 2: 位置合わせ -->
   <div class="step-panel" id="panel-2">
     <div class="card">
       <div class="card-title">📍 地図の位置を現実に合わせる</div>
-      <div class="georef-instruction">
+
+      <!-- OSM重ね合わせコントロール -->
+      <div class="georef-tip">
         <p>
-          <strong>やること：</strong>古地図と現実の地図を対応させます。<br>
-          ① 下の地図で「現実の場所」をクリック<br>
-          ② 「この点を古地図のどこ？」で古地図上の対応する場所を入力<br>
-          ③ これを <strong>最低4点</strong> 繰り返す（多いほど精度UP）
+          <strong>① 地図上をクリック</strong>して現実の地点を指定<br>
+          <strong>② 最低4点</strong>追加することで古地図の位置が決まります<br>
+          <strong>「古地図を重ねる」</strong>ボタンで実際の見え方を確認できます
         </p>
       </div>
-      <div id="georef-map"></div>
-      <div class="control-points-list">
-        <div style="font-size:11px;color:var(--sepia);margin-bottom:6px;margin-top:12px;">
-          制御点（現実の地図上でクリックして追加）
+
+      <div id="georef-map-wrap">
+        <div id="georef-map"></div>
+        <div class="map-overlay-controls">
+          <button class="map-ctrl-btn" id="btn-toggle-overlay" onclick="toggleOldMapOverlay()">🗺 古地図を重ねる</button>
+          <button class="map-ctrl-btn" id="btn-my-location" onclick="goMyLocation()">📍 現在地</button>
         </div>
-        <div id="cp-list"><div class="cp-empty">まだ制御点がありません。地図上をクリックしてください。</div></div>
+      </div>
+
+      <!-- 重ね合わせ透明度スライダー（古地図重ね時のみ表示） -->
+      <div class="overlay-slider-wrap" id="overlay-slider-wrap">
+        <div class="overlay-slider-label">
+          <span>古地図の不透明度</span>
+          <span id="overlay-opacity-val">70%</span>
+        </div>
+        <input type="range" id="overlay-opacity" min="0" max="100" value="70" style="--val:70%">
+      </div>
+
+      <div class="cp-list-wrap">
+        <div class="cp-list-label">
+          <span style="font-size:10px;color:var(--sepia);">制御点（地図をクリックして追加）</span>
+          <span id="cp-count" style="font-size:10px;color:var(--sepia);">0点</span>
+        </div>
+        <div id="cp-list"><div class="cp-empty">地図上をクリックして制御点を追加してください</div></div>
+        <div class="cp-need" id="cp-need">あと4点追加してください</div>
       </div>
     </div>
     <div class="btn-row">
@@ -261,82 +364,67 @@ html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
     </div>
   </div>
 
-  <!-- STEP 3: 地図情報入力 -->
+  <!-- STEP 3: 地図情報 -->
   <div class="step-panel" id="panel-3">
     <div class="card">
       <div class="card-title">📝 地図の情報を入力</div>
       <div class="form-group">
         <label class="form-label">地図の名前<span class="required">*</span></label>
-        <input type="text" class="form-input" id="f-name" placeholder="例：明治初期の東京地図">
+        <input class="form-input" id="f-name" placeholder="例：明治初期の東京地図">
       </div>
       <div class="form-group">
         <label class="form-label">時代・説明<span class="required">*</span></label>
-        <input type="text" class="form-input" id="f-era" placeholder="例：1880年代・明治期">
+        <input class="form-input" id="f-era" placeholder="例：1880年代・明治期">
       </div>
       <div class="form-group">
         <label class="form-label">種類</label>
         <select class="form-select" id="f-type">
           <option value="historical">📜 実在する歴史地図</option>
           <option value="aerial">✈️ 空中写真・衛星画像</option>
-          <option value="fictional">🗡 架空の地図（オリジナル地名）</option>
+          <option value="fictional">🗡 架空の地図</option>
           <option value="fantasy">🐉 ファンタジー・ゲーム世界</option>
           <option value="scifi">🚀 SF・未来世界</option>
         </select>
       </div>
       <div class="form-group">
         <label class="form-label">詳細説明（任意）</label>
-        <textarea class="form-textarea" id="f-desc" placeholder="地図の由来・特徴・見どころなどを記入"></textarea>
+        <textarea class="form-textarea" id="f-desc" placeholder="地図の由来・特徴・見どころなど"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">タグ（任意）</label>
-        <input type="text" class="form-input" id="f-tags" placeholder="例：江戸, 東京, 明治（カンマ区切り）">
-        <div class="form-hint">利用者が検索しやすくなります</div>
+        <input class="form-input" id="f-tags" placeholder="例：江戸, 東京, 明治（カンマ区切り）">
       </div>
     </div>
-
     <div class="card">
       <div class="card-title">💰 公開設定</div>
-      <div class="form-group">
-        <label class="form-label">価格設定</label>
-        <div class="price-toggle">
-          <button class="price-btn active" onclick="setPrice('free',this)">🆓 無料で公開</button>
-          <button class="price-btn" onclick="setPrice('paid',this)">💴 有料で販売</button>
-        </div>
-        <div id="price-input-wrap">
-          <input type="number" class="form-input" id="f-price" placeholder="販売価格（円）" min="100" step="100">
-          <div class="form-hint">売上の70%があなたに還元されます（将来機能）</div>
-        </div>
+      <div class="price-toggle">
+        <button class="price-btn active" onclick="setPrice('free',this)">🆓 無料で公開</button>
+        <button class="price-btn" onclick="setPrice('paid',this)">💴 有料で販売</button>
+      </div>
+      <div id="price-input-wrap" style="display:none;">
+        <input type="number" class="form-input" id="f-price" placeholder="販売価格（円）" min="100" step="100">
+        <div class="form-hint">売上の70%があなたに還元されます（将来機能）</div>
       </div>
     </div>
-
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="goStep(2)">← 戻る</button>
-      <button class="btn btn-primary" id="btn-3-next">次へ：公開 →</button>
+      <button class="btn btn-primary" onclick="goStep(4)">次へ：公開 →</button>
     </div>
   </div>
 
-  <!-- STEP 4: 公開 -->
+  <!-- STEP 4: 確認・公開 -->
   <div class="step-panel" id="panel-4">
     <div class="card">
       <div class="card-title">🚀 地図を公開する</div>
-      <div class="card-desc">
-        入力した情報を確認して「公開する」ボタンを押してください。<br>
-        地図はコミュニティに公開され、誰でも閲覧できるようになります。
+      <div class="card-desc">入力内容を確認して「公開する」ボタンを押してください。</div>
+      <div class="summary-grid" id="summary">
+        <div class="summary-row"><span class="summary-key">地図名</span><span class="summary-val" id="s-name">—</span></div>
+        <div class="summary-row"><span class="summary-key">時代</span><span class="summary-val" id="s-era">—</span></div>
+        <div class="summary-row"><span class="summary-key">種類</span><span class="summary-val" id="s-type">—</span></div>
+        <div class="summary-row"><span class="summary-key">制御点</span><span class="summary-val" id="s-cp">—</span></div>
+        <div class="summary-row"><span class="summary-key">価格</span><span class="summary-val" id="s-price">—</span></div>
       </div>
-
-      <!-- 確認サマリー -->
-      <div id="summary" style="background:rgba(0,0,0,.2);border-radius:4px;padding:12px;margin-bottom:16px;">
-        <div style="font-size:11px;color:var(--parchment2);line-height:2;">
-          <div>📌 地図名：<span id="s-name" style="color:var(--gold-light);">—</span></div>
-          <div>🕐 時代：<span id="s-era" style="color:var(--gold-light);">—</span></div>
-          <div>📁 種類：<span id="s-type" style="color:var(--gold-light);">—</span></div>
-          <div>📍 制御点：<span id="s-cp" style="color:var(--gold-light);">—</span></div>
-          <div>💰 価格：<span id="s-price" style="color:var(--gold-light);">—</span></div>
-        </div>
-      </div>
-
       <button class="btn btn-primary" id="btn-publish" style="width:100%;">🗺 地図を公開する</button>
-
       <div class="progress-section" id="progress-section">
         <div class="progress-label">
           <span id="progress-text">処理中...</span>
@@ -346,36 +434,29 @@ html,body{width:100%;min-height:100%;font-family:'Noto Serif JP',serif;
       </div>
       <div class="status-text" id="status-text"></div>
     </div>
-
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="goStep(3)">← 戻る</button>
     </div>
   </div>
 
-  <!-- STEP 5: 完了 -->
+  <!-- 完了 -->
   <div class="step-panel" id="panel-done">
     <div class="card success-card">
       <div class="success-icon">🎉</div>
       <div class="success-title">公開完了！</div>
-      <div class="success-desc">
-        地図がコミュニティに公開されました。<br>
-        ImmersaMapで世界中の人が古地図の世界を歩けるようになります。
-      </div>
-      <div class="success-url" id="success-url"></div>
-      <div class="btn-row" style="justify-content:center;">
-        <a href="./index.html" class="btn btn-primary" style="text-decoration:none;text-align:center;">
-          地図を見てみる →
-        </a>
+      <div class="success-desc">地図がコミュニティに公開されました。<br>世界中の人があなたの地図の上を歩けるようになります。</div>
+      <div class="btn-row" style="justify-content:center;margin-top:8px;">
+        <a href="./index.html" class="btn btn-primary" style="text-decoration:none;text-align:center;">地図を見てみる →</a>
         <button class="btn btn-secondary" onclick="location.reload()">別の地図を作る</button>
       </div>
     </div>
   </div>
 
-</div>
+</div><!-- /content -->
 
 <script>
 // ============================================================
-// Supabase設定
+// Supabase
 // ============================================================
 const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
@@ -385,51 +466,73 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ============================================================
 // STATE
 // ============================================================
-const STATE = {
+const S = {
   step: 1,
+  mode: 'upload',           // 'upload' | 'draw'
   file: null,
   fileDataUrl: null,
-  controlPoints: [],  // [{lat, lng, pixelNote}]
+  controlPoints: [],
   georefMap: null,
   georefMarkers: [],
+  oldMapOverlay: null,
+  overlayVisible: false,
   priceMode: 'free',
+  // 描画
+  drawTool: 'pen',
+  drawColor: '#1a1008',
+  drawSize: 2,
+  drawCtx: null,
+  isDrawing: false,
+  lastX: 0, lastY: 0,
+  lineStartX: 0, lineStartY: 0,
+  drawSnapshot: null,
 };
 
 // ============================================================
-// ステップ管理
+// ステップ移動
 // ============================================================
 function goStep(n) {
-  STATE.step = n;
+  S.step = n;
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById(`panel-${n}`);
   if (panel) panel.classList.add('active');
 
-  // ステップインジケーター更新
   for (let i = 1; i <= 4; i++) {
     const si = document.getElementById(`si-${i}`);
     si.classList.remove('active','done');
-    if (i < n) si.classList.add('done'), si.querySelector('.step-circle').textContent = '✓';
-    else if (i === n) si.classList.add('active');
-    else si.querySelector('.step-circle').textContent = i;
+    const circle = si.querySelector('.step-circle');
+    if (i < n) { si.classList.add('done'); circle.textContent = '✓'; }
+    else if (i === n) { si.classList.add('active'); circle.textContent = i; }
+    else circle.textContent = i;
   }
-  document.getElementById('step-label').textContent = `Step ${n}/4`;
+  document.getElementById('step-label').textContent = `Step ${n} / 4`;
 
-  // Step2では地図初期化
-  if (n === 2) initGeorefMap();
-  // Step4ではサマリー更新
+  if (n === 2) setTimeout(initGeorefMap, 100);
   if (n === 4) updateSummary();
-
-  window.scrollTo({top:0, behavior:'smooth'});
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 // ============================================================
-// STEP 1: 画像アップロード
+// STEP 1: モード選択
 // ============================================================
-function initStep1() {
+function selectMode(mode) {
+  S.mode = mode;
+  document.getElementById('mode-upload').classList.toggle('selected', mode==='upload');
+  document.getElementById('mode-draw').classList.toggle('selected', mode==='draw');
+  document.getElementById('upload-ui').style.display  = mode==='upload' ? '' : 'none';
+  document.getElementById('draw-ui').style.display    = mode==='draw'   ? '' : 'none';
+  // 描画モードは常に「次へ」を有効化
+  if (mode === 'draw') {
+    document.getElementById('btn-1-next').disabled = false;
+    initDrawCanvas();
+  } else {
+    document.getElementById('btn-1-next').disabled = !S.file;
+  }
+}
+
+function initDropZone() {
   const zone  = document.getElementById('drop-zone');
   const input = document.getElementById('file-input');
-  const btn   = document.getElementById('btn-1-next');
-
   zone.addEventListener('click', () => input.click());
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
@@ -438,19 +541,17 @@ function initStep1() {
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   });
   input.addEventListener('change', () => { if(input.files[0]) handleFile(input.files[0]); });
-  btn.addEventListener('click', () => goStep(2));
 }
 
 function handleFile(file) {
   if (!file.type.startsWith('image/')) { alert('画像ファイルを選択してください'); return; }
-  STATE.file = file;
+  S.file = file;
   const reader = new FileReader();
   reader.onload = e => {
-    STATE.fileDataUrl = e.target.result;
+    S.fileDataUrl = e.target.result;
     document.getElementById('preview-img').src = e.target.result;
-    const mb = (file.size / 1024 / 1024).toFixed(1);
     document.getElementById('preview-info').textContent =
-      `${file.name}　${mb}MB`;
+      `${file.name}　${(file.size/1024/1024).toFixed(1)}MB`;
     document.getElementById('file-preview').style.display = 'block';
     document.getElementById('drop-zone').querySelector('.drop-zone-text').textContent = '✅ 画像を選択しました';
     document.getElementById('btn-1-next').disabled = false;
@@ -459,113 +560,266 @@ function handleFile(file) {
 }
 
 // ============================================================
+// 描画キャンバス
+// ============================================================
+function initDrawCanvas() {
+  const canvas = document.getElementById('draw-canvas');
+  if (S.drawCtx) return;
+
+  // キャンバスサイズをラッパーに合わせる
+  const wrap = document.getElementById('draw-wrap');
+  canvas.width  = wrap.clientWidth  || 640;
+  canvas.height = 400;
+
+  const ctx = canvas.getContext('2d');
+  S.drawCtx = ctx;
+
+  // 背景を羊皮紙色に
+  ctx.fillStyle = '#f2e8d0';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // マウス/タッチイベント
+  canvas.addEventListener('mousedown',  e => startDraw(e, canvas));
+  canvas.addEventListener('mousemove',  e => draw(e, canvas));
+  canvas.addEventListener('mouseup',    () => endDraw(canvas));
+  canvas.addEventListener('mouseleave', () => endDraw(canvas));
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e.touches[0], canvas); }, {passive:false});
+  canvas.addEventListener('touchmove',  e => { e.preventDefault(); draw(e.touches[0], canvas); }, {passive:false});
+  canvas.addEventListener('touchend',   () => endDraw(canvas));
+}
+
+function getPos(e, canvas) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (canvas.width / r.width),
+           y: (e.clientY - r.top)  * (canvas.height / r.height) };
+}
+
+function startDraw(e, canvas) {
+  S.isDrawing = true;
+  const {x,y} = getPos(e, canvas);
+  S.lastX = x; S.lastY = y;
+  S.lineStartX = x; S.lineStartY = y;
+  if (S.drawTool === 'line') {
+    S.drawSnapshot = S.drawCtx.getImageData(0, 0, canvas.width, canvas.height);
+  }
+  if (S.drawTool === 'text') {
+    const txt = prompt('入力する文字：');
+    if (txt) {
+      S.drawCtx.font = `${S.drawSize * 6 + 10}px 'Noto Serif JP'`;
+      S.drawCtx.fillStyle = S.drawColor;
+      S.drawCtx.fillText(txt, x, y);
+    }
+    S.isDrawing = false;
+  }
+}
+
+function draw(e, canvas) {
+  if (!S.isDrawing) return;
+  const ctx = S.drawCtx;
+  const {x,y} = getPos(e, canvas);
+
+  if (S.drawTool === 'pen') {
+    ctx.beginPath();
+    ctx.strokeStyle = S.drawColor;
+    ctx.lineWidth   = S.drawSize;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.moveTo(S.lastX, S.lastY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    S.lastX = x; S.lastY = y;
+  } else if (S.drawTool === 'erase') {
+    ctx.clearRect(x - S.drawSize*3, y - S.drawSize*3, S.drawSize*6, S.drawSize*6);
+    ctx.fillStyle = '#f2e8d0';
+    ctx.fillRect(x - S.drawSize*3, y - S.drawSize*3, S.drawSize*6, S.drawSize*6);
+  } else if (S.drawTool === 'line') {
+    ctx.putImageData(S.drawSnapshot, 0, 0);
+    ctx.beginPath();
+    ctx.strokeStyle = S.drawColor;
+    ctx.lineWidth   = S.drawSize;
+    ctx.lineCap     = 'round';
+    ctx.moveTo(S.lineStartX, S.lineStartY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+}
+
+function endDraw(canvas) {
+  if (!S.isDrawing) return;
+  S.isDrawing = false;
+  // キャンバスをdataURLとして保存
+  S.fileDataUrl = canvas.toDataURL('image/png');
+  // Blobに変換してS.fileに格納
+  canvas.toBlob(blob => { S.file = new File([blob], 'drawing.png', {type:'image/png'}); });
+}
+
+function setTool(t) {
+  S.drawTool = t;
+  document.querySelectorAll('.draw-tool').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tool-${t}`)?.classList.add('active');
+}
+
+function setColor(c, el) {
+  S.drawColor = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setSize(s, el) {
+  S.drawSize = s;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function clearCanvas() {
+  if (!confirm('全て消去しますか？')) return;
+  const canvas = document.getElementById('draw-canvas');
+  S.drawCtx.fillStyle = '#f2e8d0';
+  S.drawCtx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// ============================================================
 // STEP 2: ジオリファレンス
 // ============================================================
 function initGeorefMap() {
-  if (STATE.georefMap) return; // 初期化済み
+  if (S.georefMap) { S.georefMap.invalidateSize(); return; }
 
-  STATE.georefMap = L.map('georef-map', {
-    center: [35.6812, 139.7671],
-    zoom: 13,
-  });
+  S.georefMap = L.map('georef-map', { center:[35.6812,139.7671], zoom:13 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { maxZoom:19 }).addTo(STATE.georefMap);
-
-  STATE.georefMap.on('click', onMapClick);
+    { maxZoom:19, attribution:'© OSM' }).addTo(S.georefMap);
+  S.georefMap.on('click', onMapClick);
   updateCPList();
 }
 
 function onMapClick(e) {
-  const lat = e.latlng.lat.toFixed(6);
-  const lng = e.latlng.lng.toFixed(6);
+  const lat = parseFloat(e.latlng.lat.toFixed(6));
+  const lng = parseFloat(e.latlng.lng.toFixed(6));
+  const idx = S.controlPoints.length + 1;
+  S.controlPoints.push({lat, lng});
 
-  // 制御点を追加
-  const idx = STATE.controlPoints.length + 1;
-  STATE.controlPoints.push({ lat: parseFloat(lat), lng: parseFloat(lng) });
-
-  // マーカー追加
-  const marker = L.circleMarker([lat, lng], {
-    radius: 8, color: '#c0392b', fillColor: '#e74c3c',
-    fillOpacity: 0.9, weight: 2,
-  }).addTo(STATE.georefMap);
-  marker.bindTooltip(`点${idx}`, {permanent:true, className:'cp-tooltip', direction:'top'});
-  STATE.georefMarkers.push(marker);
-
+  const m = L.circleMarker([lat, lng], {
+    radius:9, color:'#c0392b', fillColor:'#e74c3c', fillOpacity:.9, weight:2,
+  }).addTo(S.georefMap);
+  m.bindTooltip(`点${idx}`, {permanent:true, direction:'top', className:'cp-tip'});
+  S.georefMarkers.push(m);
   updateCPList();
-  document.getElementById('btn-2-next').disabled = STATE.controlPoints.length < 4;
+
+  // 古地図オーバーレイが表示中なら更新
+  if (S.overlayVisible) updateOldMapOverlay();
 }
 
 function updateCPList() {
   const list = document.getElementById('cp-list');
-  if (STATE.controlPoints.length === 0) {
-    list.innerHTML = '<div class="cp-empty">まだ制御点がありません。地図上をクリックしてください。</div>';
+  const need = Math.max(0, 4 - S.controlPoints.length);
+  document.getElementById('cp-count').textContent = `${S.controlPoints.length}点`;
+  document.getElementById('cp-need').textContent =
+    need > 0 ? `あと${need}点追加してください` : '✅ 位置合わせの準備ができました';
+  document.getElementById('cp-need').style.color = need > 0 ? 'var(--gold)' : 'var(--success)';
+  document.getElementById('btn-2-next').disabled = S.controlPoints.length < 4;
+
+  if (S.controlPoints.length === 0) {
+    list.innerHTML = '<div class="cp-empty">地図上をクリックして制御点を追加してください</div>';
     return;
   }
-  list.innerHTML = STATE.controlPoints.map((cp, i) => `
+  list.innerHTML = S.controlPoints.map((cp,i) => `
     <div class="cp-item">
       <div class="cp-num">${i+1}</div>
       <div class="cp-text">緯度 ${cp.lat.toFixed(5)}　経度 ${cp.lng.toFixed(5)}</div>
       <button class="cp-del" onclick="removeCP(${i})">✕</button>
     </div>`).join('');
-
-  const remaining = Math.max(0, 4 - STATE.controlPoints.length);
-  if (remaining > 0) {
-    list.innerHTML += `<div class="cp-empty" style="color:var(--gold);margin-top:6px;">あと${remaining}点追加してください</div>`;
-  }
 }
 
 function removeCP(i) {
-  STATE.controlPoints.splice(i, 1);
-  // マーカーを全削除して再描画
-  STATE.georefMarkers.forEach(m => STATE.georefMap.removeLayer(m));
-  STATE.georefMarkers = [];
-  STATE.controlPoints.forEach((cp, idx) => {
-    const m = L.circleMarker([cp.lat, cp.lng], {
-      radius:8, color:'#c0392b', fillColor:'#e74c3c', fillOpacity:.9, weight:2,
-    }).addTo(STATE.georefMap);
+  S.controlPoints.splice(i, 1);
+  S.georefMarkers.forEach(m => S.georefMap.removeLayer(m));
+  S.georefMarkers = [];
+  S.controlPoints.forEach((cp, idx) => {
+    const m = L.circleMarker([cp.lat,cp.lng], {
+      radius:9, color:'#c0392b', fillColor:'#e74c3c', fillOpacity:.9, weight:2,
+    }).addTo(S.georefMap);
     m.bindTooltip(`点${idx+1}`, {permanent:true, direction:'top'});
-    STATE.georefMarkers.push(m);
+    S.georefMarkers.push(m);
   });
   updateCPList();
-  document.getElementById('btn-2-next').disabled = STATE.controlPoints.length < 4;
+  if (S.overlayVisible) updateOldMapOverlay();
+}
+
+// 古地図を地図上に重ねて確認
+function toggleOldMapOverlay() {
+  S.overlayVisible = !S.overlayVisible;
+  const btn  = document.getElementById('btn-toggle-overlay');
+  const wrap = document.getElementById('overlay-slider-wrap');
+  btn.classList.toggle('active', S.overlayVisible);
+  btn.textContent = S.overlayVisible ? '🗺 古地図を非表示' : '🗺 古地図を重ねる';
+  wrap.style.display = S.overlayVisible ? 'block' : 'none';
+
+  if (S.overlayVisible) updateOldMapOverlay();
+  else if (S.oldMapOverlay) {
+    S.georefMap.removeLayer(S.oldMapOverlay); S.oldMapOverlay = null;
+  }
+}
+
+function updateOldMapOverlay() {
+  if (!S.fileDataUrl || S.controlPoints.length < 2) return;
+  if (S.oldMapOverlay) S.georefMap.removeLayer(S.oldMapOverlay);
+
+  // 制御点のboundsを計算して画像をオーバーレイ
+  const lats = S.controlPoints.map(c => c.lat);
+  const lngs = S.controlPoints.map(c => c.lng);
+  const bounds = [[Math.min(...lats), Math.min(...lngs)],
+                  [Math.max(...lats), Math.max(...lngs)]];
+  const opacity = parseInt(document.getElementById('overlay-opacity').value) / 100;
+
+  S.oldMapOverlay = L.imageOverlay(S.fileDataUrl, bounds, {opacity}).addTo(S.georefMap);
+  S.georefMap.fitBounds(bounds);
+}
+
+function goMyLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    S.georefMap.flyTo([pos.coords.latitude, pos.coords.longitude], 15, {duration:1});
+  });
 }
 
 // ============================================================
 // STEP 3: 地図情報
 // ============================================================
 function setPrice(mode, btn) {
-  STATE.priceMode = mode;
+  S.priceMode = mode;
   document.querySelectorAll('.price-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('price-input-wrap').style.display =
-    mode === 'paid' ? 'block' : 'none';
+  document.getElementById('price-input-wrap').style.display = mode==='paid' ? 'block' : 'none';
 }
 
 // ============================================================
 // STEP 4: サマリー・公開
 // ============================================================
 function updateSummary() {
-  const typeMap = {
-    historical:'📜 歴史地図', aerial:'✈️ 空中写真',
-    fictional:'🗡 架空地図', fantasy:'🐉 ファンタジー', scifi:'🚀 SF'
-  };
+  const typeMap = {historical:'📜 歴史地図', aerial:'✈️ 空中写真',
+    fictional:'🗡 架空地図', fantasy:'🐉 ファンタジー', scifi:'🚀 SF'};
   document.getElementById('s-name').textContent  = document.getElementById('f-name').value || '未入力';
-  document.getElementById('s-era').textContent   = document.getElementById('f-era').value || '未入力';
+  document.getElementById('s-era').textContent   = document.getElementById('f-era').value  || '未入力';
   document.getElementById('s-type').textContent  = typeMap[document.getElementById('f-type').value] || '—';
-  document.getElementById('s-cp').textContent    = `${STATE.controlPoints.length}点`;
-  document.getElementById('s-price').textContent =
-    STATE.priceMode === 'free' ? '無料' : `¥${document.getElementById('f-price').value || '未設定'}`;
+  document.getElementById('s-cp').textContent    = `${S.controlPoints.length}点`;
+  document.getElementById('s-price').textContent = S.priceMode==='free' ? '無料' :
+    `¥${document.getElementById('f-price').value || '未設定'}`;
 }
 
 async function publishMap() {
   const name = document.getElementById('f-name').value.trim();
   const era  = document.getElementById('f-era').value.trim();
-  if (!name || !era) {
-    setStatus('地図名と時代は必須です', 'error'); return;
+  if (!name || !era) { setStatus('地図名と時代は必須です','error'); return; }
+
+  // 描画モードでまだfileがなければキャンバスから生成
+  if (S.mode==='draw' && !S.file) {
+    const canvas = document.getElementById('draw-canvas');
+    await new Promise(res => canvas.toBlob(blob => {
+      S.file = new File([blob], 'drawing.png', {type:'image/png'});
+      S.fileDataUrl = canvas.toDataURL('image/png');
+      res();
+    }));
   }
-  if (!STATE.file) {
-    setStatus('画像ファイルを選択してください', 'error'); return;
-  }
+  if (!S.file) { setStatus('画像が設定されていません','error'); return; }
 
   const btn = document.getElementById('btn-publish');
   btn.disabled = true;
@@ -574,55 +828,47 @@ async function publishMap() {
   try {
     const mapId = `map_${Date.now()}`;
 
-    // Step1: 画像アップロード
-    setProgress(10, '画像をアップロード中...');
-    const ext = STATE.file.name.split('.').pop();
+    // 画像アップロード
+    setProgress(15, '画像をアップロード中...');
+    const ext = S.file.name.split('.').pop();
     const imgPath = `${mapId}/original.${ext}`;
     const { error: imgErr } = await db.storage.from(STORAGE_BUCKET)
-      .upload(imgPath, STATE.file, { contentType: STATE.file.type, upsert: true });
+      .upload(imgPath, S.file, {contentType:S.file.type, upsert:true});
     if (imgErr) throw imgErr;
-    const { data: imgUrl } = db.storage.from(STORAGE_BUCKET).getPublicUrl(imgPath);
 
-    setProgress(40, 'サムネイル生成中...');
-    // サムネイルはオリジナル画像をそのまま使用（将来的にリサイズ処理を追加）
-    const thumbnailUrl = imgUrl.publicUrl;
+    const { data: urlData } = db.storage.from(STORAGE_BUCKET).getPublicUrl(imgPath);
+    const thumbnailUrl = urlData.publicUrl;
 
-    setProgress(70, '地図情報を登録中...');
-    // 制御点の中心を地図の中心として使用
-    const centerLat = STATE.controlPoints.reduce((s,c) => s + c.lat, 0) / STATE.controlPoints.length;
-    const centerLng = STATE.controlPoints.reduce((s,c) => s + c.lng, 0) / STATE.controlPoints.length;
+    setProgress(60, '地図情報を登録中...');
+    const lats = S.controlPoints.map(c => c.lat);
+    const lngs = S.controlPoints.map(c => c.lng);
+    const centerLat = lats.reduce((a,b)=>a+b,0) / lats.length;
+    const centerLng = lngs.reduce((a,b)=>a+b,0) / lngs.length;
     const tags = document.getElementById('f-tags').value
-      .split(',').map(t => t.trim()).filter(Boolean);
-    const price = STATE.priceMode === 'free'
-      ? 0 : parseInt(document.getElementById('f-price').value) || 0;
+      .split(',').map(t=>t.trim()).filter(Boolean);
+    const price = S.priceMode==='free' ? 0 :
+      parseInt(document.getElementById('f-price').value)||0;
 
     const { error: dbErr } = await db.from('maps').insert({
-      id: mapId,
-      name,
-      era,
+      id: mapId, name, era,
       description: document.getElementById('f-desc').value.trim(),
       type: document.getElementById('f-type').value,
-      tags,
-      price,
+      tags, price,
       thumbnail_url: thumbnailUrl,
-      // タイルURLは変換処理完了後に更新（現在はオリジナル画像URLを仮設定）
-      tiles_url: null,
+      tiles_url: null,  // タイル変換後に更新
       center_lat: centerLat,
       center_lng: centerLng,
       zoom_default: 15,
       is_public: true,
-      control_points: STATE.controlPoints,
+      control_points: S.controlPoints,
     });
     if (dbErr) throw dbErr;
 
     setProgress(100, '完了！');
-    document.getElementById('success-url').textContent =
-      `地図ID: ${mapId}\n制御点: ${STATE.controlPoints.length}点\n中心: ${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}`;
-
     setTimeout(() => {
       document.getElementById('panel-4').classList.remove('active');
       document.getElementById('panel-done').classList.add('active');
-    }, 800);
+    }, 600);
 
   } catch(e) {
     setStatus(`エラー: ${e.message}`, 'error');
@@ -631,25 +877,35 @@ async function publishMap() {
 }
 
 function setProgress(pct, text) {
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-pct').textContent  = pct+'%';
   document.getElementById('progress-text').textContent = text;
 }
 function setStatus(msg, type) {
   const el = document.getElementById('status-text');
   el.textContent = msg;
-  el.className = 'status-text' + (type ? ' '+type : '');
+  el.className = 'status-text'+(type?' '+type:'');
 }
 
 // ============================================================
 // 起動
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
-  initStep1();
+  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 400);
+
+  initDropZone();
+  document.getElementById('btn-1-next').addEventListener('click', () => goStep(2));
   document.getElementById('btn-2-next').addEventListener('click', () => goStep(3));
-  document.getElementById('btn-3-next').addEventListener('click', () => goStep(4));
   document.getElementById('btn-publish').addEventListener('click', publishMap);
+
+  // オーバーレイ透明度スライダー
+  const opSlider = document.getElementById('overlay-opacity');
+  opSlider.addEventListener('input', () => {
+    const v = opSlider.value;
+    opSlider.style.setProperty('--val', v+'%');
+    document.getElementById('overlay-opacity-val').textContent = v+'%';
+    if (S.oldMapOverlay) S.oldMapOverlay.setOpacity(v/100);
+  });
 });
 </script>
 </body>
