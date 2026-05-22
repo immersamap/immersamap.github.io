@@ -572,7 +572,8 @@ input[type=range]::-webkit-slider-thumb {
         <button class="browser-cattab active" data-cat="all">すべて</button>
         <button class="browser-cattab" data-cat="historical">🏯 歴史</button>
         <button class="browser-cattab" data-cat="story">📖 人物</button>
-        <button class="browser-cattab" data-cat="aerial">✈️ 空中写真</button>
+        <button class="browser-cattab" data-cat="aerial_photo">✈️ 空中写真</button>
+        <button class="browser-cattab" data-cat="terrain">⛰ 地形・標高</button>
         <button class="browser-cattab" data-cat="fictional">🐉 架空・創作</button>
         <button class="browser-cattab" data-cat="themed">🌸 テーマ</button>
       </div>
@@ -603,44 +604,8 @@ const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ── 川越城下絵図 GeoJSON ───────────────────────────── */
-const KAWAGOE_GJ = { type:'FeatureCollection', features:[
-  {type:'Feature',properties:{name:'江戸街道',layer:'roads',type:'主要街道',
-    description:'川越と江戸を結ぶ主要街道。現在の川越街道の原型。',era:'江戸時代'},
-    geometry:{type:'LineString',coordinates:[[139.4822,35.9157],[139.4830,35.9179],[139.4838,35.9201],[139.4843,35.9213],[139.4848,35.9228],[139.4851,35.9238]]}},
-  {type:'Feature',properties:{name:'一番街（蔵造り）',layer:'roads',type:'主要道路',
-    description:'江戸時代から続く商人街。現在の川越一番街の原型。',
-    now:'現在も蔵造りの街並みとして保存。観光名所。',era:'江戸時代'},
-    geometry:{type:'LineString',coordinates:[[139.4843,35.9259],[139.4846,35.9261],[139.4848,35.9258],[139.4851,35.9253],[139.4853,35.9253]]}},
-  {type:'Feature',properties:{name:'鍵型道路',layer:'roads',type:'防衛道路',
-    description:'城下町特有のL字型道路。敵の侵入を遅らせる防衛設計。',era:'江戸時代'},
-    geometry:{type:'LineString',coordinates:[[139.4843,35.9195],[139.4843,35.9183],[139.4837,35.9158],[139.4837,35.9148]]}},
-  {type:'Feature',properties:{name:'新河岸川',layer:'rivers',
-    description:'江戸への物資輸送の要路。川越の繁栄を支えた舟運の川。',
-    now:'現在も新河岸川として流れている。遊歩道が整備されている。',era:'江戸時代'},
-    geometry:{type:'LineString',coordinates:[[139.4870,35.9357],[139.4869,35.9327],[139.4869,35.9307],[139.4868,35.9279],[139.4867,35.9252],[139.4866,35.9231]]}},
-  {type:'Feature',properties:{name:'川越城 城郭',layer:'boundaries',type:'城郭',
-    description:'川越城の本丸・二の丸を囲む堀と土塁。',
-    now:'本丸御殿が現存。無料で見学できる。',era:'江戸時代'},
-    geometry:{type:'Polygon',coordinates:[[[139.4862,35.9280],[139.4862,35.9254],[139.4858,35.9224],[139.4851,35.9189],[139.4846,35.9175],[139.4845,35.9193],[139.4848,35.9220],[139.4855,35.9255],[139.4860,35.9274],[139.4862,35.9280]]]}},
-  {type:'Feature',properties:{name:'川越城（本丸）',layer:'places',type:'城郭',
-    description:'川越藩松平家の居城。江戸城の支城として重要な役割を担った。',
-    now:'本丸御殿が現存。国の重要文化財。入場無料。',era:'江戸時代'},
-    geometry:{type:'Point',coordinates:[139.4854,35.9223]}},
-  {type:'Feature',properties:{name:'大手門跡',layer:'places',type:'門',
-    description:'川越城の正門。城下町への入口として機能した。',
-    now:'現在は「大手町」の地名が残るのみ。門は現存しない。',era:'江戸時代'},
-    geometry:{type:'Point',coordinates:[139.4856,35.9239]}},
-  {type:'Feature',properties:{name:'札の辻',layer:'places',type:'辻',
-    description:'高札が立てられた城下の重要な交差点。法令・布告を周知する場所。',
-    now:'現在も「札の辻」の交差点として残る。',era:'江戸時代'},
-    geometry:{type:'Point',coordinates:[139.4856,35.9291]}},
-  {type:'Feature',properties:{name:'T字路（防衛設計）',layer:'places',type:'辻',
-    description:'敵の侵入を防ぐために意図的に設けられた防衛用T字路。城下町の典型的な設計。',
-    now:'現在も道路の形状が残っている。',era:'江戸時代'},
-    geometry:{type:'Point',coordinates:[139.4834,35.9211]}}
-]};
+const KAWAGOE_GJ = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"川越城 城郭","layer":"boundaries","type":"城郭","description":"川越城の本丸・二の丸を囲む堀と土塁。","now":"本丸御殿が現存。国の重要文化財。無料で見学できる。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4862,35.928],[139.4862,35.9254],[139.4858,35.9224],[139.4851,35.9189],[139.4846,35.9175],[139.4845,35.9193],[139.4848,35.922],[139.4855,35.9255],[139.486,35.9274],[139.4862,35.928]]]}},{"type":"Feature","properties":{"name":"川越城 本丸御殿","layer":"buildings","type":"城郭建物","description":"藩主の居所・政庁。江戸時代中期の建築。","now":"現存する本丸御殿。国の重要文化財。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4851,35.9228],[139.4857,35.9228],[139.4857,35.9219],[139.4851,35.9219],[139.4851,35.9228]]]}},{"type":"Feature","properties":{"name":"三芳野神社","layer":"buildings","type":"寺社","description":"城内の鎮守社。「とおりゃんせ」発祥の地とされる。","now":"現在も三芳野神社として残る。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4846,35.9236],[139.485,35.9236],[139.485,35.9232],[139.4846,35.9232],[139.4846,35.9236]]]}},{"type":"Feature","properties":{"name":"仙波東照宮","layer":"buildings","type":"寺社","description":"徳川家康を祀る東照宮。日本三大東照宮のひとつ。","now":"現存。国の重要文化財。喜多院境内にある。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4801,35.9258],[139.4808,35.9258],[139.4808,35.9252],[139.4801,35.9252],[139.4801,35.9258]]]}},{"type":"Feature","properties":{"name":"喜多院","layer":"buildings","type":"寺社","description":"天海僧正ゆかりの天台宗の寺。江戸城の一部が移築されている。","now":"現存。江戸城の建物（客殿・書院・庫裡）が残る。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4796,35.9255],[139.481,35.9255],[139.481,35.9244],[139.4796,35.9244],[139.4796,35.9255]]]}},{"type":"Feature","properties":{"name":"蓮馨寺","layer":"buildings","type":"寺社","description":"城下の大寺。呑龍上人を祀り「呑龍さま」と親しまれた。","now":"現存。一番街近くに位置する。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.485,35.9283],[139.4856,35.9283],[139.4856,35.9277],[139.485,35.9277],[139.485,35.9283]]]}},{"type":"Feature","properties":{"name":"武家屋敷エリア（北）","layer":"districts","type":"武家地","description":"城の北側に広がる上級武士の屋敷地。広大な敷地に屋敷・庭園が配置されていた。","now":"現在は住宅地・公園になっている。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4835,35.93],[139.4865,35.93],[139.4865,35.9275],[139.4835,35.9275],[139.4835,35.93]]]}},{"type":"Feature","properties":{"name":"武家屋敷エリア（東）","layer":"districts","type":"武家地","description":"城の東側に広がる中級武士の屋敷地。","now":"現在は住宅地になっている。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4862,35.926],[139.488,35.926],[139.488,35.922],[139.4862,35.922],[139.4862,35.926]]]}},{"type":"Feature","properties":{"name":"一番街・仲町（商人町）","layer":"districts","type":"商人地","description":"江戸との交易で栄えた商人町。蔵造りの商家が建ち並んでいた。","now":"現在も蔵造りの街並みが保存されている。川越のシンボル。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4838,35.931],[139.486,35.931],[139.486,35.928],[139.4838,35.928],[139.4838,35.931]]]}},{"type":"Feature","properties":{"name":"連雀町（職人町）","layer":"districts","type":"職人地","description":"大工・左官などの職人が集住した町。","now":"現在は「連雀町」の地名が残る。","era":"江戸時代"},"geometry":{"type":"Polygon","coordinates":[[[139.4815,35.927],[139.4838,35.927],[139.4838,35.9255],[139.4815,35.9255],[139.4815,35.927]]]}},{"type":"Feature","properties":{"name":"江戸街道","layer":"roads","type":"主要街道","description":"川越と江戸を結ぶ主要街道。現在の川越街道・国道16号の原型。","era":"江戸時代"},"geometry":{"type":"LineString","coordinates":[[139.4822,35.9157],[139.483,35.9179],[139.4838,35.9201],[139.4843,35.9213],[139.4848,35.9228],[139.4851,35.9238]]}},{"type":"Feature","properties":{"name":"川越街道（一番街）","layer":"roads","type":"主要道路","description":"城下の中心を南北に走る目抜き通り。蔵造りの商家が建ち並んでいた。","era":"江戸時代"},"geometry":{"type":"LineString","coordinates":[[139.4848,35.9238],[139.4849,35.9258],[139.4849,35.9275],[139.4848,35.9295]]}},{"type":"Feature","properties":{"name":"鍵型道路（防衛設計）","layer":"roads","type":"防衛道路","description":"城下町特有のL字型道路。敵の直進を防ぐ防衛設計。","era":"江戸時代"},"geometry":{"type":"LineString","coordinates":[[139.4843,35.9195],[139.4843,35.9183],[139.4837,35.9158],[139.4837,35.9148]]}},{"type":"Feature","properties":{"name":"喜多院参道","layer":"roads","type":"参道","description":"喜多院へと続く参道。門前町が形成されていた。","era":"江戸時代"},"geometry":{"type":"LineString","coordinates":[[139.4849,35.9258],[139.483,35.9258],[139.481,35.9252]]}},{"type":"Feature","properties":{"name":"新河岸川","layer":"rivers","description":"江戸への物資輸送の要路。川越の繁栄を支えた舟運の川。","now":"現在も新河岸川として流れている。遊歩道が整備されている。","era":"江戸時代"},"geometry":{"type":"LineString","coordinates":[[139.487,35.9357],[139.4869,35.9327],[139.4869,35.9307],[139.4868,35.9279],[139.4867,35.9252],[139.4866,35.9231]]}},{"type":"Feature","properties":{"name":"川越城 大手門","layer":"places","type":"門","description":"川越城の正門。城下町への入口。","now":"現在は「大手町」の地名が残るのみ。","era":"江戸時代"},"geometry":{"type":"Point","coordinates":[139.4856,35.9239]}},{"type":"Feature","properties":{"name":"札の辻（高札場）","layer":"places","type":"辻","description":"幕府・藩の法令を掲示した高札場。城下の情報発信地点。","now":"現在も「札の辻」の交差点として残る。","era":"江戸時代"},"geometry":{"type":"Point","coordinates":[139.4856,35.9291]}},{"type":"Feature","properties":{"name":"時の鐘（鐘撞堂）","layer":"places","type":"施設","description":"城下の時刻を知らせた鐘。享保年間（1718年）建立。","now":"現在も鐘を撞いている。川越のシンボル。重要文化財。","era":"江戸時代（享保年間）"},"geometry":{"type":"Point","coordinates":[139.4851,35.9289]}}]};
 
-/* ── 坂本龍馬ゆかりの地 GeoJSON ─────────────────────── */
 const RYOMA_GJ = { type:'FeatureCollection', features:[
   {type:'Feature',properties:{name:'寺田屋',layer:'places',type:'史跡',
     description:'文久2年（1862年）寺田屋騒動、慶応2年（1866年）龍馬暗殺未遂事件の舞台。龍馬とお龍が宿泊した旅籠。',
@@ -715,9 +680,21 @@ const RSTYLE = {
     default:  {radius:5, color:'#888',   fillColor:'#aaa',   fillOpacity:.7,weight:1.5},
   },
 };
+  buildings:{
+    '城郭建物':  {color:'#8b4513',fillColor:'#a0522d',fillOpacity:.55,weight:1.5},
+    '寺社':      {color:'#6b2fa0',fillColor:'#8e44ad',fillOpacity:.45,weight:1.5},
+    default:     {color:'#555',   fillColor:'#777',   fillOpacity:.4, weight:1},
+  },
+  districts:{
+    '武家地':    {color:'#c0392b',fillColor:'#e74c3c',fillOpacity:.12,weight:1,dashArray:'4,3'},
+    '商人地':    {color:'#d4a017',fillColor:'#f0c040',fillOpacity:.12,weight:1,dashArray:'4,3'},
+    '職人地':    {color:'#27ae60',fillColor:'#2ecc71',fillOpacity:.10,weight:1,dashArray:'4,3'},
+    default:     {color:'#888',   fillColor:'#aaa',   fillOpacity:.08,weight:1,dashArray:'4,3'},
+  },
 const LAYER_LABEL = {
   roads:'道路・ルート', rivers:'河川',
   boundaries:'城郭・境界', places:'史跡・地名',
+  buildings:'建物', districts:'町割り・地区',
 };
 
 /* ── STATE ──────────────────────────────────────────── */
@@ -834,7 +811,10 @@ function loadVectorLayers(gj) {
 
       case 'Polygon': {
         const coords = f.geometry.coordinates[0].map(c => [c[1], c[0]]);
-        const style  = RSTYLE.boundaries[p.type] || RSTYLE.boundaries.default;
+        let style;
+        if (layer === 'buildings') style = RSTYLE.buildings[p.type] || RSTYLE.buildings.default;
+        else if (layer === 'districts') style = RSTYLE.districts[p.type] || RSTYLE.districts.default;
+        else style = RSTYLE.boundaries[p.type] || RSTYLE.boundaries.default;
         L.polygon(coords, { ...style, opacity: S.opacity })
           .bindPopup(makePopup(p), { className:'im-popup' })
           .addTo(g);
@@ -925,7 +905,7 @@ async function fetchMaps() {
     const { data, error } = await db
       .from('maps').select('*')
       .eq('is_public', true)
-      .order('tier').order('created_at', { ascending:false });
+      .order('tier').order('era', { ascending:false }).order('created_at', { ascending:false });
     if (error) throw error;
     S.allMaps = data || [];
     buildSidebar(S.allMaps, 'all');
@@ -1061,10 +1041,12 @@ function buildCardSection(elId, maps) {
 /* ── カテゴリフィルター ──────────────────────────────── */
 function filterByCat(maps, cat) {
   if (cat === 'all') return maps;
-  return maps.filter(m =>
-    m.category === cat ||
-    (cat === 'fictional' && ['fiction','original','fictional'].includes(m.category))
-  );
+  return maps.filter(m => {
+    if (cat === 'fictional') return ['fiction','original','fictional'].includes(m.category);
+    if (cat === 'aerial_photo') return ['aerial','aerial_photo'].includes(m.category);
+    if (cat === 'terrain')   return m.category === 'terrain';
+    return m.category === cat;
+  });
 }
 
 /* ── GPS ────────────────────────────────────────────── */
