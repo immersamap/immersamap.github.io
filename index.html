@@ -3,372 +3,383 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ImmersaMap — 時を超える地図体験</title>
+<title>ImmersaMap</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
 <style>
-:root{
-  --ink:#1a1008; --parchment:#f2e8d0; --parchment2:#e8d8b0;
-  --sepia:#8b6914; --gold:#d4a017; --gold-light:#f0c040; --rust:#c0392b;
-  --panel-bg:rgba(18,12,4,0.92); --panel-border:rgba(212,160,23,0.4);
-  --glow:rgba(212,160,23,0.15);
+:root {
+  --ink:#1a1008; --ink2:#2a1e0e;
+  --parchment:#f2e8d0; --parchment2:#e8d8b0;
+  --sepia:#8b6914; --gold:#d4a017; --gold-l:#f0c040;
+  --rust:#c0392b; --blue:#3498db;
+  --surface:rgba(18,12,4,0.90);
+  --border:rgba(212,160,23,0.30);
+  --glow:rgba(212,160,23,0.12);
+  --sheet-min:28px; --sheet-mid:200px; --sheet-max:68vh;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{width:100%;height:100%;overflow:hidden;
-  font-family:'Noto Serif JP',serif;
-  background:var(--ink);color:var(--parchment);
-  -webkit-tap-highlight-color:transparent;}
-#map{position:fixed;inset:0;z-index:1;}
-#grain{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0.035;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px;}
+  font-family:'Noto Sans JP',sans-serif;
+  background:var(--ink);color:var(--parchment);}
 
-/* SPLASH */
+/* ── MAP ── */
+#map{position:fixed;inset:0;z-index:1;}
+
+/* ── GRAIN ── */
+#grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px;}
+
+/* ── SPLASH ── */
 #splash{position:fixed;inset:0;z-index:100;background:var(--ink);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   transition:opacity .8s,visibility .8s;}
 #splash.hidden{opacity:0;visibility:hidden;pointer-events:none;}
-.splash-emblem{width:80px;height:80px;border-radius:50%;border:2px solid var(--gold);
-  display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:24px;
-  animation:pulseGold 2.5s ease-in-out infinite;}
-@keyframes pulseGold{
-  0%,100%{box-shadow:0 0 20px var(--glow),inset 0 0 10px var(--glow);}
-  50%{box-shadow:0 0 50px rgba(212,160,23,.35),inset 0 0 25px rgba(212,160,23,.2);}
+.splash-logo{font-family:'Cinzel',serif;font-size:clamp(28px,8vw,42px);
+  letter-spacing:.14em;color:var(--gold-l);margin-bottom:6px;}
+.splash-sub{font-size:12px;color:var(--sepia);letter-spacing:.25em;margin-bottom:48px;}
+.splash-ring{width:72px;height:72px;border-radius:50%;border:1.5px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  margin-bottom:28px;animation:pulseRing 3s ease-in-out infinite;}
+@keyframes pulseRing{
+  0%,100%{box-shadow:0 0 0 0 rgba(212,160,23,.3);}
+  50%{box-shadow:0 0 0 16px rgba(212,160,23,0);}
 }
-.splash-title{font-family:'Cinzel',serif;font-size:clamp(26px,7vw,38px);
-  letter-spacing:.12em;color:var(--gold-light);
-  text-shadow:0 0 30px rgba(212,160,23,.5);margin-bottom:6px;}
-.splash-sub{font-size:13px;color:var(--parchment2);opacity:.7;
-  letter-spacing:.2em;margin-bottom:40px;}
-.splash-btn{padding:14px 44px;border:1.5px solid var(--gold);border-radius:2px;
-  background:transparent;color:var(--gold-light);font-family:'Cinzel',serif;
-  font-size:14px;letter-spacing:.2em;cursor:pointer;transition:all .3s;text-transform:uppercase;}
-.splash-btn:hover{background:rgba(212,160,23,.15);}
-.splash-create-link{margin-top:20px;font-size:11px;color:var(--sepia);
-  letter-spacing:.12em;text-decoration:none;
-  border-bottom:1px solid rgba(139,105,20,.3);padding-bottom:2px;}
-.splash-create-link:hover{color:var(--gold);}
+.splash-start{padding:13px 42px;border:1.5px solid var(--gold);border-radius:2px;
+  background:transparent;color:var(--gold-l);font-family:'Cinzel',serif;
+  font-size:13px;letter-spacing:.2em;cursor:pointer;transition:background .3s;
+  text-transform:uppercase;}
+.splash-start:hover{background:rgba(212,160,23,.1);}
+.splash-creator{margin-top:18px;font-size:11px;color:var(--sepia);
+  text-decoration:none;letter-spacing:.1em;border-bottom:1px solid rgba(139,105,20,.25);
+  padding-bottom:1px;transition:color .2s;}
+.splash-creator:hover{color:var(--gold);}
 
-/* TOP BAR */
-#topbar{position:fixed;top:0;left:0;right:0;z-index:20;padding:12px 16px 10px;
+/* ── TOP HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;z-index:20;
+  padding:max(14px,env(safe-area-inset-top)) 14px 10px;
   display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(to bottom,rgba(18,12,4,.95),transparent);pointer-events:none;}
-.topbar-logo{font-family:'Cinzel',serif;font-size:17px;letter-spacing:.15em;
-  color:var(--gold-light);text-shadow:0 0 15px rgba(212,160,23,.4);}
-#era-badge{font-size:11px;color:var(--parchment2);letter-spacing:.12em;
-  background:var(--panel-bg);border:1px solid var(--panel-border);
-  padding:4px 10px;border-radius:2px;pointer-events:all;
-  max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-/* COMPASS */
-#compass{position:fixed;top:58px;right:14px;z-index:20;width:52px;height:52px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;}
-.compass-ring{position:absolute;inset:0;border-radius:50%;
-  border:1.5px solid rgba(212,160,23,.35);
-  background:var(--panel-bg);backdrop-filter:blur(10px);}
-.compass-needle{position:relative;z-index:1;width:4px;height:32px;
-  display:flex;flex-direction:column;align-items:center;transition:transform .3s;}
-.needle-n{width:0;height:0;border-left:5px solid transparent;
-  border-right:5px solid transparent;border-bottom:16px solid var(--rust);}
-.needle-s{width:0;height:0;border-left:5px solid transparent;
-  border-right:5px solid transparent;border-top:16px solid rgba(212,160,23,.5);}
-.compass-label-n{position:absolute;top:2px;font-family:'Cinzel',serif;
-  font-size:8px;color:var(--rust);font-weight:600;}
-
-/* CURRENT MAP INFO */
-#current-map-info{position:fixed;top:58px;left:14px;z-index:20;max-width:180px;
-  background:var(--panel-bg);border:1px solid var(--panel-border);
-  padding:8px 12px;border-radius:3px;backdrop-filter:blur(10px);
-  opacity:0;transform:translateX(-8px);transition:all .4s;pointer-events:none;}
-#current-map-info.visible{opacity:1;transform:translateX(0);}
-.cmi-title{font-size:11px;color:var(--gold-light);margin-bottom:2px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cmi-era{font-size:9px;color:var(--sepia);font-family:'Cinzel',serif;letter-spacing:.1em;}
-
-/* FLOAT CONTROLS */
-#controls{position:fixed;right:14px;bottom:80px;z-index:20;
-  display:flex;flex-direction:column;gap:10px;}
-.ctrl-btn{width:44px;height:44px;border-radius:3px;
-  border:1px solid var(--panel-border);background:var(--panel-bg);
-  backdrop-filter:blur(10px);color:var(--parchment);font-size:18px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.4);}
-.ctrl-btn:active{transform:scale(.92);background:rgba(212,160,23,.15);}
-.ctrl-btn.locating{animation:locatingPulse 1.2s ease-in-out infinite;}
-@keyframes locatingPulse{
-  0%,100%{border-color:var(--gold);box-shadow:0 0 8px rgba(212,160,23,.4);}
-  50%{border-color:rgba(212,160,23,.2);box-shadow:none;}
-}
-
-/* MAP SELECTOR PANEL */
-#map-selector{position:fixed;bottom:0;left:0;right:0;z-index:20;
-  transform:translateY(calc(100% - 64px));
-  transition:transform .45s cubic-bezier(.16,1,.3,1);}
-#map-selector.open{transform:translateY(0);}
-.selector-handle{background:var(--panel-bg);backdrop-filter:blur(12px);
-  border-top:1px solid var(--panel-border);
-  border-left:1px solid var(--panel-border);
-  border-right:1px solid var(--panel-border);
-  border-radius:12px 12px 0 0;padding:0 16px;height:64px;
-  display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
-.handle-left{display:flex;align-items:center;gap:10px;}
-.handle-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);
-  box-shadow:0 0 8px rgba(212,160,23,.8);animation:blink 2s ease-in-out infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-.handle-title{font-size:13px;color:var(--parchment);letter-spacing:.1em;}
-.handle-arrow{font-size:18px;color:var(--gold);transition:transform .3s;}
-#map-selector.open .handle-arrow{transform:rotate(180deg);}
-.selector-body{background:var(--panel-bg);backdrop-filter:blur(12px);
-  border-left:1px solid var(--panel-border);border-right:1px solid var(--panel-border);
-  padding:16px 16px 24px;max-height:65vh;overflow-y:auto;}
-
-/* OPACITY */
-.opacity-row{display:flex;align-items:center;gap:12px;
-  padding-bottom:14px;border-bottom:1px solid rgba(212,160,23,.12);margin-bottom:16px;}
-.opacity-icon{font-size:16px;flex-shrink:0;}
-.opacity-right{flex:1;}
-.opacity-label-row{display:flex;justify-content:space-between;
-  font-size:11px;color:var(--parchment2);margin-bottom:6px;}
-.opacity-label-row span:last-child{color:var(--gold);font-family:'Cinzel',serif;}
-input[type=range]{-webkit-appearance:none;width:100%;height:3px;
-  background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--val,80%),
-    rgba(212,160,23,.2) var(--val,80%));border-radius:2px;outline:none;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;
-  border-radius:50%;background:var(--gold);border:2px solid var(--ink);
-  box-shadow:0 0 8px rgba(212,160,23,.6);cursor:pointer;}
-
-/* SECTION */
-.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.section-label{font-size:10px;letter-spacing:.2em;color:var(--sepia);
-  text-transform:uppercase;font-family:'Cinzel',serif;}
-.section-note{font-size:9px;color:rgba(139,105,20,.6);}
-
-/* MAP CARDS */
-.map-cards{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;
-  scrollbar-width:none;margin-bottom:16px;}
-.map-cards::-webkit-scrollbar{display:none;}
-.map-card{flex-shrink:0;width:130px;
-  border:1.5px solid rgba(212,160,23,.2);border-radius:6px;
-  overflow:hidden;cursor:pointer;transition:all .25s;
-  background:rgba(212,160,23,.03);position:relative;}
-.map-card.active{border-color:var(--gold);box-shadow:0 0 14px rgba(212,160,23,.25);}
-.map-card:hover{border-color:rgba(212,160,23,.5);}
-.map-card:active{transform:scale(.97);}
-.map-card-thumb{width:100%;height:76px;
+  background:linear-gradient(to bottom,rgba(18,12,4,.92) 0%,transparent 100%);
+  pointer-events:none;}
+.hud-left{display:flex;flex-direction:column;gap:1px;}
+.hud-logo{font-family:'Cinzel',serif;font-size:15px;letter-spacing:.14em;color:var(--gold-l);}
+.hud-map-name{font-size:11px;color:var(--sepia);letter-spacing:.08em;
+  max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hud-right{display:flex;gap:8px;}
+.hud-btn{width:40px;height:40px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface);backdrop-filter:blur(8px);
+  color:var(--parchment);font-size:17px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
+  pointer-events:all;transition:all .2s;}
+.hud-btn:active{transform:scale(.92);background:rgba(212,160,23,.15);}
+
+/* ── COMPASS ── */
+#compass{position:fixed;top:max(62px,calc(env(safe-area-inset-top)+48px));
+  right:14px;z-index:20;width:46px;height:46px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.c-ring{position:absolute;inset:0;border-radius:50%;
+  border:1px solid rgba(212,160,23,.3);
+  background:var(--surface);backdrop-filter:blur(8px);}
+.c-needle{position:relative;z-index:1;width:0;height:0;
+  display:flex;flex-direction:column;align-items:center;transition:transform .25s;}
+.c-n{width:0;height:0;border-left:4px solid transparent;
+  border-right:4px solid transparent;border-bottom:13px solid var(--rust);}
+.c-s{width:0;height:0;border-left:4px solid transparent;
+  border-right:4px solid transparent;border-top:13px solid rgba(212,160,23,.4);}
+.c-label{position:absolute;top:3px;font-family:'Cinzel',serif;
+  font-size:7px;color:var(--rust);font-weight:600;}
+
+/* ── TIME SWIPE HINT ── */
+#swipe-hint{position:fixed;top:50%;left:50%;z-index:15;
+  transform:translate(-50%,-50%);
+  background:rgba(18,12,4,.82);border:1px solid var(--border);
+  border-radius:24px;padding:8px 18px;
+  font-size:11px;color:var(--parchment2);letter-spacing:.1em;
+  pointer-events:none;opacity:0;transition:opacity .4s;backdrop-filter:blur(8px);}
+#swipe-hint.show{opacity:1;}
+
+/* ── TIME INDICATOR ── */
+#time-bar{position:fixed;top:max(62px,calc(env(safe-area-inset-top)+48px));
+  left:14px;z-index:20;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:6px 10px;backdrop-filter:blur(8px);
+  opacity:0;transform:translateX(-6px);transition:all .35s;}
+#time-bar.visible{opacity:1;transform:translateX(0);}
+.time-era{font-size:10px;color:var(--gold-l);font-family:'Cinzel',serif;letter-spacing:.1em;}
+.time-name{font-size:11px;color:var(--parchment);margin-top:1px;
+  max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── BOTTOM SHEET ── */
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:var(--ink2);
+  border-top:1px solid var(--border);
+  border-radius:14px 14px 0 0;
+  transition:height .35s cubic-bezier(.16,1,.3,1);
+  height:var(--sheet-min);
+  padding-bottom:var(--safe-bottom);}
+.sheet-handle{height:28px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;}
+.sheet-bar{width:36px;height:3px;border-radius:2px;background:rgba(212,160,23,.35);}
+.sheet-inner{height:calc(100% - 28px);overflow:hidden;display:flex;flex-direction:column;}
+
+/* 現在地図コントロール（sheet-mid時表示） */
+#ctrl-panel{padding:0 14px 10px;flex-shrink:0;
+  border-bottom:1px solid rgba(212,160,23,.1);}
+.ctrl-now{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ctrl-now-name{font-size:13px;color:var(--gold-l);font-family:'Cinzel',serif;letter-spacing:.06em;}
+.ctrl-now-era{font-size:10px;color:var(--sepia);}
+.opacity-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.opacity-label{font-size:10px;color:var(--sepia);white-space:nowrap;}
+.opacity-val{font-size:11px;color:var(--gold);min-width:28px;text-align:right;
+  font-family:'Cinzel',serif;}
+input[type=range]{-webkit-appearance:none;flex:1;height:3px;
+  background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--p,80%),
+    rgba(212,160,23,.15) var(--p,80%));border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;background:var(--gold);border:2px solid var(--ink);cursor:pointer;}
+.layer-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.layer-pill{padding:4px 10px;border-radius:20px;font-size:10px;border:1px solid var(--border);
+  color:var(--parchment2);cursor:pointer;transition:all .2s;background:transparent;
+  font-family:'Noto Sans JP',sans-serif;}
+.layer-pill.on{background:rgba(212,160,23,.15);border-color:var(--gold);color:var(--gold-l);}
+
+/* 横スクロールチップ（sheet-mid時表示） */
+#chip-scroll{display:flex;gap:8px;padding:10px 14px;
+  overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+#chip-scroll::-webkit-scrollbar{display:none;}
+.chip{flex-shrink:0;display:flex;align-items:center;gap:7px;
+  padding:6px 12px;border-radius:20px;border:1px solid var(--border);
+  background:rgba(212,160,23,.04);cursor:pointer;transition:all .25s;}
+.chip.active{background:rgba(212,160,23,.18);border-color:var(--gold);}
+.chip:active{transform:scale(.96);}
+.chip-emoji{font-size:14px;}
+.chip-info{display:flex;flex-direction:column;}
+.chip-name{font-size:11px;color:var(--parchment);white-space:nowrap;}
+.chip-era{font-size:9px;color:var(--sepia);white-space:nowrap;}
+.chip-lock{font-size:10px;color:var(--sepia);margin-left:2px;}
+
+/* 地図ブラウザ（sheet-max時表示） */
+#browser{flex:1;overflow-y:auto;padding:0 14px 14px;scrollbar-width:thin;
+  scrollbar-color:rgba(212,160,23,.2) transparent;}
+
+/* カテゴリタブ */
+.cat-tabs{display:flex;gap:0;border-bottom:1px solid rgba(212,160,23,.15);
+  margin-bottom:14px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.cat-tabs::-webkit-scrollbar{display:none;}
+.cat-tab{flex-shrink:0;padding:8px 14px;font-size:11px;color:var(--sepia);
+  border:none;background:transparent;cursor:pointer;transition:all .2s;
+  border-bottom:2px solid transparent;white-space:nowrap;
+  font-family:'Noto Sans JP',sans-serif;}
+.cat-tab.active{color:var(--gold-l);border-bottom-color:var(--gold);}
+
+/* ティアセクション */
+.tier-section{margin-bottom:18px;}
+.tier-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.tier-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-family:'Cinzel',serif;}
+.tier-badge.std{background:rgba(52,152,219,.15);color:#5dade2;
+  border:1px solid rgba(52,152,219,.3);}
+.tier-badge.com{background:rgba(212,160,23,.12);color:var(--gold);
+  border:1px solid rgba(212,160,23,.25);}
+.tier-label{font-size:11px;color:var(--parchment2);letter-spacing:.1em;}
+
+/* 地図カード（ブラウザ内） */
+.map-cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.map-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;
+  cursor:pointer;transition:all .25s;background:rgba(212,160,23,.03);}
+.map-card.active{border-color:var(--gold);box-shadow:0 0 10px rgba(212,160,23,.2);}
+.map-card:active{transform:scale(.97);}
+.mc-thumb{width:100%;height:72px;object-fit:cover;display:block;filter:sepia(.3);}
+.mc-thumb-placeholder{width:100%;height:72px;display:flex;align-items:center;
+  justify-content:center;font-size:24px;
   background:linear-gradient(135deg,#2a1f0a,#1a1008);
-  border-bottom:1px solid rgba(212,160,23,.1);overflow:hidden;}
-.map-card-thumb img{width:100%;height:100%;object-fit:cover;filter:sepia(.3);}
-.map-card-thumb-emoji{font-size:28px;}
-.map-card-body{padding:8px;}
-.map-card-name{font-size:10px;color:var(--parchment);line-height:1.4;margin-bottom:3px;}
-.map-card-era{font-size:9px;color:var(--sepia);font-family:'Cinzel',serif;}
-.map-card-badges{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
-.badge{font-size:8px;padding:1px 5px;border-radius:2px;font-family:'Cinzel',serif;}
-.badge-gsi{background:rgba(100,150,255,.12);color:#6496ff;border:1px solid rgba(100,150,255,.25);}
-.badge-free{background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.25);}
-.badge-vector{background:rgba(212,160,23,.12);color:var(--gold);border:1px solid rgba(212,160,23,.25);}
-.badge-new{background:rgba(231,76,60,.12);color:#e74c3c;border:1px solid rgba(231,76,60,.25);}
+  border-bottom:1px solid rgba(212,160,23,.08);}
+.mc-body{padding:8px;}
+.mc-name{font-size:11px;color:var(--parchment);line-height:1.4;margin-bottom:3px;}
+.mc-era{font-size:9px;color:var(--sepia);font-family:'Cinzel',serif;}
+.mc-badges{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}
+.mc-badge{font-size:8px;padding:1px 5px;border-radius:3px;}
+.mc-badge.std{background:rgba(52,152,219,.1);color:#5dade2;
+  border:1px solid rgba(52,152,219,.2);}
+.mc-badge.free{background:rgba(46,204,113,.1);color:#2ecc71;
+  border:1px solid rgba(46,204,113,.2);}
+.mc-badge.paid{background:rgba(212,160,23,.1);color:var(--gold);
+  border:1px solid rgba(212,160,23,.2);}
+.mc-badge.new{background:rgba(231,76,60,.1);color:#e74c3c;
+  border:1px solid rgba(231,76,60,.2);}
+.mc-badge.verified{background:rgba(46,204,113,.1);color:#2ecc71;
+  border:1px solid rgba(46,204,113,.2);}
+.mc-lock{position:absolute;top:6px;right:6px;font-size:14px;}
 
-/* カードのアクションボタン（ホバー時に表示） */
-.map-card-actions{position:absolute;inset:0;
-  background:rgba(18,12,4,.85);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:8px;opacity:0;transition:opacity .2s;backdrop-filter:blur(4px);}
-.map-card:hover .map-card-actions{opacity:1;}
-.card-action-btn{padding:6px 14px;border-radius:2px;font-size:10px;
-  font-family:'Cinzel',serif;letter-spacing:.08em;cursor:pointer;
-  transition:all .2s;border:none;width:100px;text-align:center;}
-.btn-view{background:rgba(212,160,23,.2);border:1px solid var(--gold);color:var(--gold-light);}
-.btn-view:hover{background:rgba(212,160,23,.35);}
-.btn-dl{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.4);color:#2ecc71;}
-.btn-dl:hover{background:rgba(46,204,113,.2);}
-
-/* SKELETON */
-.skeleton{flex-shrink:0;width:130px;height:140px;border-radius:6px;
+/* skeleton */
+.skeleton{height:140px;border-radius:8px;
   background:linear-gradient(90deg,rgba(212,160,23,.04) 25%,rgba(212,160,23,.08) 50%,rgba(212,160,23,.04) 75%);
   background-size:200% 100%;animation:shimmer 1.5s infinite;}
-@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* MAP DETAIL MODAL */
-#modal{position:fixed;inset:0;z-index:50;
-  background:rgba(18,12,4,.92);backdrop-filter:blur(8px);
-  display:flex;align-items:flex-end;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity .3s;}
-#modal.open{opacity:1;pointer-events:all;}
-.modal-sheet{background:var(--ink);border:1px solid var(--panel-border);
-  border-radius:12px 12px 0 0;width:100%;max-width:600px;
-  max-height:85vh;overflow-y:auto;
-  transform:translateY(20px);transition:transform .3s;}
-#modal.open .modal-sheet{transform:translateY(0);}
-.modal-header{padding:16px 20px;border-bottom:1px solid rgba(212,160,23,.15);
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;background:var(--ink);z-index:1;}
-.modal-title{font-family:'Cinzel',serif;font-size:16px;color:var(--gold-light);letter-spacing:.1em;}
-.modal-close{background:none;border:none;color:var(--sepia);font-size:22px;
-  cursor:pointer;padding:4px 8px;transition:color .2s;}
-.modal-close:hover{color:var(--gold);}
-.modal-body{padding:20px;}
-.modal-thumb{width:100%;border-radius:6px;overflow:hidden;margin-bottom:16px;
-  border:1px solid var(--panel-border);}
-.modal-thumb img{width:100%;display:block;filter:sepia(.2);}
-.modal-meta{display:grid;gap:6px;margin-bottom:16px;}
-.meta-row{display:flex;font-size:12px;}
-.meta-key{color:var(--sepia);width:70px;flex-shrink:0;}
-.meta-val{color:var(--parchment);}
-.modal-desc{font-size:12px;color:var(--parchment2);line-height:1.8;
-  margin-bottom:20px;border-top:1px solid rgba(212,160,23,.1);padding-top:14px;}
-.modal-actions{display:flex;gap:10px;}
-.modal-btn{flex:1;padding:13px;border-radius:3px;font-family:'Cinzel',serif;
-  font-size:12px;letter-spacing:.1em;cursor:pointer;transition:all .3s;
-  text-align:center;text-decoration:none;border:none;}
-.modal-btn-primary{background:rgba(212,160,23,.15);border:1.5px solid var(--gold);color:var(--gold-light);}
-.modal-btn-primary:hover{background:rgba(212,160,23,.25);}
-.modal-btn-secondary{background:transparent;border:1px solid rgba(212,160,23,.3);color:var(--sepia);}
-.modal-btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+/* 地図なし状態 */
+.empty-msg{font-size:12px;color:var(--sepia);text-align:center;
+  padding:24px 0;line-height:1.8;}
+.empty-msg a{color:var(--gold);text-decoration:none;}
 
-/* CREATE LINK */
-.create-link-bar{margin-top:4px;padding:12px;border:1px dashed rgba(212,160,23,.25);
-  border-radius:4px;text-align:center;cursor:pointer;transition:all .2s;}
-.create-link-bar:hover{border-color:var(--gold);background:rgba(212,160,23,.05);}
-.create-link-bar a{font-size:12px;color:var(--sepia);text-decoration:none;
-  letter-spacing:.1em;display:flex;align-items:center;justify-content:center;gap:6px;}
-.create-link-bar:hover a{color:var(--gold);}
+/* 地図作成リンク */
+.create-bar{margin-top:8px;padding:12px;
+  border:1px dashed rgba(212,160,23,.2);border-radius:6px;
+  text-align:center;cursor:pointer;transition:all .2s;}
+.create-bar:hover{border-color:var(--gold);background:rgba(212,160,23,.04);}
+.create-bar a{font-size:11px;color:var(--sepia);text-decoration:none;
+  letter-spacing:.1em;}
+.create-bar:hover a{color:var(--gold);}
 
-/* GPS MARKER */
+/* POPUP */
+.im-popup .leaflet-popup-content-wrapper{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;color:var(--parchment);backdrop-filter:blur(10px);}
+.im-popup .leaflet-popup-tip{background:var(--surface);}
+.popup-name{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-l);margin-bottom:3px;}
+.popup-era{font-size:9px;color:var(--sepia);margin-bottom:6px;letter-spacing:.08em;}
+.popup-desc{font-size:11px;color:var(--parchment2);line-height:1.6;}
+.popup-now{font-size:10px;color:var(--blue);margin-top:6px;}
+
+/* GPS */
 .gps-dot{width:12px;height:12px;border-radius:50%;background:#4a9fff;
-  border:2px solid white;box-shadow:0 0 6px rgba(74,159,255,.6);
-  position:absolute;top:2px;left:2px;}
+  border:2px solid white;position:absolute;top:2px;left:2px;}
 .gps-ring{width:32px;height:32px;border-radius:50%;
-  border:2px solid rgba(74,159,255,.5);
+  border:2px solid rgba(74,159,255,.4);
   position:absolute;top:-8px;left:-8px;animation:gpsRing 2s ease-out infinite;}
-@keyframes gpsRing{0%{transform:scale(.5);opacity:.8;}100%{transform:scale(2);opacity:0;}}
+@keyframes gpsRing{0%{transform:scale(.5);opacity:.8}100%{transform:scale(2);opacity:0}}
 
 /* TOAST */
-#toast{position:fixed;top:60px;left:50%;
-  transform:translateX(-50%) translateY(-10px);z-index:60;
-  background:var(--panel-bg);border:1px solid var(--panel-border);
-  padding:10px 20px;border-radius:3px;font-size:12px;color:var(--parchment);
-  letter-spacing:.1em;opacity:0;pointer-events:none;transition:all .3s;
-  white-space:nowrap;backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(0,0,0,.5);}
+#toast{position:fixed;top:max(60px,calc(env(safe-area-inset-top)+46px));
+  left:50%;transform:translateX(-50%) translateY(-8px);z-index:50;
+  background:var(--surface);border:1px solid var(--border);
+  padding:9px 18px;border-radius:4px;font-size:11px;color:var(--parchment);
+  letter-spacing:.08em;opacity:0;pointer-events:none;transition:all .3s;
+  white-space:nowrap;backdrop-filter:blur(10px);}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* LOADING */
 #loading{position:fixed;inset:0;z-index:90;background:var(--ink);
   display:flex;align-items:center;justify-content:center;transition:opacity .5s;}
 #loading.hidden{opacity:0;pointer-events:none;}
-.loader-ring{width:48px;height:48px;border-radius:50%;
+.loader{width:44px;height:44px;border-radius:50%;
   border:2px solid rgba(212,160,23,.1);border-top-color:var(--gold);
   animation:spin .9s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 .leaflet-control-zoom,.leaflet-control-attribution{display:none!important;}
 </style>
 </head>
 <body>
 
-<div id="loading"><div class="loader-ring"></div></div>
+<div id="loading"><div class="loader"></div></div>
 
 <div id="splash">
-  <div class="splash-emblem">🗺</div>
-  <div class="splash-title">ImmersaMap</div>
+  <div class="splash-ring">🗺</div>
+  <div class="splash-logo">ImmersaMap</div>
   <div class="splash-sub">時を超える地図体験</div>
-  <button class="splash-btn" id="start-btn">探索を始める</button>
-  <a href="./create.html" class="splash-create-link">✏️ 地図クリエイターはこちら</a>
+  <button class="splash-start" id="btn-start">探索を始める</button>
+  <a href="./create.html" class="splash-creator">✏️ 地図クリエイターはこちら</a>
 </div>
 
 <div id="map"></div>
 <div id="grain"></div>
 
-<div id="topbar">
-  <div class="topbar-logo">ImmersaMap</div>
-  <div id="era-badge">ベース地図</div>
-</div>
-
-<div id="compass">
-  <div class="compass-ring"></div>
-  <div class="compass-needle" id="compass-needle">
-    <div class="needle-n"></div><div class="needle-s"></div>
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-logo">ImmersaMap</div>
+    <div class="hud-map-name" id="hud-map-name">現代地図</div>
   </div>
-  <span class="compass-label-n">N</span>
-</div>
-
-<div id="current-map-info">
-  <div class="cmi-title" id="cmi-title">—</div>
-  <div class="cmi-era"   id="cmi-era">—</div>
-</div>
-
-<div id="controls">
-  <button class="ctrl-btn" id="gps-btn">📍</button>
-  <button class="ctrl-btn" id="north-btn">🔺</button>
-</div>
-
-<!-- MAP SELECTOR PANEL -->
-<div id="map-selector">
-  <div class="selector-handle" id="selector-handle">
-    <div class="handle-left">
-      <div class="handle-dot"></div>
-      <span class="handle-title" id="handle-title">地図を選ぶ</span>
-    </div>
-    <span class="handle-arrow">▲</span>
+  <div class="hud-right">
+    <button class="hud-btn" id="btn-gps" aria-label="現在地">📍</button>
+    <button class="hud-btn" id="btn-north" aria-label="北向き">🔺</button>
   </div>
-  <div class="selector-body">
+</div>
 
-    <div class="opacity-row">
-      <div class="opacity-icon">🌗</div>
-      <div class="opacity-right">
-        <div class="opacity-label-row">
-          <span>古地図の濃さ</span>
-          <span id="opacity-val">80%</span>
+<div id="compass" aria-label="コンパス">
+  <div class="c-ring"></div>
+  <div class="c-needle" id="compass-needle">
+    <div class="c-n"></div>
+    <div class="c-s"></div>
+  </div>
+  <span class="c-label">N</span>
+</div>
+
+<div id="time-bar">
+  <div class="time-era" id="time-era">—</div>
+  <div class="time-name" id="time-name">—</div>
+</div>
+
+<div id="swipe-hint">← 左右スワイプで時代を切替 →</div>
+
+<!-- BOTTOM SHEET -->
+<div id="sheet">
+  <div class="sheet-handle" id="sheet-handle">
+    <div class="sheet-bar"></div>
+  </div>
+  <div class="sheet-inner">
+
+    <!-- コントロールパネル（mid以上で表示） -->
+    <div id="ctrl-panel">
+      <div class="ctrl-now">
+        <div>
+          <div class="ctrl-now-name" id="ctrl-name">地図を選んでください</div>
+          <div class="ctrl-now-era" id="ctrl-era"></div>
         </div>
-        <input type="range" id="opacity-slider" min="0" max="100" value="80" style="--val:80%">
+      </div>
+      <div class="opacity-row">
+        <span class="opacity-label">古地図の濃さ</span>
+        <input type="range" id="opacity-slider" min="0" max="100" value="80" step="1" style="--p:80%">
+        <span class="opacity-val" id="opacity-val">80%</span>
+      </div>
+      <div class="layer-pills" id="layer-pills"></div>
+    </div>
+
+    <!-- 横スクロールチップ -->
+    <div id="chip-scroll"></div>
+
+    <!-- 地図ブラウザ -->
+    <div id="browser">
+      <!-- カテゴリタブ -->
+      <div class="cat-tabs" id="cat-tabs">
+        <button class="cat-tab active" data-cat="all">すべて</button>
+        <button class="cat-tab" data-cat="historical">🏯 歴史</button>
+        <button class="cat-tab" data-cat="aerial">✈️ 空中写真</button>
+        <button class="cat-tab" data-cat="fiction">📺 フィクション</button>
+        <button class="cat-tab" data-cat="original">🐉 創作</button>
+        <button class="cat-tab" data-cat="themed">🌸 テーマ</button>
+      </div>
+
+      <!-- Standard -->
+      <div class="tier-section" id="section-standard">
+        <div class="tier-head">
+          <span class="tier-badge std">Standard</span>
+          <span class="tier-label">公式・品質保証</span>
+        </div>
+        <div class="map-cards-grid" id="cards-std">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+
+      <!-- Community -->
+      <div class="tier-section" id="section-community">
+        <div class="tier-head">
+          <span class="tier-badge com">Community</span>
+          <span class="tier-label">ユーザー作成</span>
+        </div>
+        <div class="map-cards-grid" id="cards-com">
+          <div class="skeleton"></div>
+        </div>
+      </div>
+
+      <div class="create-bar">
+        <a href="./create.html">✏️ 地図を作って公開する →</a>
       </div>
     </div>
 
-    <!-- ベクター地図（AIトレース済み） -->
-    <div class="section-head">
-      <span class="section-label">🤖 AIトレース地図</span>
-      <span class="section-note">ベクターレイヤー</span>
-    </div>
-    <div class="map-cards" id="cards-vector"></div>
-
-    <!-- 地理院タイル -->
-    <div class="section-head">
-      <span class="section-label">📸 空中写真・歴史地図</span>
-      <span class="section-note">国土地理院 無料</span>
-    </div>
-    <div class="map-cards" id="cards-gsi"></div>
-
-    <!-- コミュニティ -->
-    <div class="section-head">
-      <span class="section-label">🗺 コミュニティ地図</span>
-      <span class="section-note" id="community-count"></span>
-    </div>
-    <div class="map-cards" id="cards-community">
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
-    </div>
-
-    <div class="create-link-bar">
-      <a href="./create.html">✏️ あなたの地図を作って公開する →</a>
-    </div>
-  </div>
-</div>
-
-<!-- MAP DETAIL MODAL -->
-<div id="modal">
-  <div class="modal-sheet">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">地図の詳細</div>
-      <button class="modal-close" id="modal-close">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-thumb" id="modal-thumb"></div>
-      <div class="modal-meta" id="modal-meta"></div>
-      <div class="modal-desc" id="modal-desc"></div>
-      <div class="modal-actions" id="modal-actions"></div>
-    </div>
   </div>
 </div>
 
@@ -376,271 +387,407 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 
 <script>
 // ============================================================
-// Supabase
+// CONFIG
 // ============================================================
 const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ============================================================
-// AIトレース済みベクター地図（静的定義）
-// ============================================================
-const VECTOR_MAPS = [
-  {
-    id: 'kawagoe-vector',
-    name: '川越城下絵図',
-    era: '江戸時代中〜後期',
-    emoji: '🏯',
-    type: 'vector',
-    description: '川越城を中心とした城下町の絵図をAIが解析し、道路・河川・城郭・地名をベクターレイヤーに変換。GPS連動でリアルタイムに現在地を表示。',
-    thumbnail: './kawagoe.jpg',
-    view_url: './kawagoe.html',
-    download_url: './kawagoe.html',
-    geojson_url: null,
-    center: [35.923, 139.485],
-    zoom: 15,
-    tile: null,
-    tags: ['川越', '城下町', '埼玉', '江戸時代'],
-    price: 0,
-    layers: ['道路・街道', '河川', '城郭境界', '地名・ポイント'],
-  },
-];
+// 川越GeoJSON（同一ページに埋め込み）
+const KAWAGOE_GEOJSON = {
+  type:'FeatureCollection',
+  features:[
+    {type:'Feature',properties:{name:'江戸街道',layer:'roads',type:'主要街道',description:'川越と江戸を結ぶ主要街道。現在の川越街道の原型。',era:'江戸時代'},
+      geometry:{type:'LineString',coordinates:[[139.482216,35.915654],[139.482988,35.917865],[139.483759,35.920077],[139.484273,35.921349],[139.484787,35.922773],[139.485147,35.923754]]}},
+    {type:'Feature',properties:{name:'一番街（蔵造り）',layer:'roads',type:'主要道路',description:'現在の川越一番街の原型。江戸時代から続く商人街。',era:'江戸時代'},
+      geometry:{type:'LineString',coordinates:[[139.484302,35.925888],[139.484555,35.92607],[139.484806,35.925799],[139.485057,35.925527],[139.485308,35.925256]]}},
+    {type:'Feature',properties:{name:'鍵型道路',layer:'roads',type:'防衛道路',description:'城下町特有のL字型道路。敵の侵入を遅らせる防衛設計。',era:'江戸時代'},
+      geometry:{type:'LineString',coordinates:[[139.484261,35.919534],[139.484254,35.918323],[139.483733,35.915841],[139.483726,35.914782]]}},
+    {type:'Feature',properties:{name:'新河岸川',layer:'rivers',description:'江戸への物資輸送の要路。川越の繁栄を支えた舟運の川。',era:'江戸時代'},
+      geometry:{type:'LineString',coordinates:[[139.487042,35.935718],[139.486871,35.932704],[139.486909,35.930683],[139.48679,35.927917],[139.486672,35.925151],[139.486558,35.923141]]}},
+    {type:'Feature',properties:{name:'川越城 城郭',layer:'boundaries',type:'城郭',description:'川越城の本丸・二の丸を囲む堀と土塁。',era:'江戸時代'},
+      geometry:{type:'Polygon',coordinates:[[[139.486184,35.927963],[139.486168,35.925391],[139.485796,35.922443],[139.485116,35.918913],[139.484602,35.917489],[139.484512,35.919262],[139.484782,35.922016],[139.485462,35.925547],[139.485979,35.927424],[139.486184,35.927963]]]}},
+    {type:'Feature',properties:{name:'川越城',layer:'places',type:'城郭',description:'川越藩主松平家の居城。本丸御殿が現存する。',now:'現在は川越城本丸御殿として公開。入場無料。',era:'江戸時代'},
+      geometry:{type:'Point',coordinates:[139.48539,35.922272]}},
+    {type:'Feature',properties:{name:'大手門',layer:'places',type:'門',description:'川越城の正門。',now:'現在は大手町交差点付近。門は現存しない。',era:'江戸時代'},
+      geometry:{type:'Point',coordinates:[139.485552,35.923925]}},
+    {type:'Feature',properties:{name:'札の辻',layer:'places',type:'辻',description:'高札が立てられた重要な交差点。城下の情報発信地点。',now:'現在も「札の辻」の地名が残る。',era:'江戸時代'},
+      geometry:{type:'Point',coordinates:[139.485585,35.929069]}},
+    {type:'Feature',properties:{name:'T字路',layer:'places',type:'辻',description:'防衛のため意図的に設けられたT字路。',now:'現在も道路の形状が残っている。',era:'江戸時代'},
+      geometry:{type:'Point',coordinates:[139.483412,35.921062]}},
+    {type:'Feature',properties:{name:'新河岸川',layer:'places',type:'河川',description:'江戸へ通じる舟運の要路。川越と江戸を結んだ。',now:'現在も新河岸川として流れている。遊歩道が整備されている。',era:'江戸時代'},
+      geometry:{type:'Point',coordinates:[139.486909,35.930683]}}
+  ]
+};
 
-// ============================================================
-// 地理院タイル
-// ============================================================
-const GSI_MAPS = [
-  { id:'none',     name:'現代地図のみ', era:'Modern',      emoji:'🌍', tile:null, center:[35.6812,139.7671], zoom:14 },
-  { id:'air1936',  name:'戦前の東京',   era:'1936〜1942年', emoji:'✈️',
-    tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',
-    center:[35.7148,139.7967], zoom:16, note:'東京23区・大阪市' },
-  { id:'air1945',  name:'終戦直後',     era:'1945〜1950年', emoji:'🕊️',
-    tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',
-    center:[35.7148,139.7967], zoom:16, note:'全国' },
-  { id:'air1961',  name:'高度成長期',   era:'1961〜1969年', emoji:'🏭',
-    tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',
-    center:[35.6362,139.7966], zoom:16, note:'全国' },
-  { id:'air1974',  name:'昭和50年代',   era:'1974〜1978年', emoji:'🚃',
-    tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',
-    center:[35.7148,139.7967], zoom:16, note:'全国' },
-  { id:'relief',   name:'色別標高図',   era:'地形データ',   emoji:'⛰',
-    tile:'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',
-    center:[35.3606,138.7274], zoom:11, note:'全国' },
-];
+// レイヤースタイル定義
+const LAYER_STYLES = {
+  roads:{
+    '主要街道':{color:'#d4a017',weight:4,opacity:.9},
+    '主要道路':{color:'#f0c040',weight:3,opacity:.85},
+    '防衛道路':{color:'#c0392b',weight:2.5,opacity:.8,dashArray:'7,4'},
+    default:   {color:'#d4a017',weight:2,opacity:.7}
+  },
+  rivers:{color:'#3498db',weight:4,opacity:.8},
+  boundaries:{
+    '城郭':{color:'#d4a017',weight:2.5,fillColor:'#8b4513',fillOpacity:.2},
+    default:{color:'#888',weight:1.5,fillColor:'#555',fillOpacity:.1}
+  },
+  places:{
+    '城郭':{radius:9,color:'#e74c3c',fillColor:'#c0392b',fillOpacity:.9,weight:2},
+    '門':  {radius:7,color:'#e67e22',fillColor:'#d35400',fillOpacity:.9,weight:2},
+    '辻':  {radius:6,color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
+    '河川':{radius:6,color:'#3498db',fillColor:'#5dade2',fillOpacity:.8,weight:2},
+    default:{radius:5,color:'#888',fillColor:'#aaa',fillOpacity:.7,weight:1.5}
+  }
+};
 
 // ============================================================
 // STATE
 // ============================================================
-const S = { map:null, base:null, overlay:null, opacity:0.8,
-            gpsMarker:null, watchId:null, currentMapDef:null };
+const S = {
+  map:null, base:null, overlay:null,
+  vectorGroups:{},   // layerName → L.LayerGroup
+  activeMapId:null,
+  activeDef:null,
+  opacity:.8,
+  sheetState:'min',  // min|mid|max
+  currentCat:'all',
+  allMaps:[],        // DBから取得した全地図
+  gpsMarker:null, watchId:null,
+  swipeStartX:null,
+  swipeOverlay:0,    // 0=古地図 1=現代
+};
 
 // ============================================================
-// 地図初期化
+// MAP INIT
 // ============================================================
 function initMap() {
-  S.map = L.map('map', { center:[35.6812,139.7671], zoom:14,
-    zoomControl:false, attributionControl:false, preferCanvas:true });
+  S.map = L.map('map',{center:[35.6812,139.7671],zoom:14,
+    zoomControl:false,attributionControl:false,preferCanvas:true});
   S.base = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { maxZoom:19, zIndex:1 }).addTo(S.map);
-  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
+    {maxZoom:19,zIndex:1}).addTo(S.map);
+  setTimeout(()=>document.getElementById('loading').classList.add('hidden'),700);
 }
 
 // ============================================================
-// 地図を地図画面に表示
+// 地図を読み込む（ベクター or タイル）
 // ============================================================
 function loadMap(def) {
-  if (S.overlay) { S.map.removeLayer(S.overlay); S.overlay = null; }
-  S.currentMapDef = def;
+  // 既存クリア
+  if (S.overlay) { S.map.removeLayer(S.overlay); S.overlay=null; }
+  Object.values(S.vectorGroups).forEach(g=>S.map.removeLayer(g));
+  S.vectorGroups = {};
 
-  const era = def.era || '—';
-  document.getElementById('era-badge').textContent  = era;
-  document.getElementById('cmi-title').textContent  = def.name;
-  document.getElementById('cmi-era').textContent    = era;
-  document.getElementById('handle-title').textContent = def.id === 'none' ? '地図を選ぶ' : def.name;
-  document.getElementById('current-map-info')
-    .classList.toggle('visible', def.id !== 'none');
-  document.querySelectorAll('.map-card').forEach(c =>
-    c.classList.toggle('active', c.dataset.id === def.id));
+  S.activeMapId = def.id;
+  S.activeDef   = def;
 
-  const tileUrl = def.tile || def.tiles_url;
-  if (tileUrl) {
-    S.overlay = L.tileLayer(tileUrl, {
+  const name = def.name;
+  const era  = def.era || def.description || '';
+
+  // HUD更新
+  document.getElementById('hud-map-name').textContent = name;
+  document.getElementById('ctrl-name').textContent    = name;
+  document.getElementById('ctrl-era').textContent     = era;
+  document.getElementById('time-name').textContent    = name;
+  document.getElementById('time-era').textContent     = era;
+  document.getElementById('time-bar').classList.add('visible');
+
+  // チップのアクティブ状態
+  document.querySelectorAll('.chip').forEach(c=>
+    c.classList.toggle('active', c.dataset.id===def.id));
+  document.querySelectorAll('.map-card').forEach(c=>
+    c.classList.toggle('active', c.dataset.id===def.id));
+
+  // 川越ベクター地図
+  if (def.id === 'standard-kawagoe-edo') {
+    loadVectorMap(KAWAGOE_GEOJSON, def);
+    showToast('川越城下絵図を表示中');
+  } else if (def.tiles_url) {
+    // タイル地図
+    S.overlay = L.tileLayer(def.tiles_url, {
       opacity:S.opacity, zIndex:2,
-      minZoom:def.minZoom || 2,
-      maxZoom:def.maxZoom || 18,
+      minZoom:def.zoom_min||2, maxZoom:def.zoom_max||18,
     }).addTo(S.map);
-    showToast(`${def.name}${def.note ? ' 【'+def.note+'】' : ''}`);
-  } else if (def.type === 'vector') {
-    // ベクター地図はモーダルで詳細表示を促す
-    showToast(`${def.name} — 詳細ボタンから表示できます`);
+    buildLayerPills([]);
+    showToast(name);
   } else {
-    showToast('現代地図を表示中');
+    buildLayerPills([]);
+    showToast('現代地図のみ表示');
   }
 
-  const lat = def.center ? def.center[0] : def.center_lat;
-  const lng = def.center ? def.center[1] : def.center_lng;
-  if (lat && lng) S.map.flyTo([lat,lng], def.zoom || def.zoom_default || 14, {duration:1.2});
+  const lat = def.center_lat, lng = def.center_lng;
+  if (lat&&lng) S.map.flyTo([lat,lng],def.zoom_default||15,{duration:1.2});
 }
 
 // ============================================================
-// ベクター地図カード
+// ベクターレイヤー描画
 // ============================================================
-function buildVectorCards() {
-  const c = document.getElementById('cards-vector');
-  VECTOR_MAPS.forEach(def => {
-    const el = makeVectorCard(def);
-    c.appendChild(el);
+function loadVectorMap(geojson, def) {
+  const layerNames = [];
+  geojson.features.forEach(f=>{
+    const p = f.properties;
+    const layer = p.layer;
+    if (!S.vectorGroups[layer]) {
+      S.vectorGroups[layer] = L.layerGroup().addTo(S.map);
+      layerNames.push(layer);
+    }
+    const g = S.vectorGroups[layer];
+
+    if (f.geometry.type === 'LineString') {
+      const coords = f.geometry.coordinates.map(c=>[c[1],c[0]]);
+      const style  = layer==='rivers' ? LAYER_STYLES.rivers
+        : (LAYER_STYLES.roads[p.type]||LAYER_STYLES.roads.default);
+      L.polyline(coords, {...style, opacity:S.opacity})
+        .bindPopup(makePopup(p),{className:'im-popup'}).addTo(g);
+
+    } else if (f.geometry.type === 'Polygon') {
+      const coords = f.geometry.coordinates[0].map(c=>[c[1],c[0]]);
+      const style  = LAYER_STYLES.boundaries[p.type]||LAYER_STYLES.boundaries.default;
+      L.polygon(coords, {...style, opacity:S.opacity})
+        .bindPopup(makePopup(p),{className:'im-popup'}).addTo(g);
+
+    } else if (f.geometry.type === 'Point') {
+      const ll    = [f.geometry.coordinates[1],f.geometry.coordinates[0]];
+      const style = LAYER_STYLES.places[p.type]||LAYER_STYLES.places.default;
+      const m = L.circleMarker(ll,style)
+        .bindPopup(makePopup(p),{className:'im-popup'}).addTo(g);
+      m.bindTooltip(p.name,{permanent:true,direction:'top',className:'',offset:[0,-8]});
+    }
+  });
+  buildLayerPills([...new Set(geojson.features.map(f=>f.properties.layer))]);
+}
+
+function makePopup(p) {
+  return `<div class="popup-name">${p.name}</div>
+    <div class="popup-era">${p.era||''} ${p.type?'· '+p.type:''}</div>
+    <div class="popup-desc">${p.description||''}</div>
+    ${p.now?`<div class="popup-now">📍 現在：${p.now}</div>`:''}`;
+}
+
+// ============================================================
+// レイヤーピル
+// ============================================================
+const LAYER_LABELS = {roads:'道路',rivers:'河川',boundaries:'城郭',places:'地名'};
+function buildLayerPills(layers) {
+  const el = document.getElementById('layer-pills');
+  el.innerHTML = '';
+  layers.forEach(name=>{
+    const btn = document.createElement('button');
+    btn.className = 'layer-pill on';
+    btn.textContent = LAYER_LABELS[name]||name;
+    btn.dataset.layer = name;
+    btn.addEventListener('click', ()=>{
+      const on = btn.classList.toggle('on');
+      const g  = S.vectorGroups[name];
+      if (!g) return;
+      if (on) S.map.addLayer(g); else S.map.removeLayer(g);
+    });
+    el.appendChild(btn);
   });
 }
 
-function makeVectorCard(def) {
+// ============================================================
+// チップ生成
+// ============================================================
+function buildChips(maps) {
+  const c = document.getElementById('chip-scroll');
+  c.innerHTML = '';
+
+  // 「なし」チップ
+  const none = mkChip({id:'none',name:'現代地図',era:'Modern',emoji:'🌍'}, false);
+  none.addEventListener('click',()=>{
+    clearOverlay();
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    none.classList.add('active');
+    document.getElementById('hud-map-name').textContent='現代地図';
+    document.getElementById('time-bar').classList.remove('visible');
+  });
+  c.appendChild(none);
+
+  maps.slice(0,10).forEach(def=>{
+    const chip = mkChip(def, def.price>0);
+    chip.addEventListener('click',()=>{ loadMap(def); closeSheet(); });
+    c.appendChild(chip);
+  });
+
+  // 地図追加ボタン
+  const add = document.createElement('div');
+  add.className = 'chip';
+  add.innerHTML = `<span class="chip-emoji">➕</span><div class="chip-info"><span class="chip-name">地図を追加</span></div>`;
+  add.addEventListener('click',()=>{ openSheet('max'); });
+  c.appendChild(add);
+}
+
+function mkChip(def, locked) {
   const el = document.createElement('div');
-  el.className = 'map-card';
+  el.className = 'chip' + (def.id==='none'?' active':'');
   el.dataset.id = def.id;
-
   el.innerHTML = `
-    <div class="map-card-thumb">
-      <img src="${def.thumbnail}" alt="${def.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <span class="map-card-thumb-emoji" style="display:none;">${def.emoji}</span>
+    <span class="chip-emoji">${def.emoji||'🗺'}</span>
+    <div class="chip-info">
+      <span class="chip-name">${def.name}</span>
+      <span class="chip-era">${def.era||''}</span>
     </div>
-    <div class="map-card-body">
-      <div class="map-card-name">${def.name}</div>
-      <div class="map-card-era">${def.era}</div>
-      <div class="map-card-badges">
-        <span class="badge badge-vector">Vector</span>
-        <span class="badge badge-free">Free</span>
-      </div>
-    </div>
-    <div class="map-card-actions">
-      <button class="card-action-btn btn-view" onclick="openModal(event,'${def.id}')">詳細・表示</button>
-      <a class="card-action-btn btn-dl" href="${def.download_url}" download="${def.name}.html" onclick="event.stopPropagation()">ダウンロード</a>
-    </div>`;
-
-  el.addEventListener('click', () => {
-    loadMap(def);
-    togglePanel(false);
-  });
+    ${locked?`<span class="chip-lock">🔒</span>`:''}`;
   return el;
 }
 
 // ============================================================
-// 地理院カード
+// 地図カード（ブラウザ）
 // ============================================================
-function buildGSICards() {
-  const c = document.getElementById('cards-gsi');
-  GSI_MAPS.forEach(def => {
-    const el = document.createElement('div');
-    el.className = 'map-card' + (def.id==='none' ? ' active' : '');
-    el.dataset.id = def.id;
-    el.innerHTML = `
-      <div class="map-card-thumb"><span class="map-card-thumb-emoji">${def.emoji}</span></div>
-      <div class="map-card-body">
-        <div class="map-card-name">${def.name}</div>
-        <div class="map-card-era">${def.era}</div>
-        <div class="map-card-badges">
-          <span class="badge badge-gsi">地理院</span>
-          ${def.note ? `<span style="font-size:8px;color:var(--sepia);">${def.note}</span>` : ''}
-        </div>
+function buildCards(maps, cat) {
+  const std = maps.filter(m=>m.tier==='standard'&&(cat==='all'||m.category===cat));
+  const com = maps.filter(m=>m.tier!=='standard'&&(cat==='all'||m.category===cat));
+
+  buildCardSection('cards-std', std);
+  buildCardSection('cards-com', com);
+
+  document.getElementById('section-community').style.display = com.length ? '' : 'none';
+}
+
+function buildCardSection(elId, maps) {
+  const c = document.getElementById(elId);
+  c.innerHTML = '';
+  if (!maps.length) {
+    c.innerHTML = '<div class="empty-msg">地図がありません</div>';
+    return;
+  }
+  maps.forEach(def=>{
+    const card = document.createElement('div');
+    card.className = 'map-card' + (def.id===S.activeMapId?' active':'');
+    card.dataset.id = def.id;
+    card.style.position = 'relative';
+
+    const thumb = def.thumbnail_url
+      ? `<img class="mc-thumb" src="${def.thumbnail_url}" alt="${def.name}" loading="lazy">`
+      : `<div class="mc-thumb-placeholder">${def.emoji||'🗺'}</div>`;
+
+    const isNew = def.created_at && (Date.now()-new Date(def.created_at))<7*86400000;
+    let badges = def.is_standard
+      ? `<span class="mc-badge std">公式</span>`
+      : (def.price===0
+        ? `<span class="mc-badge free">Free</span>`
+        : `<span class="mc-badge paid">¥${def.price}</span>`);
+    if (def.is_verified) badges += `<span class="mc-badge verified">認証済</span>`;
+    if (isNew) badges += `<span class="mc-badge new">New</span>`;
+    if (def.price>0) card.innerHTML += `<span class="mc-lock">🔒</span>`;
+
+    card.innerHTML = `
+      ${thumb}
+      <div class="mc-body">
+        <div class="mc-name">${def.name}</div>
+        <div class="mc-era">${def.era||def.description||''}</div>
+        <div class="mc-badges">${badges}</div>
       </div>`;
-    el.addEventListener('click', () => { loadMap(def); togglePanel(false); });
-    c.appendChild(el);
+
+    card.addEventListener('click',()=>{ loadMap(def); closeSheet(); });
+    c.appendChild(card);
   });
 }
 
 // ============================================================
-// コミュニティ地図
+// Supabaseからデータ取得
 // ============================================================
-async function loadCommunityMaps() {
-  const c = document.getElementById('cards-community');
+async function fetchMaps() {
   try {
-    const { data, error } = await db.from('maps').select('*')
-      .eq('is_public', true).order('created_at', {ascending:false}).limit(20);
+    const {data,error} = await db.from('maps').select('*')
+      .eq('is_public',true).order('tier').order('created_at',{ascending:false});
     if (error) throw error;
-    c.innerHTML = '';
-    if (!data || data.length === 0) {
-      c.innerHTML = `<div style="font-size:11px;color:var(--sepia);padding:4px 0;line-height:1.7;">
-        まだ地図がありません。<br>下のリンクから作ってみましょう！</div>`;
-      return;
-    }
-    document.getElementById('community-count').textContent = `${data.length}件`;
-    data.forEach(def => {
-      const el = document.createElement('div');
-      el.className = 'map-card';
-      el.dataset.id = def.id;
-      const thumb = def.thumbnail_url
-        ? `<img src="${def.thumbnail_url}" alt="${def.name}">`
-        : `<span class="map-card-thumb-emoji">🗺</span>`;
-      const created = new Date(def.created_at);
-      const isNew = Date.now() - created < 7*24*60*60*1000;
-      el.innerHTML = `
-        <div class="map-card-thumb">${thumb}</div>
-        <div class="map-card-body">
-          <div class="map-card-name">${def.name}</div>
-          <div class="map-card-era">${def.era || ''}</div>
-          <div class="map-card-badges">
-            ${def.price===0 ? '<span class="badge badge-free">Free</span>' : `<span class="badge badge-vector">¥${def.price}</span>`}
-            ${isNew ? '<span class="badge badge-new">New</span>' : ''}
-          </div>
-        </div>
-        <div class="map-card-actions">
-          <button class="card-action-btn btn-view" onclick="openCommunityModal(event,'${def.id}')">詳細</button>
-        </div>`;
-      el.addEventListener('click', () => { loadMap(def); togglePanel(false); });
-      c.appendChild(el);
-    });
+    S.allMaps = data || [];
+    buildChips(S.allMaps);
+    buildCards(S.allMaps, S.currentCat);
   } catch(e) {
-    c.innerHTML = `<div style="font-size:11px;color:rgba(231,76,60,.8);padding:4px;">接続エラー</div>`;
+    document.getElementById('cards-std').innerHTML =
+      `<div class="empty-msg">読み込みエラー<br>${e.message}</div>`;
   }
 }
 
 // ============================================================
-// モーダル（ベクター地図）
+// シートの開閉（3段階スナップ）
 // ============================================================
-function openModal(e, mapId) {
-  e.stopPropagation();
-  const def = VECTOR_MAPS.find(m => m.id === mapId);
-  if (!def) return;
+const SHEET_HEIGHTS = {min:'28px', mid:'200px', max:'68vh'};
 
-  document.getElementById('modal-title').textContent = def.name;
-  document.getElementById('modal-thumb').innerHTML =
-    def.thumbnail ? `<img src="${def.thumbnail}" alt="${def.name}">` : '';
-
-  document.getElementById('modal-meta').innerHTML = `
-    <div class="meta-row"><span class="meta-key">時代</span><span class="meta-val">${def.era}</span></div>
-    <div class="meta-row"><span class="meta-key">地域</span><span class="meta-val">${def.tags?.join(' / ') || '—'}</span></div>
-    <div class="meta-row"><span class="meta-key">レイヤー</span><span class="meta-val">${def.layers?.join('・') || '—'}</span></div>
-    <div class="meta-row"><span class="meta-key">価格</span><span class="meta-val" style="color:var(--success);">無料</span></div>`;
-
-  document.getElementById('modal-desc').textContent = def.description;
-
-  document.getElementById('modal-actions').innerHTML = `
-    <a class="modal-btn modal-btn-primary" href="${def.view_url}" target="_blank">
-      🗺 ベクター地図を開く
-    </a>
-    <a class="modal-btn modal-btn-secondary" href="${def.download_url}" download="${def.name}.html">
-      ⬇️ ダウンロード
-    </a>`;
-
-  document.getElementById('modal').classList.add('open');
-  togglePanel(false);
+function openSheet(state) {
+  S.sheetState = state;
+  const el = document.getElementById('sheet');
+  el.style.height = SHEET_HEIGHTS[state];
+}
+function closeSheet() { openSheet('mid'); }
+function toggleSheet() {
+  if (S.sheetState==='min') openSheet('mid');
+  else if (S.sheetState==='mid') openSheet('max');
+  else openSheet('min');
 }
 
-function openCommunityModal(e, mapId) {
-  e.stopPropagation();
-  showToast('詳細情報を準備中...');
+// ============================================================
+// タイムスワイプ（左右スワイプで過去↔現在）
+// ============================================================
+function initSwipe() {
+  const mapEl = document.getElementById('map');
+  let startX = null, startY = null;
+
+  const onStart = e => {
+    if (S.sheetState !== 'min') return;
+    startX = (e.touches?.[0]||e).clientX;
+    startY = (e.touches?.[0]||e).clientY;
+  };
+  const onEnd = e => {
+    if (startX===null) return;
+    const dx = (e.changedTouches?.[0]||e).clientX - startX;
+    const dy = (e.changedTouches?.[0]||e).clientY - startY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (!S.activeDef) { startX=null; return; }
+      S.swipeOverlay = S.swipeOverlay===0 ? 1 : 0;
+      const hint = document.getElementById('swipe-hint');
+      hint.textContent = S.swipeOverlay===0
+        ? `← ${S.activeDef.era}` : '← 現代地図';
+      hint.classList.add('show');
+      setTimeout(()=>hint.classList.remove('show'), 1800);
+
+      // フェードで切替
+      if (S.overlay) {
+        S.overlay.setOpacity(S.swipeOverlay===0 ? S.opacity : 0);
+      }
+      Object.values(S.vectorGroups).forEach(g=>{
+        g.eachLayer(l=>l.setStyle&&l.setStyle({opacity:S.swipeOverlay===0?S.opacity:0,fillOpacity:S.swipeOverlay===0?.8:0}));
+      });
+    }
+    startX = null;
+  };
+
+  mapEl.addEventListener('touchstart', onStart, {passive:true});
+  mapEl.addEventListener('touchend',   onEnd,   {passive:true});
+}
+
+// ============================================================
+// オーバーレイをクリア
+// ============================================================
+function clearOverlay() {
+  if (S.overlay) { S.map.removeLayer(S.overlay); S.overlay=null; }
+  Object.values(S.vectorGroups).forEach(g=>S.map.removeLayer(g));
+  S.vectorGroups = {};
+  document.getElementById('layer-pills').innerHTML = '';
+  document.getElementById('ctrl-name').textContent = '地図を選んでください';
+  document.getElementById('ctrl-era').textContent  = '';
+  document.getElementById('time-bar').classList.remove('visible');
+  S.activeMapId = null; S.activeDef = null;
 }
 
 // ============================================================
 // 不透明度
 // ============================================================
-function initSlider() {
-  const slider = document.getElementById('opacity-slider');
-  slider.addEventListener('input', () => {
-    const v = parseInt(slider.value);
-    slider.style.setProperty('--val', v+'%');
+function initOpacitySlider() {
+  const sl = document.getElementById('opacity-slider');
+  sl.addEventListener('input', ()=>{
+    const v = parseInt(sl.value);
+    sl.style.setProperty('--p', v+'%');
     document.getElementById('opacity-val').textContent = v+'%';
     S.opacity = v/100;
     if (S.overlay) S.overlay.setOpacity(S.opacity);
+    Object.values(S.vectorGroups).forEach(g=>{
+      g.eachLayer(l=>l.setStyle&&l.setStyle({opacity:S.opacity,fillOpacity:S.opacity*.8}));
+    });
   });
 }
 
@@ -648,26 +795,26 @@ function initSlider() {
 // GPS
 // ============================================================
 function startGPS() {
-  const btn = document.getElementById('gps-btn');
+  const btn = document.getElementById('btn-gps');
   btn.classList.add('locating');
-  const fallback = () => { placeMarker(35.6812,139.7671); showToast('デモ位置を表示'); };
-  if (!navigator.geolocation) { btn.classList.remove('locating'); fallback(); return; }
-  navigator.geolocation.getCurrentPosition(pos => {
+  const fb = ()=>{ placeMarker(35.6812,139.7671); showToast('デモ位置を表示'); };
+  if (!navigator.geolocation) { btn.style.opacity='.4'; fb(); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
     btn.classList.remove('locating');
     placeMarker(pos.coords.latitude, pos.coords.longitude);
-    S.map.flyTo([pos.coords.latitude, pos.coords.longitude], 16, {duration:1.5});
+    S.map.flyTo([pos.coords.latitude,pos.coords.longitude],16,{duration:1.5});
     showToast('現在地を表示中');
-  }, () => { btn.classList.remove('locating'); fallback(); }, {enableHighAccuracy:true,timeout:8000});
+  }, ()=>{ btn.classList.remove('locating'); fb(); },{enableHighAccuracy:true,timeout:8000});
   if (S.watchId) navigator.geolocation.clearWatch(S.watchId);
   S.watchId = navigator.geolocation.watchPosition(
-    pos => placeMarker(pos.coords.latitude, pos.coords.longitude));
+    pos=>placeMarker(pos.coords.latitude,pos.coords.longitude));
 }
 
-function placeMarker(lat, lng) {
-  const icon = L.divIcon({ className:'',
+function placeMarker(lat,lng) {
+  const icon = L.divIcon({className:'',
     html:`<div style="position:relative;width:16px;height:16px;">
-            <div class="gps-dot"></div><div class="gps-ring"></div></div>`,
-    iconSize:[32,32], iconAnchor:[16,16] });
+      <div class="gps-dot"></div><div class="gps-ring"></div></div>`,
+    iconSize:[32,32],iconAnchor:[16,16]});
   if (S.gpsMarker) S.gpsMarker.setLatLng([lat,lng]);
   else S.gpsMarker = L.marker([lat,lng],{icon,zIndexOffset:9999}).addTo(S.map);
 }
@@ -679,58 +826,97 @@ function initCompass() {
   const needle = document.getElementById('compass-needle');
   const h = e => needle.style.transform =
     `rotate(${e.webkitCompassHeading!=null?e.webkitCompassHeading:360-(e.alpha??0)}deg)`;
-  if (typeof DeviceOrientationEvent !== 'undefined') {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function')
-      document.getElementById('compass').addEventListener('click', () =>
+  if (typeof DeviceOrientationEvent!=='undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission==='function')
+      document.getElementById('compass').addEventListener('click',()=>
         DeviceOrientationEvent.requestPermission().then(r=>r==='granted'&&window.addEventListener('deviceorientation',h)));
-    else window.addEventListener('deviceorientation', h);
+    else window.addEventListener('deviceorientation',h);
   }
 }
 
 // ============================================================
-// パネル・モーダル・トースト
+// カテゴリタブ
 // ============================================================
-function togglePanel(force) {
-  const p = document.getElementById('map-selector');
-  p.classList.toggle('open', force!==undefined ? force : !p.classList.contains('open'));
+function initCatTabs() {
+  document.getElementById('cat-tabs').addEventListener('click', e=>{
+    const tab = e.target.closest('.cat-tab');
+    if (!tab) return;
+    document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    S.currentCat = tab.dataset.cat;
+    buildCards(S.allMaps, S.currentCat);
+  });
 }
+
+// ============================================================
+// トースト
+// ============================================================
 let _tt;
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(_tt); _tt = setTimeout(()=>t.classList.remove('show'), 3000);
+  clearTimeout(_tt); _tt = setTimeout(()=>t.classList.remove('show'),2800);
 }
 
 // ============================================================
-// 起動
+// シートスワイプ（上下）
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-  initMap();
-  buildVectorCards();
-  buildGSICards();
-  initSlider();
-  initCompass();
-  loadCommunityMaps();
+function initSheetGesture() {
+  const handle = document.getElementById('sheet-handle');
+  let sy=null;
+  handle.addEventListener('touchstart',e=>{sy=(e.touches[0]).clientY;},{passive:true});
+  handle.addEventListener('touchend',e=>{
+    if (sy===null) return;
+    const dy = sy - e.changedTouches[0].clientY;
+    if (dy>30) openSheet(S.sheetState==='min'?'mid':'max');
+    else if (dy<-30) openSheet(S.sheetState==='max'?'mid':'min');
+    sy=null;
+  },{passive:true});
+  handle.addEventListener('click', toggleSheet);
+}
 
-  document.getElementById('start-btn').addEventListener('click', () => {
+// ============================================================
+// BOOT
+// ============================================================
+document.addEventListener('DOMContentLoaded',()=>{
+  initMap();
+  initOpacitySlider();
+  initCompass();
+  initSwipe();
+  initSheetGesture();
+  initCatTabs();
+  fetchMaps();
+
+  document.getElementById('btn-start').addEventListener('click',()=>{
     document.getElementById('splash').classList.add('hidden');
-    setTimeout(() => loadMap(VECTOR_MAPS[0]), 600);
+    openSheet('mid');
+    // 最初の地図を自動ロード（川越）
+    setTimeout(()=>{
+      if (S.allMaps.length) {
+        const kawagoe = S.allMaps.find(m=>m.id==='standard-kawagoe-edo');
+        if (kawagoe) loadMap(kawagoe);
+      }
+    }, 800);
   });
 
-  document.getElementById('selector-handle').addEventListener('click', () => togglePanel());
-  document.getElementById('gps-btn').addEventListener('click', startGPS);
-  document.getElementById('north-btn').addEventListener('click', () => {
-    document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
+  document.getElementById('btn-gps').addEventListener('click',startGPS);
+  document.getElementById('btn-north').addEventListener('click',()=>{
+    document.getElementById('compass-needle').style.transform='rotate(0deg)';
     showToast('北向きにリセット');
   });
-  document.getElementById('modal-close').addEventListener('click', () =>
-    document.getElementById('modal').classList.remove('open'));
-  document.getElementById('modal').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('open');
+
+  // 地図タップでシートを閉じる
+  document.getElementById('map').addEventListener('click',()=>{
+    if (S.sheetState!=='min') openSheet('min');
   });
-  document.getElementById('map').addEventListener('click', () => {
-    if (document.getElementById('map-selector').classList.contains('open')) togglePanel(false);
-  });
+
+  // スワイプヒントを最初に表示
+  setTimeout(()=>{
+    const h = document.getElementById('swipe-hint');
+    h.textContent='← 左右スワイプで過去↔現在を切替 →';
+    h.classList.add('show');
+    setTimeout(()=>h.classList.remove('show'),3000);
+  }, 3000);
 });
 </script>
 </body>
