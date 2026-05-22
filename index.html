@@ -346,9 +346,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       <div class="cat-tabs" id="cat-tabs">
         <button class="cat-tab active" data-cat="all">すべて</button>
         <button class="cat-tab" data-cat="historical">🏯 歴史</button>
+        <button class="cat-tab" data-cat="story">📖 人物・物語</button>
         <button class="cat-tab" data-cat="aerial">✈️ 空中写真</button>
-        <button class="cat-tab" data-cat="fiction">📺 フィクション</button>
-        <button class="cat-tab" data-cat="original">🐉 創作</button>
+        <button class="cat-tab" data-cat="fictional">🐉 架空・創作</button>
         <button class="cat-tab" data-cat="themed">🌸 テーマ</button>
       </div>
 
@@ -420,7 +420,52 @@ const KAWAGOE_GEOJSON = {
   ]
 };
 
-// レイヤースタイル定義
+// 坂本龍馬ゆかりの地 GeoJSON
+const RYOMA_GEOJSON = {
+  type:'FeatureCollection',
+  features:[
+    {type:'Feature',properties:{name:'寺田屋',layer:'places',type:'史跡',
+      description:'文久2年・慶応2年の事件の舞台。龍馬とお龍が宿泊した旅籠。',
+      now:'現在も旅館として営業。内部見学可（有料）。',era:'幕末 1862〜1866年',importance:'high'},
+      geometry:{type:'Point',coordinates:[135.7558,34.9301]}},
+    {type:'Feature',properties:{name:'近江屋跡',layer:'places',type:'事件地',
+      description:'慶応3年（1867年）11月15日、龍馬・中岡慎太郎が暗殺された場所。醤油商の2階。',
+      now:'現在は石碑のみ。ビルが建っている。河原町通沿い。',era:'幕末 1867年',importance:'high'},
+      geometry:{type:'Point',coordinates:[135.7685,35.0058]}},
+    {type:'Feature',properties:{name:'酢屋',layer:'places',type:'史跡',
+      description:'海援隊京都本部が置かれた材木商。龍馬の活動拠点。',
+      now:'現在も「酢屋」として営業（木工芸品店）。2階はギャラリーとして公開。',era:'幕末 1867年',importance:'medium'},
+      geometry:{type:'Point',coordinates:[135.7693,35.0090]}},
+    {type:'Feature',properties:{name:'霊山護国神社（龍馬の墓）',layer:'places',type:'墓所',
+      description:'坂本龍馬・中岡慎太郎が眠る神社。東山の中腹。',
+      now:'参拝可。隣接する霊山歴史館に龍馬関連資料多数。',era:'明治元年（1868年）創建',importance:'high'},
+      geometry:{type:'Point',coordinates:[135.7833,35.0014]}},
+    {type:'Feature',properties:{name:'池田屋跡',layer:'places',type:'事件地',
+      description:'元治元年（1864年）の池田屋事件の現場。新選組が尊攘派志士を急襲。',
+      now:'現在はパチンコ店。入口に事件説明板あり。',era:'幕末 1864年',importance:'medium'},
+      geometry:{type:'Point',coordinates:[135.7700,35.0063]}},
+    {type:'Feature',properties:{name:'薩摩藩邸跡（伏見）',layer:'places',type:'史跡',
+      description:'慶応2年（1866年）、薩長同盟が締結された薩摩藩伏見屋敷跡。',
+      now:'現在は石碑のみ。月桂冠大倉記念館の近く。',era:'幕末 1866年',importance:'high'},
+      geometry:{type:'Point',coordinates:[135.7563,34.9338]}},
+    {type:'Feature',properties:{name:'円山公園（龍馬・慎太郎像）',layer:'places',type:'銅像',
+      description:'坂本龍馬と中岡慎太郎が並び立つ銅像。幕末の志士のシンボル。',
+      now:'現在も円山公園として親しまれている。桜の名所。',era:'1934年建立',importance:'medium'},
+      geometry:{type:'Point',coordinates:[135.7808,35.0034]}},
+    {type:'Feature',properties:{name:'三条大橋（制札事件跡）',layer:'places',type:'史跡',
+      description:'慶応3年、陸援隊・海援隊が高札を引き倒した倒幕行動の現場。',
+      now:'現在も三条大橋として現役。橋のたもとに弥次喜多像。',era:'幕末 1867年',importance:'low'},
+      geometry:{type:'Point',coordinates:[135.7726,35.0084]}},
+    {type:'Feature',properties:{name:'伏見・寺田屋周辺ルート',layer:'roads',type:'史跡ルート',
+      description:'龍馬とお龍が伏見で過ごした頃の町並み。酒蔵が立ち並ぶ風情ある街並みが残る。',
+      era:'幕末 1866年'},
+      geometry:{type:'LineString',coordinates:[[135.7558,34.9301],[135.7563,34.9320],[135.7570,34.9338],[135.7563,34.9338]]}},
+    {type:'Feature',properties:{name:'龍馬の京都活動ルート',layer:'roads',type:'活動ルート',
+      description:'龍馬が京都市内で活動した主要ルート。河原町〜木屋町界隈を中心に志士たちが集った。',
+      era:'幕末 1867年'},
+      geometry:{type:'LineString',coordinates:[[135.7685,35.0058],[135.7693,35.0080],[135.7700,35.0063],[135.7726,35.0084]]}}
+  ]
+};
 const LAYER_STYLES = {
   roads:{
     '主要街道':{color:'#d4a017',weight:4,opacity:.9},
@@ -434,11 +479,15 @@ const LAYER_STYLES = {
     default:{color:'#888',weight:1.5,fillColor:'#555',fillOpacity:.1}
   },
   places:{
-    '城郭':{radius:9,color:'#e74c3c',fillColor:'#c0392b',fillOpacity:.9,weight:2},
-    '門':  {radius:7,color:'#e67e22',fillColor:'#d35400',fillOpacity:.9,weight:2},
-    '辻':  {radius:6,color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
-    '河川':{radius:6,color:'#3498db',fillColor:'#5dade2',fillOpacity:.8,weight:2},
-    default:{radius:5,color:'#888',fillColor:'#aaa',fillOpacity:.7,weight:1.5}
+    '城郭':    {radius:9,color:'#e74c3c',fillColor:'#c0392b',fillOpacity:.9,weight:2},
+    '門':      {radius:7,color:'#e67e22',fillColor:'#d35400',fillOpacity:.9,weight:2},
+    '辻':      {radius:6,color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
+    '河川':    {radius:6,color:'#3498db',fillColor:'#5dade2',fillOpacity:.8,weight:2},
+    '史跡':    {radius:8,color:'#8e44ad',fillColor:'#9b59b6',fillOpacity:.9,weight:2},
+    '事件地':  {radius:9,color:'#c0392b',fillColor:'#e74c3c',fillOpacity:.9,weight:2.5},
+    '墓所':    {radius:7,color:'#7f8c8d',fillColor:'#95a5a6',fillOpacity:.9,weight:2},
+    '銅像':    {radius:6,color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
+    default:   {radius:5,color:'#888',   fillColor:'#aaa',   fillOpacity:.7,weight:1.5}
   }
 };
 
@@ -503,6 +552,10 @@ function loadMap(def) {
   if (def.id === 'standard-kawagoe-edo') {
     loadVectorMap(KAWAGOE_GEOJSON, def);
     showToast('川越城下絵図を表示中');
+  // 龍馬ベクター地図
+  } else if (def.id === 'standard-ryoma-kyoto') {
+    loadVectorMap(RYOMA_GEOJSON, def);
+    showToast('坂本龍馬ゆかりの地を表示中');
   } else if (def.tiles_url) {
     // タイル地図
     S.overlay = L.tileLayer(def.tiles_url, {
@@ -568,7 +621,7 @@ function makePopup(p) {
 // ============================================================
 // レイヤーピル
 // ============================================================
-const LAYER_LABELS = {roads:'道路',rivers:'河川',boundaries:'城郭',places:'地名'};
+const LAYER_LABELS = {roads:'道路・ルート',rivers:'河川',boundaries:'城郭・境界',places:'史跡・地名'};
 function buildLayerPills(layers) {
   const el = document.getElementById('layer-pills');
   el.innerHTML = '';
@@ -637,8 +690,8 @@ function mkChip(def, locked) {
 // 地図カード（ブラウザ）
 // ============================================================
 function buildCards(maps, cat) {
-  const std = maps.filter(m=>m.tier==='standard'&&(cat==='all'||m.category===cat));
-  const com = maps.filter(m=>m.tier!=='standard'&&(cat==='all'||m.category===cat));
+  const std = maps.filter(m=>m.tier==='standard'&&(cat==='all'||m.category===cat||((cat==='fictional')&&['fiction','original','fictional'].includes(m.category))));
+  const com = maps.filter(m=>m.tier!=='standard'&&(cat==='all'||m.category===cat||((cat==='fictional')&&['fiction','original','fictional'].includes(m.category))));
 
   buildCardSection('cards-std', std);
   buildCardSection('cards-com', com);
