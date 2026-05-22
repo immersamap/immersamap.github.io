@@ -82,6 +82,7 @@ html, body {
   padding:max(10px,env(safe-area-inset-top)) 12px 8px;
   pointer-events:none;
 }
+/* スマホ時は右側にコンパス分のスペース確保 */
 .search-box {
   display:flex; align-items:center; gap:8px;
   background:var(--surface); backdrop-filter:blur(12px);
@@ -486,12 +487,12 @@ input[type=range]::-webkit-slider-thumb {
 @media (max-width:767px) {
   #sidebar { display:none !important; }
   #map { left:0; }
-  /* スマホ：検索バーは上部オーバーレイ */
-  #search-overlay { left:0; }
+  /* スマホ：検索バーは右端をコンパス分(52px)空ける */
+  #search-overlay { left:0; right:60px; }
   /* コンパスは右上（検索バーの下） */
-  #compass { top:max(64px,calc(env(safe-area-inset-top)+54px)); right:12px; }
-  /* バッジは左上（コンパスと重ならない） */
-  #map-badge { top:max(64px,calc(env(safe-area-inset-top)+54px)); left:12px; }
+  #compass { top:max(72px,calc(env(safe-area-inset-top)+62px)); right:12px; width:40px; height:40px; }
+  /* バッジは検索バーの下・左端 */
+  #map-badge { top:max(72px,calc(env(safe-area-inset-top)+62px)); left:12px; }
   /* 現在地ボタンはパネル高さ分上にオフセット */
   #loc-btn { bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 14px); }
   #panel { display:flex; flex-direction:column; height:var(--panel-h); }
@@ -857,7 +858,7 @@ function loadVectorLayers(gj) {
         const st = RSTYLE.places[p.type] || RSTYLE.places.default;
         L.circleMarker(ll, st)
           .bindPopup(mkPopup(p), {className:'im-popup'})
-          .bindTooltip(p.name, {permanent:true, direction:'top',
+          .bindTooltip(p.name, {permanent:false, direction:'top',
             className:'', offset:[0,-8]})
           .addTo(g);
         break;
