@@ -239,6 +239,7 @@ input[type=range]::-webkit-slider-thumb {
   transition:all .2s;
 }
 .mhud-btn:active { transform:scale(.92); }
+.mhud-btn.menu-open { background:rgba(212,160,23,.25); border-color:var(--gold); }
 
 #sheet {
   display:none; /* PC では非表示 */
@@ -249,6 +250,7 @@ input[type=range]::-webkit-slider-thumb {
   transition:height .35s cubic-bezier(.16,1,.3,1);
   height:28px;
   padding-bottom:env(safe-area-inset-bottom,0px);
+  transition:height .35s cubic-bezier(.16,1,.3,1);
 }
 .sheet-handle {
   height:28px; display:flex; align-items:center;
@@ -428,8 +430,17 @@ input[type=range]::-webkit-slider-thumb {
 @keyframes spin { to { transform:rotate(360deg); } }
 
 /* Leaflet デフォルトUIを非表示 */
-.leaflet-control-zoom,
-.leaflet-control-attribution { display:none !important; }
+.leaflet-control-zoom { display:none !important; }
+.leaflet-control-attribution {
+  background:rgba(18,12,4,0.75) !important;
+  color:rgba(242,232,208,0.7) !important;
+  font-size:10px !important;
+  backdrop-filter:blur(4px);
+  border-radius:3px 0 0 0 !important;
+}
+.leaflet-control-attribution a {
+  color:rgba(212,160,23,0.8) !important;
+}
 
 /* ============================================================
    レスポンシブ切替
@@ -528,6 +539,7 @@ input[type=range]::-webkit-slider-thumb {
   <div class="mhud-right">
     <button class="mhud-btn" id="sp-gps-btn"   aria-label="現在地">📍</button>
     <button class="mhud-btn" id="sp-north-btn" aria-label="北向きに戻す">🔺</button>
+    <button class="mhud-btn" id="sp-menu-btn"  aria-label="地図を選ぶ">🗺</button>
   </div>
 </div>
 
@@ -719,12 +731,14 @@ const S = {
 function initMap() {
   S.map = L.map('map', {
     center:[35.6812,139.7671], zoom:14,
-    zoomControl:false, attributionControl:false, preferCanvas:true,
+    zoomControl:false, attributionControl:true, preferCanvas:true,
   });
+  // ライセンス表記（地理院タイル利用規約に基づく必須表記）
+  S.map.attributionControl.setPrefix('');
   /* ベース地図: OpenStreetMap（これが常に土台） */
   S.base = L.tileLayer(
     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { maxZoom:19, zIndex:1, attribution:'© OpenStreetMap contributors' }
+    { maxZoom:19, zIndex:1, attribution:'<a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap contributors</a>' }
   ).addTo(S.map);
 
   // ローディングは地図タイルが1枚でも読み込まれたら消す
@@ -770,12 +784,15 @@ function loadMap(def) {
 
   } else if (def.tiles_url) {
     /* タイル画像 → OSMの上に重ねる（zIndex:2） */
+    const attr = def.is_standard && def.category && def.category.includes('aerial')
+      ? '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
+      : (def.attribution || '');
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity,
       zIndex:  2,
       minZoom: def.zoom_min || 2,
       maxZoom: def.zoom_max || 18,
-      attribution: def.attribution || '',
+      attribution: attr,
     }).addTo(S.map);
     buildLayerPills([]);
     S.map.flyTo([def.center_lat, def.center_lng],
@@ -914,7 +931,7 @@ async function fetchMaps() {
       .from('maps').select('*')
       .eq('is_public', true)
       .order('tier')
-      .order('era', { ascending:false })
+      .order('sort_order', { ascending:true, nullsFirst:false })
       .order('created_at', { ascending:false });
 
     if (error) throw error;
@@ -1139,9 +1156,6 @@ function initSheetGesture() {
     sy = null;
   }, { passive:true });
   handle.addEventListener('click', toggleSheet);
-  document.getElementById('map').addEventListener('click', () => {
-    if (S.sheetH !== 'min') setSheet('min');
-  });
 }
 
 /* ── トースト ───────────────────────────────────────── */
@@ -1194,6 +1208,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sp-north-btn').addEventListener('click', () => {
     document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
     showToast('北向きにリセット');
+  });
+  // スマホ：メニューボタンでシート開閉
+  document.getElementById('sp-menu-btn').addEventListener('click', () => {
+    const btn = document.getElementById('sp-menu-btn');
+    if (S.sheetH === 'min') {
+      setSheet('mid');
+      btn.classList.add('menu-open');
+    } else {
+      setSheet('min');
+      btn.classList.remove('menu-open');
+    }
+  });
+  // シートが閉じたらボタンのactiveを解除
+  document.getElementById('map').addEventListener('click', () => {
+    if (S.sheetH !== 'min') {
+      setSheet('min');
+      document.getElementById('sp-menu-btn')?.classList.remove('menu-open');
+    }
   });
 
   /* PC カテゴリタブ */
