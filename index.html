@@ -725,7 +725,12 @@ function initMap() {
     { maxZoom:19, zIndex:1, attribution:'© OpenStreetMap contributors' }
   ).addTo(S.map);
 
-  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
+  // ローディングは地図タイルが1枚でも読み込まれたら消す
+  S.base.once('tileload', () => {
+    document.getElementById('loading').classList.add('hidden');
+  });
+  // フォールバック: 2秒後に強制的に消す
+  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 2000);
 }
 
 /* ── 地図を選択・表示 ────────────────────────────────── */
@@ -902,19 +907,34 @@ function initSliders() {
 /* ── Supabaseからデータ取得 ──────────────────────────── */
 async function fetchMaps() {
   try {
+    // Supabase v2 新しいAPIキー形式に対応
     const { data, error } = await db
       .from('maps').select('*')
       .eq('is_public', true)
-      .order('tier').order('era', { ascending:false }).order('created_at', { ascending:false });
+      .order('tier')
+      .order('created_at', { ascending:false });
+
     if (error) throw error;
+
     S.allMaps = data || [];
+
+    if (S.allMaps.length === 0) {
+      // DBにデータがない場合でも画面が動くようにフォールバック
+      showToast('地図データが見つかりません。SQLを実行してください。');
+    }
+
     buildSidebar(S.allMaps, 'all');
     buildChips(S.allMaps);
     buildBrowserCards(S.allMaps, 'all');
+
   } catch(e) {
-    document.getElementById('sb-list').innerHTML =
-      `<div style="padding:16px;font-size:11px;color:rgba(231,76,60,.7);">
-        読み込みエラー<br>${e.message}</div>`;
+    console.error('fetchMaps error:', e);
+    // エラーでもスプラッシュは閉じられるようにallMapsに空配列を設定済み
+    const errMsg = `<div style="padding:16px;font-size:11px;color:rgba(231,76,60,.8);line-height:1.8;">
+      データ読み込みエラー<br>${e.message}<br>
+      <small>Supabaseの設定を確認してください</small></div>`;
+    document.getElementById('sb-list').innerHTML = errMsg;
+    showToast('接続エラー — ページを再読み込みしてください');
   }
 }
 
@@ -1141,13 +1161,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('splash').classList.add('hidden');
     setSheet('mid');
-    setTimeout(() => {
+
+    // allMapsがすでに取得済みならすぐloadMap、まだなら待機
+    const tryLoad = () => {
       if (S.allMaps.length) {
         const first = S.allMaps.find(m => m.id === 'standard-ryoma-kyoto')
           || S.allMaps[0];
         if (first) loadMap(first);
+      } else {
+        // まだ取得中なら500ms後に再試行（最大5回）
+        tryLoad._count = (tryLoad._count || 0) + 1;
+        if (tryLoad._count < 10) setTimeout(tryLoad, 500);
       }
-    }, 700);
+    };
+    setTimeout(tryLoad, 300);
   });
 
   /* PC ボタン */
