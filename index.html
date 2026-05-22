@@ -3,973 +3,1206 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ImmersaMap</title>
+<title>ImmersaMap — 時を超える地図体験</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   変数・リセット
+   ============================================================ */
 :root {
-  --ink:#1a1008; --ink2:#2a1e0e;
+  --ink:#1a1008; --ink2:#221408;
   --parchment:#f2e8d0; --parchment2:#e8d8b0;
   --sepia:#8b6914; --gold:#d4a017; --gold-l:#f0c040;
   --rust:#c0392b; --blue:#3498db;
-  --surface:rgba(18,12,4,0.90);
-  --border:rgba(212,160,23,0.30);
-  --glow:rgba(212,160,23,0.12);
-  --sheet-min:28px; --sheet-mid:200px; --sheet-max:68vh;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --surface:rgba(22,14,4,0.93);
+  --border:rgba(212,160,23,0.28);
+  --sidebar-w:280px;
 }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{width:100%;height:100%;overflow:hidden;
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent; }
+html, body { width:100%; height:100%; overflow:hidden;
   font-family:'Noto Sans JP',sans-serif;
-  background:var(--ink);color:var(--parchment);}
+  background:var(--ink); color:var(--parchment); }
 
-/* ── MAP ── */
-#map{position:fixed;inset:0;z-index:1;}
-
-/* ── GRAIN ── */
-#grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:200px;}
-
-/* ── SPLASH ── */
-#splash{position:fixed;inset:0;z-index:100;background:var(--ink);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  transition:opacity .8s,visibility .8s;}
-#splash.hidden{opacity:0;visibility:hidden;pointer-events:none;}
-.splash-logo{font-family:'Cinzel',serif;font-size:clamp(28px,8vw,42px);
-  letter-spacing:.14em;color:var(--gold-l);margin-bottom:6px;}
-.splash-sub{font-size:12px;color:var(--sepia);letter-spacing:.25em;margin-bottom:48px;}
-.splash-ring{width:72px;height:72px;border-radius:50%;border:1.5px solid var(--gold);
-  display:flex;align-items:center;justify-content:center;font-size:28px;
-  margin-bottom:28px;animation:pulseRing 3s ease-in-out infinite;}
-@keyframes pulseRing{
-  0%,100%{box-shadow:0 0 0 0 rgba(212,160,23,.3);}
-  50%{box-shadow:0 0 0 16px rgba(212,160,23,0);}
+/* ============================================================
+   地図（常にフルスクリーン・最背面）
+   OSM が常にベースとして表示される
+   ============================================================ */
+#map {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
 }
-.splash-start{padding:13px 42px;border:1.5px solid var(--gold);border-radius:2px;
-  background:transparent;color:var(--gold-l);font-family:'Cinzel',serif;
-  font-size:13px;letter-spacing:.2em;cursor:pointer;transition:background .3s;
-  text-transform:uppercase;}
-.splash-start:hover{background:rgba(212,160,23,.1);}
-.splash-creator{margin-top:18px;font-size:11px;color:var(--sepia);
-  text-decoration:none;letter-spacing:.1em;border-bottom:1px solid rgba(139,105,20,.25);
-  padding-bottom:1px;transition:color .2s;}
-.splash-creator:hover{color:var(--gold);}
 
-/* ── TOP HUD ── */
-#hud{position:fixed;top:0;left:0;right:0;z-index:20;
-  padding:max(14px,env(safe-area-inset-top)) 14px 10px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(to bottom,rgba(18,12,4,.92) 0%,transparent 100%);
-  pointer-events:none;}
-.hud-left{display:flex;flex-direction:column;gap:1px;}
-.hud-logo{font-family:'Cinzel',serif;font-size:15px;letter-spacing:.14em;color:var(--gold-l);}
-.hud-map-name{font-size:11px;color:var(--sepia);letter-spacing:.08em;
-  max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.hud-right{display:flex;gap:8px;}
-.hud-btn{width:40px;height:40px;border-radius:6px;border:1px solid var(--border);
-  background:var(--surface);backdrop-filter:blur(8px);
-  color:var(--parchment);font-size:17px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  pointer-events:all;transition:all .2s;}
-.hud-btn:active{transform:scale(.92);background:rgba(212,160,23,.15);}
+/* ============================================================
+   スプラッシュ
+   ============================================================ */
+#splash {
+  position:fixed; inset:0; z-index:200;
+  background:var(--ink);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  transition:opacity .8s ease, visibility .8s ease;
+}
+#splash.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+.splash-ring {
+  width:76px; height:76px; border-radius:50%;
+  border:1.5px solid var(--gold);
+  display:flex; align-items:center; justify-content:center;
+  font-size:30px; margin-bottom:22px;
+  animation:pulseRing 3s ease-in-out infinite;
+}
+@keyframes pulseRing {
+  0%,100% { box-shadow:0 0 0 0 rgba(212,160,23,.3); }
+  50%      { box-shadow:0 0 0 18px rgba(212,160,23,0); }
+}
+.splash-logo { font-family:'Cinzel',serif; font-size:clamp(28px,6vw,42px);
+  letter-spacing:.14em; color:var(--gold-l); margin-bottom:6px; }
+.splash-sub  { font-size:12px; color:var(--sepia); letter-spacing:.22em;
+  margin-bottom:44px; }
+.splash-btn  { padding:13px 44px; border:1.5px solid var(--gold); border-radius:2px;
+  background:transparent; color:var(--gold-l); font-family:'Cinzel',serif;
+  font-size:13px; letter-spacing:.2em; cursor:pointer; transition:background .3s;
+  text-transform:uppercase; }
+.splash-btn:hover { background:rgba(212,160,23,.1); }
+.splash-link { margin-top:18px; font-size:11px; color:var(--sepia);
+  text-decoration:none; border-bottom:1px solid rgba(139,105,20,.25);
+  padding-bottom:1px; letter-spacing:.1em; transition:color .2s; }
+.splash-link:hover { color:var(--gold); }
 
-/* ── COMPASS ── */
-#compass{position:fixed;top:max(62px,calc(env(safe-area-inset-top)+48px));
-  right:14px;z-index:20;width:46px;height:46px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;}
-.c-ring{position:absolute;inset:0;border-radius:50%;
-  border:1px solid rgba(212,160,23,.3);
-  background:var(--surface);backdrop-filter:blur(8px);}
-.c-needle{position:relative;z-index:1;width:0;height:0;
-  display:flex;flex-direction:column;align-items:center;transition:transform .25s;}
-.c-n{width:0;height:0;border-left:4px solid transparent;
-  border-right:4px solid transparent;border-bottom:13px solid var(--rust);}
-.c-s{width:0;height:0;border-left:4px solid transparent;
-  border-right:4px solid transparent;border-top:13px solid rgba(212,160,23,.4);}
-.c-label{position:absolute;top:3px;font-family:'Cinzel',serif;
-  font-size:7px;color:var(--rust);font-weight:600;}
+/* ============================================================
+   PC レイアウト：左サイドバー固定
+   ============================================================ */
+#sidebar {
+  position:fixed; top:0; left:0; bottom:0; z-index:20;
+  width:var(--sidebar-w);
+  background:var(--ink2);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  transition:transform .3s ease;
+}
 
-/* ── TIME SWIPE HINT ── */
-#swipe-hint{position:fixed;top:50%;left:50%;z-index:15;
-  transform:translate(-50%,-50%);
-  background:rgba(18,12,4,.82);border:1px solid var(--border);
-  border-radius:24px;padding:8px 18px;
-  font-size:11px;color:var(--parchment2);letter-spacing:.1em;
-  pointer-events:none;opacity:0;transition:opacity .4s;backdrop-filter:blur(8px);}
-#swipe-hint.show{opacity:1;}
+/* サイドバー上部ヘッダー */
+.sb-header {
+  padding:14px 16px 12px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.sb-logo { font-family:'Cinzel',serif; font-size:16px;
+  letter-spacing:.14em; color:var(--gold-l); }
+.sb-header-btns { display:flex; gap:6px; }
+.sb-icon-btn {
+  width:32px; height:32px; border-radius:5px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--parchment); font-size:15px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.sb-icon-btn:hover { background:rgba(212,160,23,.1); border-color:var(--gold); }
 
-/* ── TIME INDICATOR ── */
-#time-bar{position:fixed;top:max(62px,calc(env(safe-area-inset-top)+48px));
-  left:14px;z-index:20;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:6px;padding:6px 10px;backdrop-filter:blur(8px);
-  opacity:0;transform:translateX(-6px);transition:all .35s;}
-#time-bar.visible{opacity:1;transform:translateX(0);}
-.time-era{font-size:10px;color:var(--gold-l);font-family:'Cinzel',serif;letter-spacing:.1em;}
-.time-name{font-size:11px;color:var(--parchment);margin-top:1px;
-  max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* カテゴリタブ */
+.sb-cattabs {
+  display:flex; overflow-x:auto; scrollbar-width:none;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.sb-cattabs::-webkit-scrollbar { display:none; }
+.sb-cattab {
+  flex-shrink:0; padding:8px 12px; font-size:11px;
+  color:var(--sepia); background:transparent; border:none;
+  border-bottom:2px solid transparent; cursor:pointer;
+  white-space:nowrap; transition:all .2s;
+  font-family:'Noto Sans JP',sans-serif;
+}
+.sb-cattab.active { color:var(--gold-l); border-bottom-color:var(--gold); }
 
-/* ── BOTTOM SHEET ── */
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;
+/* 地図リスト */
+.sb-list {
+  flex:1; overflow-y:auto; padding:8px 0;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(212,160,23,.2) transparent;
+}
+.sb-tier-label {
+  font-size:9px; color:var(--sepia); letter-spacing:.18em;
+  text-transform:uppercase; padding:8px 16px 4px;
+}
+.sb-map-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 16px; cursor:pointer; transition:all .2s;
+  border-left:2px solid transparent;
+}
+.sb-map-item:hover { background:rgba(212,160,23,.06); }
+.sb-map-item.active {
+  background:rgba(212,160,23,.12);
+  border-left-color:var(--gold);
+}
+.sb-item-emoji { font-size:18px; flex-shrink:0; width:24px; text-align:center; }
+.sb-item-info  { flex:1; min-width:0; }
+.sb-item-name  { font-size:12px; color:var(--parchment);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-item-era   { font-size:10px; color:var(--sepia); margin-top:1px; }
+.sb-item-badge {
+  font-size:8px; padding:1px 6px; border-radius:3px; flex-shrink:0;
+  font-family:'Cinzel',serif;
+}
+.badge-std  { background:rgba(52,152,219,.14); color:#5dade2;
+  border:1px solid rgba(52,152,219,.25); }
+.badge-free { background:rgba(46,204,113,.12); color:#2ecc71;
+  border:1px solid rgba(46,204,113,.2); }
+.badge-paid { background:rgba(212,160,23,.12); color:var(--gold);
+  border:1px solid rgba(212,160,23,.22); }
+.badge-new  { background:rgba(231,76,60,.1); color:#e74c3c;
+  border:1px solid rgba(231,76,60,.2); }
+.sb-divider { border:none; border-top:1px solid rgba(212,160,23,.1);
+  margin:6px 16px; }
+
+/* コントロールパネル（サイドバー下部） */
+.sb-ctrl {
+  border-top:1px solid var(--border);
+  padding:12px 16px 14px;
+  flex-shrink:0;
+}
+.sb-ctrl-title {
+  font-size:10px; color:var(--sepia); letter-spacing:.14em;
+  text-transform:uppercase; margin-bottom:10px;
+}
+.sb-now-name { font-size:13px; color:var(--gold-l);
+  font-family:'Cinzel',serif; margin-bottom:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sb-now-era  { font-size:10px; color:var(--sepia); margin-bottom:10px; }
+
+/* スライダー */
+.ctrl-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.ctrl-label { font-size:10px; color:var(--sepia); white-space:nowrap; width:60px; }
+.ctrl-val   { font-size:11px; color:var(--gold); min-width:30px; text-align:right;
+  font-family:'Cinzel',serif; }
+input[type=range] {
+  -webkit-appearance:none; flex:1; height:3px;
+  background:linear-gradient(to right,
+    var(--gold) 0%, var(--gold) var(--p,80%),
+    rgba(212,160,23,.15) var(--p,80%));
+  border-radius:2px; outline:none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--gold); border:2px solid var(--ink); cursor:pointer;
+}
+
+/* レイヤーピル */
+.layer-pills { display:flex; gap:5px; flex-wrap:wrap; }
+.layer-pill {
+  padding:3px 9px; border-radius:20px; font-size:10px;
+  border:1px solid var(--border); color:var(--parchment2);
+  cursor:pointer; transition:all .2s; background:transparent;
+  font-family:'Noto Sans JP',sans-serif;
+}
+.layer-pill.on { background:rgba(212,160,23,.14); border-color:var(--gold);
+  color:var(--gold-l); }
+
+/* 地図作成リンク */
+.sb-create-link {
+  display:block; text-align:center; padding:10px;
+  border:1px dashed rgba(212,160,23,.2); border-radius:4px;
+  font-size:11px; color:var(--sepia); text-decoration:none;
+  margin:0 16px 14px; transition:all .2s; letter-spacing:.08em;
+}
+.sb-create-link:hover { border-color:var(--gold); color:var(--gold);
+  background:rgba(212,160,23,.05); }
+
+/* ============================================================
+   スマホ レイアウト：ボトムシート（モバイルのみ表示）
+   ============================================================ */
+#mobile-hud {
+  display:none; /* PC では非表示 */
+  position:fixed; top:0; left:0; right:0; z-index:20;
+  padding:max(12px,env(safe-area-inset-top)) 12px 10px;
+  background:linear-gradient(to bottom,rgba(18,12,4,.92),transparent);
+  pointer-events:none;
+  align-items:center; justify-content:space-between;
+}
+.mhud-logo { font-family:'Cinzel',serif; font-size:15px;
+  letter-spacing:.13em; color:var(--gold-l); }
+.mhud-mapname { font-size:10px; color:var(--sepia); margin-top:1px;
+  max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mhud-right { display:flex; gap:6px; pointer-events:all; }
+.mhud-btn {
+  width:38px; height:38px; border-radius:5px;
+  border:1px solid var(--border); background:var(--surface);
+  backdrop-filter:blur(8px); color:var(--parchment);
+  font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.mhud-btn:active { transform:scale(.92); }
+
+#sheet {
+  display:none; /* PC では非表示 */
+  position:fixed; left:0; right:0; bottom:0; z-index:30;
   background:var(--ink2);
   border-top:1px solid var(--border);
   border-radius:14px 14px 0 0;
   transition:height .35s cubic-bezier(.16,1,.3,1);
-  height:var(--sheet-min);
-  padding-bottom:var(--safe-bottom);}
-.sheet-handle{height:28px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;}
-.sheet-bar{width:36px;height:3px;border-radius:2px;background:rgba(212,160,23,.35);}
-.sheet-inner{height:calc(100% - 28px);overflow:hidden;display:flex;flex-direction:column;}
+  height:28px;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.sheet-handle {
+  height:28px; display:flex; align-items:center;
+  justify-content:center; cursor:pointer; flex-shrink:0;
+}
+.sheet-bar { width:36px; height:3px; border-radius:2px;
+  background:rgba(212,160,23,.3); }
+.sheet-inner { height:calc(100% - 28px); overflow:hidden;
+  display:flex; flex-direction:column; }
 
-/* 現在地図コントロール（sheet-mid時表示） */
-#ctrl-panel{padding:0 14px 10px;flex-shrink:0;
-  border-bottom:1px solid rgba(212,160,23,.1);}
-.ctrl-now{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.ctrl-now-name{font-size:13px;color:var(--gold-l);font-family:'Cinzel',serif;letter-spacing:.06em;}
-.ctrl-now-era{font-size:10px;color:var(--sepia);}
-.opacity-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.opacity-label{font-size:10px;color:var(--sepia);white-space:nowrap;}
-.opacity-val{font-size:11px;color:var(--gold);min-width:28px;text-align:right;
-  font-family:'Cinzel',serif;}
-input[type=range]{-webkit-appearance:none;flex:1;height:3px;
-  background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--p,80%),
-    rgba(212,160,23,.15) var(--p,80%));border-radius:2px;outline:none;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
-  border-radius:50%;background:var(--gold);border:2px solid var(--ink);cursor:pointer;}
-.layer-pills{display:flex;gap:6px;flex-wrap:wrap;}
-.layer-pill{padding:4px 10px;border-radius:20px;font-size:10px;border:1px solid var(--border);
-  color:var(--parchment2);cursor:pointer;transition:all .2s;background:transparent;
-  font-family:'Noto Sans JP',sans-serif;}
-.layer-pill.on{background:rgba(212,160,23,.15);border-color:var(--gold);color:var(--gold-l);}
+/* シート内コントロール */
+.sheet-ctrl { padding:0 14px 8px; flex-shrink:0;
+  border-bottom:1px solid rgba(212,160,23,.1); }
+.sheet-now { display:flex; justify-content:space-between;
+  align-items:baseline; margin-bottom:8px; }
+.sheet-now-name { font-size:12px; color:var(--gold-l);
+  font-family:'Cinzel',serif; }
+.sheet-now-era  { font-size:10px; color:var(--sepia); }
 
-/* 横スクロールチップ（sheet-mid時表示） */
-#chip-scroll{display:flex;gap:8px;padding:10px 14px;
-  overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
-#chip-scroll::-webkit-scrollbar{display:none;}
-.chip{flex-shrink:0;display:flex;align-items:center;gap:7px;
-  padding:6px 12px;border-radius:20px;border:1px solid var(--border);
-  background:rgba(212,160,23,.04);cursor:pointer;transition:all .25s;}
-.chip.active{background:rgba(212,160,23,.18);border-color:var(--gold);}
-.chip:active{transform:scale(.96);}
-.chip-emoji{font-size:14px;}
-.chip-info{display:flex;flex-direction:column;}
-.chip-name{font-size:11px;color:var(--parchment);white-space:nowrap;}
-.chip-era{font-size:9px;color:var(--sepia);white-space:nowrap;}
-.chip-lock{font-size:10px;color:var(--sepia);margin-left:2px;}
+/* 横スクロールチップ */
+#chip-scroll {
+  display:flex; gap:7px; padding:8px 14px;
+  overflow-x:auto; scrollbar-width:none; flex-shrink:0;
+}
+#chip-scroll::-webkit-scrollbar { display:none; }
+.chip {
+  flex-shrink:0; display:flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:20px;
+  border:1px solid var(--border); background:rgba(212,160,23,.03);
+  cursor:pointer; transition:all .22s;
+}
+.chip.active { background:rgba(212,160,23,.17); border-color:var(--gold); }
+.chip-emoji  { font-size:13px; }
+.chip-info   { display:flex; flex-direction:column; }
+.chip-name   { font-size:11px; color:var(--parchment); white-space:nowrap; }
+.chip-era    { font-size:9px;  color:var(--sepia); }
 
-/* 地図ブラウザ（sheet-max時表示） */
-#browser{flex:1;overflow-y:auto;padding:0 14px 14px;scrollbar-width:thin;
-  scrollbar-color:rgba(212,160,23,.2) transparent;}
-
-/* カテゴリタブ */
-.cat-tabs{display:flex;gap:0;border-bottom:1px solid rgba(212,160,23,.15);
-  margin-bottom:14px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
-.cat-tabs::-webkit-scrollbar{display:none;}
-.cat-tab{flex-shrink:0;padding:8px 14px;font-size:11px;color:var(--sepia);
-  border:none;background:transparent;cursor:pointer;transition:all .2s;
-  border-bottom:2px solid transparent;white-space:nowrap;
-  font-family:'Noto Sans JP',sans-serif;}
-.cat-tab.active{color:var(--gold-l);border-bottom-color:var(--gold);}
-
-/* ティアセクション */
-.tier-section{margin-bottom:18px;}
-.tier-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-.tier-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-family:'Cinzel',serif;}
-.tier-badge.std{background:rgba(52,152,219,.15);color:#5dade2;
-  border:1px solid rgba(52,152,219,.3);}
-.tier-badge.com{background:rgba(212,160,23,.12);color:var(--gold);
-  border:1px solid rgba(212,160,23,.25);}
-.tier-label{font-size:11px;color:var(--parchment2);letter-spacing:.1em;}
-
-/* 地図カード（ブラウザ内） */
-.map-cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
-.map-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;
-  cursor:pointer;transition:all .25s;background:rgba(212,160,23,.03);}
-.map-card.active{border-color:var(--gold);box-shadow:0 0 10px rgba(212,160,23,.2);}
-.map-card:active{transform:scale(.97);}
-.mc-thumb{width:100%;height:72px;object-fit:cover;display:block;filter:sepia(.3);}
-.mc-thumb-placeholder{width:100%;height:72px;display:flex;align-items:center;
-  justify-content:center;font-size:24px;
+/* シート内ブラウザ */
+#sheet-browser {
+  flex:1; overflow-y:auto; padding:0 14px 14px;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(212,160,23,.18) transparent;
+}
+.browser-cattabs {
+  display:flex; overflow-x:auto; scrollbar-width:none;
+  border-bottom:1px solid rgba(212,160,23,.15);
+  margin-bottom:12px; flex-shrink:0;
+}
+.browser-cattabs::-webkit-scrollbar { display:none; }
+.browser-cattab {
+  flex-shrink:0; padding:7px 12px; font-size:11px; color:var(--sepia);
+  background:transparent; border:none; border-bottom:2px solid transparent;
+  cursor:pointer; white-space:nowrap; transition:all .2s;
+  font-family:'Noto Sans JP',sans-serif;
+}
+.browser-cattab.active { color:var(--gold-l); border-bottom-color:var(--gold); }
+.browser-tier-label { font-size:9px; color:var(--sepia); letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:6px; }
+.browser-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:7px;
+  margin-bottom:14px; }
+.browser-card {
+  border:1px solid var(--border); border-radius:7px; overflow:hidden;
+  cursor:pointer; transition:all .22s;
+  background:rgba(212,160,23,.03);
+}
+.browser-card.active { border-color:var(--gold);
+  box-shadow:0 0 10px rgba(212,160,23,.18); }
+.browser-card:active { transform:scale(.97); }
+.bc-thumb {
+  width:100%; height:68px; object-fit:cover; display:block; filter:sepia(.3);
+}
+.bc-thumb-ph {
+  width:100%; height:68px; display:flex; align-items:center;
+  justify-content:center; font-size:22px;
   background:linear-gradient(135deg,#2a1f0a,#1a1008);
-  border-bottom:1px solid rgba(212,160,23,.08);}
-.mc-body{padding:8px;}
-.mc-name{font-size:11px;color:var(--parchment);line-height:1.4;margin-bottom:3px;}
-.mc-era{font-size:9px;color:var(--sepia);font-family:'Cinzel',serif;}
-.mc-badges{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}
-.mc-badge{font-size:8px;padding:1px 5px;border-radius:3px;}
-.mc-badge.std{background:rgba(52,152,219,.1);color:#5dade2;
-  border:1px solid rgba(52,152,219,.2);}
-.mc-badge.free{background:rgba(46,204,113,.1);color:#2ecc71;
-  border:1px solid rgba(46,204,113,.2);}
-.mc-badge.paid{background:rgba(212,160,23,.1);color:var(--gold);
-  border:1px solid rgba(212,160,23,.2);}
-.mc-badge.new{background:rgba(231,76,60,.1);color:#e74c3c;
-  border:1px solid rgba(231,76,60,.2);}
-.mc-badge.verified{background:rgba(46,204,113,.1);color:#2ecc71;
-  border:1px solid rgba(46,204,113,.2);}
-.mc-lock{position:absolute;top:6px;right:6px;font-size:14px;}
+  border-bottom:1px solid rgba(212,160,23,.08);
+}
+.bc-body { padding:7px 8px; }
+.bc-name  { font-size:10px; color:var(--parchment); line-height:1.4; margin-bottom:2px; }
+.bc-era   { font-size:9px; color:var(--sepia); font-family:'Cinzel',serif; }
+.bc-badges { display:flex; gap:3px; margin-top:3px; flex-wrap:wrap; }
 
-/* skeleton */
-.skeleton{height:140px;border-radius:8px;
-  background:linear-gradient(90deg,rgba(212,160,23,.04) 25%,rgba(212,160,23,.08) 50%,rgba(212,160,23,.04) 75%);
-  background-size:200% 100%;animation:shimmer 1.5s infinite;}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* スケルトン */
+.skeleton { height:128px; border-radius:7px;
+  background:linear-gradient(90deg,
+    rgba(212,160,23,.04) 25%, rgba(212,160,23,.08) 50%,
+    rgba(212,160,23,.04) 75%);
+  background-size:200% 100%; animation:shimmer 1.4s infinite; }
+@keyframes shimmer {
+  0%   { background-position:200% 0; }
+  100% { background-position:-200% 0; }
+}
+.empty-state { font-size:12px; color:var(--sepia); text-align:center;
+  padding:20px 0; line-height:1.8; }
 
-/* 地図なし状態 */
-.empty-msg{font-size:12px;color:var(--sepia);text-align:center;
-  padding:24px 0;line-height:1.8;}
-.empty-msg a{color:var(--gold);text-decoration:none;}
+/* ============================================================
+   コンパス（PC: 地図上 右上 / スマホ: 地図上 右上）
+   ============================================================ */
+#compass {
+  position:fixed; z-index:20; top:14px; right:14px;
+  width:44px; height:44px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+}
+.c-ring {
+  position:absolute; inset:0; border-radius:50%;
+  border:1px solid rgba(212,160,23,.3);
+  background:var(--surface); backdrop-filter:blur(8px);
+}
+.c-needle { position:relative; z-index:1;
+  display:flex; flex-direction:column; align-items:center;
+  transition:transform .25s; }
+.c-n { width:0; height:0;
+  border-left:4px solid transparent; border-right:4px solid transparent;
+  border-bottom:13px solid var(--rust); }
+.c-s { width:0; height:0;
+  border-left:4px solid transparent; border-right:4px solid transparent;
+  border-top:13px solid rgba(212,160,23,.4); }
+.c-lbl { position:absolute; top:3px;
+  font-family:'Cinzel',serif; font-size:7px;
+  color:var(--rust); font-weight:600; }
 
-/* 地図作成リンク */
-.create-bar{margin-top:8px;padding:12px;
-  border:1px dashed rgba(212,160,23,.2);border-radius:6px;
-  text-align:center;cursor:pointer;transition:all .2s;}
-.create-bar:hover{border-color:var(--gold);background:rgba(212,160,23,.04);}
-.create-bar a{font-size:11px;color:var(--sepia);text-decoration:none;
-  letter-spacing:.1em;}
-.create-bar:hover a{color:var(--gold);}
-
-/* POPUP */
-.im-popup .leaflet-popup-content-wrapper{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:8px;color:var(--parchment);backdrop-filter:blur(10px);}
-.im-popup .leaflet-popup-tip{background:var(--surface);}
-.popup-name{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-l);margin-bottom:3px;}
-.popup-era{font-size:9px;color:var(--sepia);margin-bottom:6px;letter-spacing:.08em;}
-.popup-desc{font-size:11px;color:var(--parchment2);line-height:1.6;}
-.popup-now{font-size:10px;color:var(--blue);margin-top:6px;}
-
-/* GPS */
-.gps-dot{width:12px;height:12px;border-radius:50%;background:#4a9fff;
-  border:2px solid white;position:absolute;top:2px;left:2px;}
-.gps-ring{width:32px;height:32px;border-radius:50%;
+/* GPS マーカー */
+.gps-dot { width:12px; height:12px; border-radius:50%;
+  background:#4a9fff; border:2px solid white;
+  box-shadow:0 0 6px rgba(74,159,255,.5);
+  position:absolute; top:2px; left:2px; }
+.gps-ring { width:30px; height:30px; border-radius:50%;
   border:2px solid rgba(74,159,255,.4);
-  position:absolute;top:-8px;left:-8px;animation:gpsRing 2s ease-out infinite;}
-@keyframes gpsRing{0%{transform:scale(.5);opacity:.8}100%{transform:scale(2);opacity:0}}
+  position:absolute; top:-7px; left:-7px;
+  animation:gpsRing 2s ease-out infinite; }
+@keyframes gpsRing {
+  0%   { transform:scale(.5); opacity:.8; }
+  100% { transform:scale(2.2); opacity:0; }
+}
 
-/* TOAST */
-#toast{position:fixed;top:max(60px,calc(env(safe-area-inset-top)+46px));
-  left:50%;transform:translateX(-50%) translateY(-8px);z-index:50;
-  background:var(--surface);border:1px solid var(--border);
-  padding:9px 18px;border-radius:4px;font-size:11px;color:var(--parchment);
-  letter-spacing:.08em;opacity:0;pointer-events:none;transition:all .3s;
-  white-space:nowrap;backdrop-filter:blur(10px);}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* ポップアップ */
+.im-popup .leaflet-popup-content-wrapper {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; color:var(--parchment);
+  backdrop-filter:blur(10px); min-width:180px;
+}
+.im-popup .leaflet-popup-tip { background:var(--surface); }
+.popup-name { font-family:'Cinzel',serif; font-size:13px;
+  color:var(--gold-l); margin-bottom:3px; }
+.popup-era  { font-size:9px; color:var(--sepia); margin-bottom:6px;
+  letter-spacing:.08em; }
+.popup-desc { font-size:11px; color:var(--parchment2); line-height:1.65; }
+.popup-now  { font-size:10px; color:var(--blue); margin-top:6px;
+  padding-top:6px; border-top:1px solid rgba(212,160,23,.15); }
 
-/* LOADING */
-#loading{position:fixed;inset:0;z-index:90;background:var(--ink);
-  display:flex;align-items:center;justify-content:center;transition:opacity .5s;}
-#loading.hidden{opacity:0;pointer-events:none;}
-.loader{width:44px;height:44px;border-radius:50%;
-  border:2px solid rgba(212,160,23,.1);border-top-color:var(--gold);
-  animation:spin .9s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* トースト */
+#toast {
+  position:fixed; top:14px; left:50%;
+  transform:translateX(-50%) translateY(-6px);
+  z-index:50; background:var(--surface);
+  border:1px solid var(--border); padding:9px 18px;
+  border-radius:4px; font-size:11px; color:var(--parchment);
+  letter-spacing:.08em; opacity:0; pointer-events:none;
+  transition:all .3s; white-space:nowrap;
+  backdrop-filter:blur(10px);
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-.leaflet-control-zoom,.leaflet-control-attribution{display:none!important;}
+/* ローディング */
+#loading {
+  position:fixed; inset:0; z-index:100;
+  background:var(--ink);
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity .5s;
+}
+#loading.hidden { opacity:0; pointer-events:none; }
+.loader { width:44px; height:44px; border-radius:50%;
+  border:2px solid rgba(212,160,23,.1);
+  border-top-color:var(--gold);
+  animation:spin .9s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Leaflet デフォルトUIを非表示 */
+.leaflet-control-zoom,
+.leaflet-control-attribution { display:none !important; }
+
+/* ============================================================
+   レスポンシブ切替
+   PC: サイドバー表示 / スマホ: ボトムシート表示
+   ============================================================ */
+@media (min-width: 768px) {
+  /* PC: サイドバー分だけ地図をずらす */
+  #map { left:var(--sidebar-w); }
+  #compass { right:14px; top:14px; }
+  #sidebar { display:flex; }
+  #mobile-hud { display:none !important; }
+  #sheet { display:none !important; }
+}
+
+@media (max-width: 767px) {
+  /* スマホ: サイドバーを非表示、ボトムシートを表示 */
+  #sidebar { display:none !important; }
+  #map { left:0; }
+  #mobile-hud { display:flex; }
+  #sheet { display:flex; flex-direction:column; }
+  #compass { top:max(60px,calc(env(safe-area-inset-top)+46px)); right:12px; }
+}
 </style>
 </head>
 <body>
 
 <div id="loading"><div class="loader"></div></div>
 
+<!-- スプラッシュ -->
 <div id="splash">
   <div class="splash-ring">🗺</div>
   <div class="splash-logo">ImmersaMap</div>
   <div class="splash-sub">時を超える地図体験</div>
-  <button class="splash-start" id="btn-start">探索を始める</button>
-  <a href="./create.html" class="splash-creator">✏️ 地図クリエイターはこちら</a>
+  <button class="splash-btn" id="btn-start">探索を始める</button>
+  <a href="./create.html" class="splash-link">✏️ 地図を作る・公開する</a>
 </div>
 
+<!-- OSMベース地図（常にこれが土台） -->
 <div id="map"></div>
-<div id="grain"></div>
 
-<div id="hud">
-  <div class="hud-left">
-    <div class="hud-logo">ImmersaMap</div>
-    <div class="hud-map-name" id="hud-map-name">現代地図</div>
+<!-- ============================================================
+     PC サイドバー
+     ============================================================ -->
+<div id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">ImmersaMap</div>
+    <div class="sb-header-btns">
+      <button class="sb-icon-btn" id="pc-gps-btn"   aria-label="現在地">📍</button>
+      <button class="sb-icon-btn" id="pc-north-btn" aria-label="北向きに戻す">🔺</button>
+    </div>
   </div>
-  <div class="hud-right">
-    <button class="hud-btn" id="btn-gps" aria-label="現在地">📍</button>
-    <button class="hud-btn" id="btn-north" aria-label="北向き">🔺</button>
+
+  <!-- カテゴリタブ -->
+  <div class="sb-cattabs" id="sb-cattabs">
+    <button class="sb-cattab active" data-cat="all">すべて</button>
+    <button class="sb-cattab" data-cat="historical">🏯 歴史</button>
+    <button class="sb-cattab" data-cat="story">📖 人物</button>
+    <button class="sb-cattab" data-cat="aerial">✈️ 空中写真</button>
+    <button class="sb-cattab" data-cat="fictional">🐉 架空・創作</button>
+    <button class="sb-cattab" data-cat="themed">🌸 テーマ</button>
+  </div>
+
+  <!-- 地図リスト -->
+  <div class="sb-list" id="sb-list">
+    <div class="sb-tier-label">読み込み中...</div>
+    <div class="skeleton" style="margin:0 16px 6px;height:48px;border-radius:5px;"></div>
+    <div class="skeleton" style="margin:0 16px 6px;height:48px;border-radius:5px;"></div>
+    <div class="skeleton" style="margin:0 16px;height:48px;border-radius:5px;"></div>
+  </div>
+
+  <!-- コントロール -->
+  <div class="sb-ctrl">
+    <div class="sb-ctrl-title">表示コントロール</div>
+    <div class="sb-now-name" id="pc-now-name">地図を選んでください</div>
+    <div class="sb-now-era"  id="pc-now-era"></div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">重ね濃さ</span>
+      <input type="range" id="pc-opacity" min="0" max="100" value="80" step="1" style="--p:80%">
+      <span class="ctrl-val"  id="pc-opacity-val">80%</span>
+    </div>
+    <div class="layer-pills" id="pc-layer-pills"></div>
+  </div>
+
+  <a href="./create.html" class="sb-create-link">✏️ 地図を作って公開する</a>
+</div>
+
+<!-- ============================================================
+     スマホ HUD（上部）
+     ============================================================ -->
+<div id="mobile-hud">
+  <div>
+    <div class="mhud-logo">ImmersaMap</div>
+    <div class="mhud-mapname" id="sp-now-name">地図を選んでください</div>
+  </div>
+  <div class="mhud-right">
+    <button class="mhud-btn" id="sp-gps-btn"   aria-label="現在地">📍</button>
+    <button class="mhud-btn" id="sp-north-btn" aria-label="北向きに戻す">🔺</button>
   </div>
 </div>
 
-<div id="compass" aria-label="コンパス">
+<!-- コンパス（PC・スマホ共通） -->
+<div id="compass">
   <div class="c-ring"></div>
   <div class="c-needle" id="compass-needle">
     <div class="c-n"></div>
     <div class="c-s"></div>
   </div>
-  <span class="c-label">N</span>
+  <span class="c-lbl">N</span>
 </div>
 
-<div id="time-bar">
-  <div class="time-era" id="time-era">—</div>
-  <div class="time-name" id="time-name">—</div>
-</div>
-
-<div id="swipe-hint">← 左右スワイプで時代を切替 →</div>
-
-<!-- BOTTOM SHEET -->
+<!-- ============================================================
+     スマホ ボトムシート
+     ============================================================ -->
 <div id="sheet">
   <div class="sheet-handle" id="sheet-handle">
     <div class="sheet-bar"></div>
   </div>
   <div class="sheet-inner">
 
-    <!-- コントロールパネル（mid以上で表示） -->
-    <div id="ctrl-panel">
-      <div class="ctrl-now">
-        <div>
-          <div class="ctrl-now-name" id="ctrl-name">地図を選んでください</div>
-          <div class="ctrl-now-era" id="ctrl-era"></div>
-        </div>
+    <!-- 現在地図のコントロール -->
+    <div class="sheet-ctrl">
+      <div class="sheet-now">
+        <span class="sheet-now-name" id="sp-sheet-name">地図を選んでください</span>
+        <span class="sheet-now-era"  id="sp-sheet-era"></span>
       </div>
-      <div class="opacity-row">
-        <span class="opacity-label">古地図の濃さ</span>
-        <input type="range" id="opacity-slider" min="0" max="100" value="80" step="1" style="--p:80%">
-        <span class="opacity-val" id="opacity-val">80%</span>
+      <div class="ctrl-row">
+        <span class="ctrl-label">重ね濃さ</span>
+        <input type="range" id="sp-opacity" min="0" max="100" value="80" step="1" style="--p:80%">
+        <span class="ctrl-val" id="sp-opacity-val">80%</span>
       </div>
-      <div class="layer-pills" id="layer-pills"></div>
+      <div class="layer-pills" id="sp-layer-pills"></div>
     </div>
 
     <!-- 横スクロールチップ -->
     <div id="chip-scroll"></div>
 
     <!-- 地図ブラウザ -->
-    <div id="browser">
-      <!-- カテゴリタブ -->
-      <div class="cat-tabs" id="cat-tabs">
-        <button class="cat-tab active" data-cat="all">すべて</button>
-        <button class="cat-tab" data-cat="historical">🏯 歴史</button>
-        <button class="cat-tab" data-cat="story">📖 人物・物語</button>
-        <button class="cat-tab" data-cat="aerial">✈️ 空中写真</button>
-        <button class="cat-tab" data-cat="fictional">🐉 架空・創作</button>
-        <button class="cat-tab" data-cat="themed">🌸 テーマ</button>
+    <div id="sheet-browser">
+      <div class="browser-cattabs" id="browser-cattabs">
+        <button class="browser-cattab active" data-cat="all">すべて</button>
+        <button class="browser-cattab" data-cat="historical">🏯 歴史</button>
+        <button class="browser-cattab" data-cat="story">📖 人物</button>
+        <button class="browser-cattab" data-cat="aerial">✈️ 空中写真</button>
+        <button class="browser-cattab" data-cat="fictional">🐉 架空・創作</button>
+        <button class="browser-cattab" data-cat="themed">🌸 テーマ</button>
       </div>
-
-      <!-- Standard -->
-      <div class="tier-section" id="section-standard">
-        <div class="tier-head">
-          <span class="tier-badge std">Standard</span>
-          <span class="tier-label">公式・品質保証</span>
-        </div>
-        <div class="map-cards-grid" id="cards-std">
-          <div class="skeleton"></div>
-          <div class="skeleton"></div>
-        </div>
+      <div class="browser-tier-label">Standard（公式）</div>
+      <div class="browser-cards" id="sp-cards-std">
+        <div class="skeleton"></div><div class="skeleton"></div>
       </div>
-
-      <!-- Community -->
-      <div class="tier-section" id="section-community">
-        <div class="tier-head">
-          <span class="tier-badge com">Community</span>
-          <span class="tier-label">ユーザー作成</span>
-        </div>
-        <div class="map-cards-grid" id="cards-com">
-          <div class="skeleton"></div>
-        </div>
-      </div>
-
-      <div class="create-bar">
-        <a href="./create.html">✏️ 地図を作って公開する →</a>
-      </div>
+      <div class="browser-tier-label" id="sp-com-label">Community</div>
+      <div class="browser-cards" id="sp-cards-com"></div>
+      <a href="./create.html" style="display:block;text-align:center;padding:10px;
+        border:1px dashed rgba(212,160,23,.2);border-radius:5px;font-size:11px;
+        color:var(--sepia);text-decoration:none;letter-spacing:.08em;
+        transition:all .2s;margin-top:4px;">
+        ✏️ 地図を作って公開する →
+      </a>
     </div>
-
   </div>
 </div>
 
 <div id="toast"></div>
 
+<!-- ============================================================
+     GeoJSON データ（OSMの上に重ねるベクターレイヤー）
+     ============================================================ -->
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
 const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 川越GeoJSON（同一ページに埋め込み）
-const KAWAGOE_GEOJSON = {
-  type:'FeatureCollection',
-  features:[
-    {type:'Feature',properties:{name:'江戸街道',layer:'roads',type:'主要街道',description:'川越と江戸を結ぶ主要街道。現在の川越街道の原型。',era:'江戸時代'},
-      geometry:{type:'LineString',coordinates:[[139.482216,35.915654],[139.482988,35.917865],[139.483759,35.920077],[139.484273,35.921349],[139.484787,35.922773],[139.485147,35.923754]]}},
-    {type:'Feature',properties:{name:'一番街（蔵造り）',layer:'roads',type:'主要道路',description:'現在の川越一番街の原型。江戸時代から続く商人街。',era:'江戸時代'},
-      geometry:{type:'LineString',coordinates:[[139.484302,35.925888],[139.484555,35.92607],[139.484806,35.925799],[139.485057,35.925527],[139.485308,35.925256]]}},
-    {type:'Feature',properties:{name:'鍵型道路',layer:'roads',type:'防衛道路',description:'城下町特有のL字型道路。敵の侵入を遅らせる防衛設計。',era:'江戸時代'},
-      geometry:{type:'LineString',coordinates:[[139.484261,35.919534],[139.484254,35.918323],[139.483733,35.915841],[139.483726,35.914782]]}},
-    {type:'Feature',properties:{name:'新河岸川',layer:'rivers',description:'江戸への物資輸送の要路。川越の繁栄を支えた舟運の川。',era:'江戸時代'},
-      geometry:{type:'LineString',coordinates:[[139.487042,35.935718],[139.486871,35.932704],[139.486909,35.930683],[139.48679,35.927917],[139.486672,35.925151],[139.486558,35.923141]]}},
-    {type:'Feature',properties:{name:'川越城 城郭',layer:'boundaries',type:'城郭',description:'川越城の本丸・二の丸を囲む堀と土塁。',era:'江戸時代'},
-      geometry:{type:'Polygon',coordinates:[[[139.486184,35.927963],[139.486168,35.925391],[139.485796,35.922443],[139.485116,35.918913],[139.484602,35.917489],[139.484512,35.919262],[139.484782,35.922016],[139.485462,35.925547],[139.485979,35.927424],[139.486184,35.927963]]]}},
-    {type:'Feature',properties:{name:'川越城',layer:'places',type:'城郭',description:'川越藩主松平家の居城。本丸御殿が現存する。',now:'現在は川越城本丸御殿として公開。入場無料。',era:'江戸時代'},
-      geometry:{type:'Point',coordinates:[139.48539,35.922272]}},
-    {type:'Feature',properties:{name:'大手門',layer:'places',type:'門',description:'川越城の正門。',now:'現在は大手町交差点付近。門は現存しない。',era:'江戸時代'},
-      geometry:{type:'Point',coordinates:[139.485552,35.923925]}},
-    {type:'Feature',properties:{name:'札の辻',layer:'places',type:'辻',description:'高札が立てられた重要な交差点。城下の情報発信地点。',now:'現在も「札の辻」の地名が残る。',era:'江戸時代'},
-      geometry:{type:'Point',coordinates:[139.485585,35.929069]}},
-    {type:'Feature',properties:{name:'T字路',layer:'places',type:'辻',description:'防衛のため意図的に設けられたT字路。',now:'現在も道路の形状が残っている。',era:'江戸時代'},
-      geometry:{type:'Point',coordinates:[139.483412,35.921062]}},
-    {type:'Feature',properties:{name:'新河岸川',layer:'places',type:'河川',description:'江戸へ通じる舟運の要路。川越と江戸を結んだ。',now:'現在も新河岸川として流れている。遊歩道が整備されている。',era:'江戸時代'},
-      geometry:{type:'Point',coordinates:[139.486909,35.930683]}}
-  ]
+/* ── 川越城下絵図 GeoJSON ───────────────────────────── */
+const KAWAGOE_GJ = { type:'FeatureCollection', features:[
+  {type:'Feature',properties:{name:'江戸街道',layer:'roads',type:'主要街道',
+    description:'川越と江戸を結ぶ主要街道。現在の川越街道の原型。',era:'江戸時代'},
+    geometry:{type:'LineString',coordinates:[[139.4822,35.9157],[139.4830,35.9179],[139.4838,35.9201],[139.4843,35.9213],[139.4848,35.9228],[139.4851,35.9238]]}},
+  {type:'Feature',properties:{name:'一番街（蔵造り）',layer:'roads',type:'主要道路',
+    description:'江戸時代から続く商人街。現在の川越一番街の原型。',
+    now:'現在も蔵造りの街並みとして保存。観光名所。',era:'江戸時代'},
+    geometry:{type:'LineString',coordinates:[[139.4843,35.9259],[139.4846,35.9261],[139.4848,35.9258],[139.4851,35.9253],[139.4853,35.9253]]}},
+  {type:'Feature',properties:{name:'鍵型道路',layer:'roads',type:'防衛道路',
+    description:'城下町特有のL字型道路。敵の侵入を遅らせる防衛設計。',era:'江戸時代'},
+    geometry:{type:'LineString',coordinates:[[139.4843,35.9195],[139.4843,35.9183],[139.4837,35.9158],[139.4837,35.9148]]}},
+  {type:'Feature',properties:{name:'新河岸川',layer:'rivers',
+    description:'江戸への物資輸送の要路。川越の繁栄を支えた舟運の川。',
+    now:'現在も新河岸川として流れている。遊歩道が整備されている。',era:'江戸時代'},
+    geometry:{type:'LineString',coordinates:[[139.4870,35.9357],[139.4869,35.9327],[139.4869,35.9307],[139.4868,35.9279],[139.4867,35.9252],[139.4866,35.9231]]}},
+  {type:'Feature',properties:{name:'川越城 城郭',layer:'boundaries',type:'城郭',
+    description:'川越城の本丸・二の丸を囲む堀と土塁。',
+    now:'本丸御殿が現存。無料で見学できる。',era:'江戸時代'},
+    geometry:{type:'Polygon',coordinates:[[[139.4862,35.9280],[139.4862,35.9254],[139.4858,35.9224],[139.4851,35.9189],[139.4846,35.9175],[139.4845,35.9193],[139.4848,35.9220],[139.4855,35.9255],[139.4860,35.9274],[139.4862,35.9280]]]}},
+  {type:'Feature',properties:{name:'川越城（本丸）',layer:'places',type:'城郭',
+    description:'川越藩松平家の居城。江戸城の支城として重要な役割を担った。',
+    now:'本丸御殿が現存。国の重要文化財。入場無料。',era:'江戸時代'},
+    geometry:{type:'Point',coordinates:[139.4854,35.9223]}},
+  {type:'Feature',properties:{name:'大手門跡',layer:'places',type:'門',
+    description:'川越城の正門。城下町への入口として機能した。',
+    now:'現在は「大手町」の地名が残るのみ。門は現存しない。',era:'江戸時代'},
+    geometry:{type:'Point',coordinates:[139.4856,35.9239]}},
+  {type:'Feature',properties:{name:'札の辻',layer:'places',type:'辻',
+    description:'高札が立てられた城下の重要な交差点。法令・布告を周知する場所。',
+    now:'現在も「札の辻」の交差点として残る。',era:'江戸時代'},
+    geometry:{type:'Point',coordinates:[139.4856,35.9291]}},
+  {type:'Feature',properties:{name:'T字路（防衛設計）',layer:'places',type:'辻',
+    description:'敵の侵入を防ぐために意図的に設けられた防衛用T字路。城下町の典型的な設計。',
+    now:'現在も道路の形状が残っている。',era:'江戸時代'},
+    geometry:{type:'Point',coordinates:[139.4834,35.9211]}}
+]};
+
+/* ── 坂本龍馬ゆかりの地 GeoJSON ─────────────────────── */
+const RYOMA_GJ = { type:'FeatureCollection', features:[
+  {type:'Feature',properties:{name:'寺田屋',layer:'places',type:'史跡',
+    description:'文久2年（1862年）寺田屋騒動、慶応2年（1866年）龍馬暗殺未遂事件の舞台。龍馬とお龍が宿泊した旅籠。',
+    now:'現在も旅館として営業。内部見学可（有料）。2階に龍馬ゆかりの品を展示。',era:'幕末 1862〜1866年'},
+    geometry:{type:'Point',coordinates:[135.7558,34.9301]}},
+  {type:'Feature',properties:{name:'近江屋跡',layer:'places',type:'事件地',
+    description:'慶応3年（1867年）11月15日、坂本龍馬・中岡慎太郎が暗殺された場所。醤油商・近江屋の2階座敷。',
+    now:'現在は石碑のみ。ビルが建っている。河原町通沿い。',era:'幕末 1867年'},
+    geometry:{type:'Point',coordinates:[135.7685,35.0058]}},
+  {type:'Feature',properties:{name:'酢屋',layer:'places',type:'史跡',
+    description:'海援隊京都本部が置かれた材木商。龍馬が京都での活動拠点とした場所。',
+    now:'現在も「酢屋」として営業（木工芸品店）。2階はギャラリーとして公開。',era:'幕末 1867年'},
+    geometry:{type:'Point',coordinates:[135.7693,35.0090]}},
+  {type:'Feature',properties:{name:'霊山護国神社（龍馬の墓）',layer:'places',type:'墓所',
+    description:'坂本龍馬・中岡慎太郎をはじめ幕末の志士が眠る神社。東山の中腹。',
+    now:'参拝可。隣接する霊山歴史館に龍馬関連資料多数。',era:'明治元年（1868年）創建'},
+    geometry:{type:'Point',coordinates:[135.7833,35.0014]}},
+  {type:'Feature',properties:{name:'池田屋跡',layer:'places',type:'事件地',
+    description:'元治元年（1864年）池田屋事件の現場。新選組が尊攘派志士を急襲した旅籠。龍馬は当日不在だった。',
+    now:'現在はパチンコ店。入口に事件の説明板あり。',era:'幕末 1864年'},
+    geometry:{type:'Point',coordinates:[135.7700,35.0063]}},
+  {type:'Feature',properties:{name:'薩摩藩邸跡（伏見）',layer:'places',type:'史跡',
+    description:'慶応2年（1866年）龍馬の仲介で薩長同盟が締結された薩摩藩伏見屋敷跡。',
+    now:'現在は石碑のみ。月桂冠大倉記念館の近く。',era:'幕末 1866年'},
+    geometry:{type:'Point',coordinates:[135.7563,34.9338]}},
+  {type:'Feature',properties:{name:'円山公園（龍馬・慎太郎像）',layer:'places',type:'銅像',
+    description:'坂本龍馬と中岡慎太郎が並び立つ銅像。幕末の志士のシンボル。',
+    now:'円山公園として市民に親しまれている。桜の名所。',era:'1934年建立'},
+    geometry:{type:'Point',coordinates:[135.7808,35.0034]}},
+  {type:'Feature',properties:{name:'三条大橋（制札事件跡）',layer:'places',type:'史跡',
+    description:'慶応3年（1867年）陸援隊・海援隊が高札を引き倒した倒幕行動の現場。',
+    now:'現在も三条大橋として現役。橋のたもとに弥次喜多像。',era:'幕末 1867年'},
+    geometry:{type:'Point',coordinates:[135.7726,35.0084]}},
+  {type:'Feature',properties:{name:'伏見・寺田屋周辺ルート',layer:'roads',type:'史跡ルート',
+    description:'龍馬とお龍が暮らした伏見の酒蔵町。当時の風情が残る街並み。',era:'幕末 1866年'},
+    geometry:{type:'LineString',coordinates:[[135.7558,34.9301],[135.7563,34.9320],[135.7570,34.9338],[135.7563,34.9338]]}},
+  {type:'Feature',properties:{name:'龍馬の京都活動ルート',layer:'roads',type:'活動ルート',
+    description:'龍馬が京都市内で活動した主要ルート。河原町〜木屋町界隈。',era:'幕末 1867年'},
+    geometry:{type:'LineString',coordinates:[[135.7685,35.0058],[135.7693,35.0080],[135.7700,35.0063],[135.7726,35.0084]]}}
+]};
+
+/* ── GeoJSON ID → データ マップ ─────────────────────── */
+const BUILTIN_GJ = {
+  'standard-kawagoe-edo':   KAWAGOE_GJ,
+  'standard-ryoma-kyoto':   RYOMA_GJ,
 };
 
-// 坂本龍馬ゆかりの地 GeoJSON
-const RYOMA_GEOJSON = {
-  type:'FeatureCollection',
-  features:[
-    {type:'Feature',properties:{name:'寺田屋',layer:'places',type:'史跡',
-      description:'文久2年・慶応2年の事件の舞台。龍馬とお龍が宿泊した旅籠。',
-      now:'現在も旅館として営業。内部見学可（有料）。',era:'幕末 1862〜1866年',importance:'high'},
-      geometry:{type:'Point',coordinates:[135.7558,34.9301]}},
-    {type:'Feature',properties:{name:'近江屋跡',layer:'places',type:'事件地',
-      description:'慶応3年（1867年）11月15日、龍馬・中岡慎太郎が暗殺された場所。醤油商の2階。',
-      now:'現在は石碑のみ。ビルが建っている。河原町通沿い。',era:'幕末 1867年',importance:'high'},
-      geometry:{type:'Point',coordinates:[135.7685,35.0058]}},
-    {type:'Feature',properties:{name:'酢屋',layer:'places',type:'史跡',
-      description:'海援隊京都本部が置かれた材木商。龍馬の活動拠点。',
-      now:'現在も「酢屋」として営業（木工芸品店）。2階はギャラリーとして公開。',era:'幕末 1867年',importance:'medium'},
-      geometry:{type:'Point',coordinates:[135.7693,35.0090]}},
-    {type:'Feature',properties:{name:'霊山護国神社（龍馬の墓）',layer:'places',type:'墓所',
-      description:'坂本龍馬・中岡慎太郎が眠る神社。東山の中腹。',
-      now:'参拝可。隣接する霊山歴史館に龍馬関連資料多数。',era:'明治元年（1868年）創建',importance:'high'},
-      geometry:{type:'Point',coordinates:[135.7833,35.0014]}},
-    {type:'Feature',properties:{name:'池田屋跡',layer:'places',type:'事件地',
-      description:'元治元年（1864年）の池田屋事件の現場。新選組が尊攘派志士を急襲。',
-      now:'現在はパチンコ店。入口に事件説明板あり。',era:'幕末 1864年',importance:'medium'},
-      geometry:{type:'Point',coordinates:[135.7700,35.0063]}},
-    {type:'Feature',properties:{name:'薩摩藩邸跡（伏見）',layer:'places',type:'史跡',
-      description:'慶応2年（1866年）、薩長同盟が締結された薩摩藩伏見屋敷跡。',
-      now:'現在は石碑のみ。月桂冠大倉記念館の近く。',era:'幕末 1866年',importance:'high'},
-      geometry:{type:'Point',coordinates:[135.7563,34.9338]}},
-    {type:'Feature',properties:{name:'円山公園（龍馬・慎太郎像）',layer:'places',type:'銅像',
-      description:'坂本龍馬と中岡慎太郎が並び立つ銅像。幕末の志士のシンボル。',
-      now:'現在も円山公園として親しまれている。桜の名所。',era:'1934年建立',importance:'medium'},
-      geometry:{type:'Point',coordinates:[135.7808,35.0034]}},
-    {type:'Feature',properties:{name:'三条大橋（制札事件跡）',layer:'places',type:'史跡',
-      description:'慶応3年、陸援隊・海援隊が高札を引き倒した倒幕行動の現場。',
-      now:'現在も三条大橋として現役。橋のたもとに弥次喜多像。',era:'幕末 1867年',importance:'low'},
-      geometry:{type:'Point',coordinates:[135.7726,35.0084]}},
-    {type:'Feature',properties:{name:'伏見・寺田屋周辺ルート',layer:'roads',type:'史跡ルート',
-      description:'龍馬とお龍が伏見で過ごした頃の町並み。酒蔵が立ち並ぶ風情ある街並みが残る。',
-      era:'幕末 1866年'},
-      geometry:{type:'LineString',coordinates:[[135.7558,34.9301],[135.7563,34.9320],[135.7570,34.9338],[135.7563,34.9338]]}},
-    {type:'Feature',properties:{name:'龍馬の京都活動ルート',layer:'roads',type:'活動ルート',
-      description:'龍馬が京都市内で活動した主要ルート。河原町〜木屋町界隈を中心に志士たちが集った。',
-      era:'幕末 1867年'},
-      geometry:{type:'LineString',coordinates:[[135.7685,35.0058],[135.7693,35.0080],[135.7700,35.0063],[135.7726,35.0084]]}}
-  ]
-};
-const LAYER_STYLES = {
+/* ── レイヤースタイル ────────────────────────────────── */
+const RSTYLE = {
   roads:{
-    '主要街道':{color:'#d4a017',weight:4,opacity:.9},
-    '主要道路':{color:'#f0c040',weight:3,opacity:.85},
-    '防衛道路':{color:'#c0392b',weight:2.5,opacity:.8,dashArray:'7,4'},
-    default:   {color:'#d4a017',weight:2,opacity:.7}
+    '主要街道':   {color:'#d4a017',weight:4,opacity:.9},
+    '主要道路':   {color:'#f0c040',weight:3,opacity:.85},
+    '防衛道路':   {color:'#c0392b',weight:2.5,opacity:.8,dashArray:'7,4'},
+    '史跡ルート': {color:'#8e44ad',weight:2.5,opacity:.8,dashArray:'5,4'},
+    '活動ルート': {color:'#c0392b',weight:2,  opacity:.75,dashArray:'5,4'},
+    default:      {color:'#d4a017',weight:2,  opacity:.7},
   },
-  rivers:{color:'#3498db',weight:4,opacity:.8},
-  boundaries:{
-    '城郭':{color:'#d4a017',weight:2.5,fillColor:'#8b4513',fillOpacity:.2},
-    default:{color:'#888',weight:1.5,fillColor:'#555',fillOpacity:.1}
+  rivers:     {color:'#3498db',weight:4,opacity:.8},
+  boundaries: {
+    '城郭': {color:'#d4a017',weight:2.5,fillColor:'#8b4513',fillOpacity:.2},
+    default:{color:'#888',   weight:1.5,fillColor:'#555',   fillOpacity:.1},
   },
   places:{
-    '城郭':    {radius:9,color:'#e74c3c',fillColor:'#c0392b',fillOpacity:.9,weight:2},
-    '門':      {radius:7,color:'#e67e22',fillColor:'#d35400',fillOpacity:.9,weight:2},
-    '辻':      {radius:6,color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
-    '河川':    {radius:6,color:'#3498db',fillColor:'#5dade2',fillOpacity:.8,weight:2},
-    '史跡':    {radius:8,color:'#8e44ad',fillColor:'#9b59b6',fillOpacity:.9,weight:2},
-    '事件地':  {radius:9,color:'#c0392b',fillColor:'#e74c3c',fillOpacity:.9,weight:2.5},
-    '墓所':    {radius:7,color:'#7f8c8d',fillColor:'#95a5a6',fillOpacity:.9,weight:2},
-    '銅像':    {radius:6,color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
-    default:   {radius:5,color:'#888',   fillColor:'#aaa',   fillOpacity:.7,weight:1.5}
-  }
+    '城郭':   {radius:9, color:'#e74c3c',fillColor:'#c0392b',fillOpacity:.9,weight:2},
+    '門':     {radius:7, color:'#e67e22',fillColor:'#d35400',fillOpacity:.9,weight:2},
+    '辻':     {radius:6, color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
+    '河川':   {radius:6, color:'#3498db',fillColor:'#5dade2',fillOpacity:.8,weight:2},
+    '史跡':   {radius:8, color:'#8e44ad',fillColor:'#9b59b6',fillOpacity:.9,weight:2},
+    '事件地': {radius:9, color:'#c0392b',fillColor:'#e74c3c',fillOpacity:.9,weight:2.5},
+    '墓所':   {radius:7, color:'#7f8c8d',fillColor:'#95a5a6',fillOpacity:.9,weight:2},
+    '銅像':   {radius:6, color:'#d4a017',fillColor:'#f0c040',fillOpacity:.9,weight:2},
+    default:  {radius:5, color:'#888',   fillColor:'#aaa',   fillOpacity:.7,weight:1.5},
+  },
+};
+const LAYER_LABEL = {
+  roads:'道路・ルート', rivers:'河川',
+  boundaries:'城郭・境界', places:'史跡・地名',
 };
 
-// ============================================================
-// STATE
-// ============================================================
+/* ── STATE ──────────────────────────────────────────── */
 const S = {
-  map:null, base:null, overlay:null,
-  vectorGroups:{},   // layerName → L.LayerGroup
-  activeMapId:null,
+  map:null,
+  base:null,          // OSM タイルレイヤー（常にアクティブ）
+  overlayTile:null,   // タイル画像オーバーレイ（地理院等）
+  vectorGroups:{},    // ベクターレイヤー
+  activeId:null,
   activeDef:null,
   opacity:.8,
-  sheetState:'min',  // min|mid|max
+  allMaps:[],
   currentCat:'all',
-  allMaps:[],        // DBから取得した全地図
-  gpsMarker:null, watchId:null,
-  swipeStartX:null,
-  swipeOverlay:0,    // 0=古地図 1=現代
+  gpsMarker:null,
+  watchId:null,
+  sheetH:'28px',
 };
 
-// ============================================================
-// MAP INIT
-// ============================================================
+/* ── 地図初期化 ──────────────────────────────────────── */
 function initMap() {
-  S.map = L.map('map',{center:[35.6812,139.7671],zoom:14,
-    zoomControl:false,attributionControl:false,preferCanvas:true});
-  S.base = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {maxZoom:19,zIndex:1}).addTo(S.map);
-  setTimeout(()=>document.getElementById('loading').classList.add('hidden'),700);
+  S.map = L.map('map', {
+    center:[35.6812,139.7671], zoom:14,
+    zoomControl:false, attributionControl:false, preferCanvas:true,
+  });
+  /* ベース地図: OpenStreetMap（これが常に土台） */
+  S.base = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom:19, zIndex:1, attribution:'© OpenStreetMap contributors' }
+  ).addTo(S.map);
+
+  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
 }
 
-// ============================================================
-// 地図を読み込む（ベクター or タイル）
-// ============================================================
+/* ── 地図を選択・表示 ────────────────────────────────── */
 function loadMap(def) {
-  // 既存クリア
-  if (S.overlay) { S.map.removeLayer(S.overlay); S.overlay=null; }
-  Object.values(S.vectorGroups).forEach(g=>S.map.removeLayer(g));
+  /* 既存オーバーレイをすべてクリア */
+  if (S.overlayTile) { S.map.removeLayer(S.overlayTile); S.overlayTile = null; }
+  Object.values(S.vectorGroups).forEach(g => S.map.removeLayer(g));
   S.vectorGroups = {};
 
-  S.activeMapId = def.id;
-  S.activeDef   = def;
+  S.activeId  = def.id;
+  S.activeDef = def;
 
   const name = def.name;
-  const era  = def.era || def.description || '';
+  const era  = def.era || '';
 
-  // HUD更新
-  document.getElementById('hud-map-name').textContent = name;
-  document.getElementById('ctrl-name').textContent    = name;
-  document.getElementById('ctrl-era').textContent     = era;
-  document.getElementById('time-name').textContent    = name;
-  document.getElementById('time-era').textContent     = era;
-  document.getElementById('time-bar').classList.add('visible');
+  /* UI 更新 */
+  document.getElementById('pc-now-name').textContent   = name;
+  document.getElementById('pc-now-era').textContent    = era;
+  document.getElementById('sp-now-name').textContent   = name;
+  document.getElementById('sp-sheet-name').textContent = name;
+  document.getElementById('sp-sheet-era').textContent  = era;
 
-  // チップのアクティブ状態
-  document.querySelectorAll('.chip').forEach(c=>
-    c.classList.toggle('active', c.dataset.id===def.id));
-  document.querySelectorAll('.map-card').forEach(c=>
-    c.classList.toggle('active', c.dataset.id===def.id));
+  document.querySelectorAll('.sb-map-item,.browser-card,.chip').forEach(el =>
+    el.classList.toggle('active', el.dataset.id === def.id));
 
-  // 川越ベクター地図
-  if (def.id === 'standard-kawagoe-edo') {
-    loadVectorMap(KAWAGOE_GEOJSON, def);
-    showToast('川越城下絵図を表示中');
-  // 龍馬ベクター地図
-  } else if (def.id === 'standard-ryoma-kyoto') {
-    loadVectorMap(RYOMA_GEOJSON, def);
-    showToast('坂本龍馬ゆかりの地を表示中');
+  /* レイヤーの種類に応じて処理を分岐 */
+  const gj = BUILTIN_GJ[def.id];
+
+  if (gj) {
+    /* ベクターGeoJSON → OSMの上に重ねる */
+    loadVectorLayers(gj);
+    S.map.flyTo([def.center_lat, def.center_lng],
+      def.zoom_default || 15, { duration:1.2 });
+    showToast(name + ' を表示中');
+
   } else if (def.tiles_url) {
-    // タイル地図
-    S.overlay = L.tileLayer(def.tiles_url, {
-      opacity:S.opacity, zIndex:2,
-      minZoom:def.zoom_min||2, maxZoom:def.zoom_max||18,
+    /* タイル画像 → OSMの上に重ねる（zIndex:2） */
+    S.overlayTile = L.tileLayer(def.tiles_url, {
+      opacity: S.opacity,
+      zIndex:  2,
+      minZoom: def.zoom_min || 2,
+      maxZoom: def.zoom_max || 18,
+      attribution: def.attribution || '',
     }).addTo(S.map);
     buildLayerPills([]);
-    showToast(name);
+    S.map.flyTo([def.center_lat, def.center_lng],
+      def.zoom_default || 14, { duration:1.2 });
+    showToast(name + ' を表示中');
+
   } else {
     buildLayerPills([]);
-    showToast('現代地図のみ表示');
+    showToast('現代地図（OSM）のみ表示');
   }
-
-  const lat = def.center_lat, lng = def.center_lng;
-  if (lat&&lng) S.map.flyTo([lat,lng],def.zoom_default||15,{duration:1.2});
 }
 
-// ============================================================
-// ベクターレイヤー描画
-// ============================================================
-function loadVectorMap(geojson, def) {
+/* ── ベクターレイヤーを描画 ──────────────────────────── */
+function loadVectorLayers(gj) {
   const layerNames = [];
-  geojson.features.forEach(f=>{
-    const p = f.properties;
+
+  gj.features.forEach(f => {
+    const p     = f.properties;
     const layer = p.layer;
+    if (!layer) return;
+
     if (!S.vectorGroups[layer]) {
       S.vectorGroups[layer] = L.layerGroup().addTo(S.map);
       layerNames.push(layer);
     }
     const g = S.vectorGroups[layer];
 
-    if (f.geometry.type === 'LineString') {
-      const coords = f.geometry.coordinates.map(c=>[c[1],c[0]]);
-      const style  = layer==='rivers' ? LAYER_STYLES.rivers
-        : (LAYER_STYLES.roads[p.type]||LAYER_STYLES.roads.default);
-      L.polyline(coords, {...style, opacity:S.opacity})
-        .bindPopup(makePopup(p),{className:'im-popup'}).addTo(g);
+    switch (f.geometry.type) {
 
-    } else if (f.geometry.type === 'Polygon') {
-      const coords = f.geometry.coordinates[0].map(c=>[c[1],c[0]]);
-      const style  = LAYER_STYLES.boundaries[p.type]||LAYER_STYLES.boundaries.default;
-      L.polygon(coords, {...style, opacity:S.opacity})
-        .bindPopup(makePopup(p),{className:'im-popup'}).addTo(g);
+      case 'LineString': {
+        const coords = f.geometry.coordinates.map(c => [c[1], c[0]]);
+        const style  = layer === 'rivers'
+          ? RSTYLE.rivers
+          : (RSTYLE.roads[p.type] || RSTYLE.roads.default);
+        L.polyline(coords, { ...style, opacity: S.opacity })
+          .bindPopup(makePopup(p), { className:'im-popup' })
+          .addTo(g);
+        break;
+      }
 
-    } else if (f.geometry.type === 'Point') {
-      const ll    = [f.geometry.coordinates[1],f.geometry.coordinates[0]];
-      const style = LAYER_STYLES.places[p.type]||LAYER_STYLES.places.default;
-      const m = L.circleMarker(ll,style)
-        .bindPopup(makePopup(p),{className:'im-popup'}).addTo(g);
-      m.bindTooltip(p.name,{permanent:true,direction:'top',className:'',offset:[0,-8]});
+      case 'Polygon': {
+        const coords = f.geometry.coordinates[0].map(c => [c[1], c[0]]);
+        const style  = RSTYLE.boundaries[p.type] || RSTYLE.boundaries.default;
+        L.polygon(coords, { ...style, opacity: S.opacity })
+          .bindPopup(makePopup(p), { className:'im-popup' })
+          .addTo(g);
+        break;
+      }
+
+      case 'Point': {
+        const ll    = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+        const style = RSTYLE.places[p.type] || RSTYLE.places.default;
+        L.circleMarker(ll, style)
+          .bindPopup(makePopup(p), { className:'im-popup' })
+          .bindTooltip(p.name, { permanent:true, direction:'top',
+            className:'', offset:[0,-8] })
+          .addTo(g);
+        break;
+      }
     }
   });
-  buildLayerPills([...new Set(geojson.features.map(f=>f.properties.layer))]);
+
+  buildLayerPills([...new Set(gj.features.map(f => f.properties.layer).filter(Boolean))]);
 }
 
+/* ── ポップアップ HTML ───────────────────────────────── */
 function makePopup(p) {
   return `<div class="popup-name">${p.name}</div>
-    <div class="popup-era">${p.era||''} ${p.type?'· '+p.type:''}</div>
-    <div class="popup-desc">${p.description||''}</div>
-    ${p.now?`<div class="popup-now">📍 現在：${p.now}</div>`:''}`;
+    <div class="popup-era">${p.era || ''}${p.type ? ' · ' + p.type : ''}</div>
+    <div class="popup-desc">${p.description || ''}</div>
+    ${p.now ? `<div class="popup-now">📍 現在：${p.now}</div>` : ''}`;
 }
 
-// ============================================================
-// レイヤーピル
-// ============================================================
-const LAYER_LABELS = {roads:'道路・ルート',rivers:'河川',boundaries:'城郭・境界',places:'史跡・地名'};
+/* ── レイヤーON/OFFピル ─────────────────────────────── */
 function buildLayerPills(layers) {
-  const el = document.getElementById('layer-pills');
-  el.innerHTML = '';
-  layers.forEach(name=>{
-    const btn = document.createElement('button');
-    btn.className = 'layer-pill on';
-    btn.textContent = LAYER_LABELS[name]||name;
-    btn.dataset.layer = name;
-    btn.addEventListener('click', ()=>{
-      const on = btn.classList.toggle('on');
-      const g  = S.vectorGroups[name];
-      if (!g) return;
-      if (on) S.map.addLayer(g); else S.map.removeLayer(g);
+  ['pc-layer-pills', 'sp-layer-pills'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    layers.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className    = 'layer-pill on';
+      btn.textContent  = LAYER_LABEL[name] || name;
+      btn.dataset.layer = name;
+      btn.addEventListener('click', () => {
+        const on = btn.classList.toggle('on');
+        const g  = S.vectorGroups[name];
+        if (!g) return;
+        // 同じレイヤー名のボタンを両方同期
+        document.querySelectorAll(`.layer-pill[data-layer="${name}"]`)
+          .forEach(b => b.classList.toggle('on', on));
+        if (on) S.map.addLayer(g); else S.map.removeLayer(g);
+      });
+      el.appendChild(btn);
     });
-    el.appendChild(btn);
   });
 }
 
-// ============================================================
-// チップ生成
-// ============================================================
-function buildChips(maps) {
-  const c = document.getElementById('chip-scroll');
-  c.innerHTML = '';
-
-  // 「なし」チップ
-  const none = mkChip({id:'none',name:'現代地図',era:'Modern',emoji:'🌍'}, false);
-  none.addEventListener('click',()=>{
-    clearOverlay();
-    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
-    none.classList.add('active');
-    document.getElementById('hud-map-name').textContent='現代地図';
-    document.getElementById('time-bar').classList.remove('visible');
+/* ── 不透明度スライダー ──────────────────────────────── */
+function initSliders() {
+  ['pc-opacity', 'sp-opacity'].forEach(id => {
+    const sl = document.getElementById(id);
+    const vl = document.getElementById(id + '-val');
+    sl.addEventListener('input', () => {
+      const v = parseInt(sl.value);
+      sl.style.setProperty('--p', v + '%');
+      vl.textContent = v + '%';
+      S.opacity = v / 100;
+      // 同じスライダーを同期
+      ['pc-opacity','sp-opacity'].forEach(sid => {
+        const s = document.getElementById(sid);
+        s.value = v;
+        s.style.setProperty('--p', v + '%');
+        document.getElementById(sid + '-val').textContent = v + '%';
+      });
+      // レイヤーに反映
+      if (S.overlayTile) S.overlayTile.setOpacity(S.opacity);
+      Object.values(S.vectorGroups).forEach(g => {
+        g.eachLayer(l => {
+          if (l.setOpacity)  l.setOpacity(S.opacity);
+          if (l.setStyle)    l.setStyle({ opacity: S.opacity,
+            fillOpacity: S.opacity * .85 });
+        });
+      });
+    });
   });
-  c.appendChild(none);
-
-  maps.slice(0,10).forEach(def=>{
-    const chip = mkChip(def, def.price>0);
-    chip.addEventListener('click',()=>{ loadMap(def); closeSheet(); });
-    c.appendChild(chip);
-  });
-
-  // 地図追加ボタン
-  const add = document.createElement('div');
-  add.className = 'chip';
-  add.innerHTML = `<span class="chip-emoji">➕</span><div class="chip-info"><span class="chip-name">地図を追加</span></div>`;
-  add.addEventListener('click',()=>{ openSheet('max'); });
-  c.appendChild(add);
 }
 
-function mkChip(def, locked) {
+/* ── Supabaseからデータ取得 ──────────────────────────── */
+async function fetchMaps() {
+  try {
+    const { data, error } = await db
+      .from('maps').select('*')
+      .eq('is_public', true)
+      .order('tier').order('created_at', { ascending:false });
+    if (error) throw error;
+    S.allMaps = data || [];
+    buildSidebar(S.allMaps, 'all');
+    buildChips(S.allMaps);
+    buildBrowserCards(S.allMaps, 'all');
+  } catch(e) {
+    document.getElementById('sb-list').innerHTML =
+      `<div style="padding:16px;font-size:11px;color:rgba(231,76,60,.7);">
+        読み込みエラー<br>${e.message}</div>`;
+  }
+}
+
+/* ── PC サイドバーのリスト生成 ──────────────────────── */
+function buildSidebar(maps, cat) {
+  const std = filterByCat(maps.filter(m => m.tier === 'standard'), cat);
+  const com = filterByCat(maps.filter(m => m.tier !== 'standard'), cat);
+  const el  = document.getElementById('sb-list');
+  el.innerHTML = '';
+
+  if (std.length) {
+    appendTierLabel(el, 'Standard（公式・品質保証）');
+    std.forEach(def => el.appendChild(makeSidebarItem(def)));
+  }
+  if (com.length) {
+    const hr = document.createElement('hr');
+    hr.className = 'sb-divider';
+    el.appendChild(hr);
+    appendTierLabel(el, 'Community（ユーザー作成）');
+    com.forEach(def => el.appendChild(makeSidebarItem(def)));
+  }
+  if (!std.length && !com.length) {
+    el.innerHTML = '<div class="empty-state">このカテゴリの地図はまだありません</div>';
+  }
+}
+
+function appendTierLabel(parent, text) {
+  const d = document.createElement('div');
+  d.className = 'sb-tier-label';
+  d.textContent = text;
+  parent.appendChild(d);
+}
+
+function makeSidebarItem(def) {
   const el = document.createElement('div');
-  el.className = 'chip' + (def.id==='none'?' active':'');
+  el.className = 'sb-map-item' + (def.id === S.activeId ? ' active' : '');
   el.dataset.id = def.id;
+  const isNew = def.created_at &&
+    Date.now() - new Date(def.created_at) < 7 * 86400000;
+  let badge = def.is_standard
+    ? `<span class="sb-item-badge badge-std">公式</span>`
+    : (def.price === 0
+      ? `<span class="sb-item-badge badge-free">Free</span>`
+      : `<span class="sb-item-badge badge-paid">¥${def.price}</span>`);
+  if (isNew) badge = `<span class="sb-item-badge badge-new">New</span>` + badge;
+
   el.innerHTML = `
-    <span class="chip-emoji">${def.emoji||'🗺'}</span>
-    <div class="chip-info">
-      <span class="chip-name">${def.name}</span>
-      <span class="chip-era">${def.era||''}</span>
+    <span class="sb-item-emoji">${def.emoji || '🗺'}</span>
+    <div class="sb-item-info">
+      <div class="sb-item-name">${def.name}</div>
+      <div class="sb-item-era">${def.era || def.description || ''}</div>
     </div>
-    ${locked?`<span class="chip-lock">🔒</span>`:''}`;
+    ${badge}`;
+  el.addEventListener('click', () => loadMap(def));
   return el;
 }
 
-// ============================================================
-// 地図カード（ブラウザ）
-// ============================================================
-function buildCards(maps, cat) {
-  const std = maps.filter(m=>m.tier==='standard'&&(cat==='all'||m.category===cat||((cat==='fictional')&&['fiction','original','fictional'].includes(m.category))));
-  const com = maps.filter(m=>m.tier!=='standard'&&(cat==='all'||m.category===cat||((cat==='fictional')&&['fiction','original','fictional'].includes(m.category))));
+/* ── スマホ: 横スクロールチップ ──────────────────────── */
+function buildChips(maps) {
+  const c = document.getElementById('chip-scroll');
+  c.innerHTML = '';
+  maps.slice(0, 12).forEach(def => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (def.id === S.activeId ? ' active' : '');
+    el.dataset.id = def.id;
+    el.innerHTML = `
+      <span class="chip-emoji">${def.emoji || '🗺'}</span>
+      <div class="chip-info">
+        <span class="chip-name">${def.name}</span>
+        <span class="chip-era">${def.era || ''}</span>
+      </div>`;
+    el.addEventListener('click', () => {
+      loadMap(def);
+      setSheet('mid');
+    });
+    c.appendChild(el);
+  });
+}
 
-  buildCardSection('cards-std', std);
-  buildCardSection('cards-com', com);
-
-  document.getElementById('section-community').style.display = com.length ? '' : 'none';
+/* ── スマホ: ブラウザカード ──────────────────────────── */
+function buildBrowserCards(maps, cat) {
+  const std = filterByCat(maps.filter(m => m.tier === 'standard'), cat);
+  const com = filterByCat(maps.filter(m => m.tier !== 'standard'), cat);
+  buildCardSection('sp-cards-std', std);
+  buildCardSection('sp-cards-com', com);
+  document.getElementById('sp-com-label').style.display =
+    com.length ? '' : 'none';
 }
 
 function buildCardSection(elId, maps) {
   const c = document.getElementById(elId);
+  if (!c) return;
   c.innerHTML = '';
   if (!maps.length) {
-    c.innerHTML = '<div class="empty-msg">地図がありません</div>';
+    c.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">なし</div>';
     return;
   }
-  maps.forEach(def=>{
+  maps.forEach(def => {
     const card = document.createElement('div');
-    card.className = 'map-card' + (def.id===S.activeMapId?' active':'');
+    card.className = 'browser-card' + (def.id === S.activeId ? ' active' : '');
     card.dataset.id = def.id;
-    card.style.position = 'relative';
-
-    const thumb = def.thumbnail_url
-      ? `<img class="mc-thumb" src="${def.thumbnail_url}" alt="${def.name}" loading="lazy">`
-      : `<div class="mc-thumb-placeholder">${def.emoji||'🗺'}</div>`;
-
-    const isNew = def.created_at && (Date.now()-new Date(def.created_at))<7*86400000;
+    const isNew = def.created_at &&
+      Date.now() - new Date(def.created_at) < 7 * 86400000;
     let badges = def.is_standard
-      ? `<span class="mc-badge std">公式</span>`
-      : (def.price===0
-        ? `<span class="mc-badge free">Free</span>`
-        : `<span class="mc-badge paid">¥${def.price}</span>`);
-    if (def.is_verified) badges += `<span class="mc-badge verified">認証済</span>`;
-    if (isNew) badges += `<span class="mc-badge new">New</span>`;
-    if (def.price>0) card.innerHTML += `<span class="mc-lock">🔒</span>`;
-
-    card.innerHTML = `
-      ${thumb}
-      <div class="mc-body">
-        <div class="mc-name">${def.name}</div>
-        <div class="mc-era">${def.era||def.description||''}</div>
-        <div class="mc-badges">${badges}</div>
+      ? `<span class="sb-item-badge badge-std">公式</span>`
+      : (def.price === 0
+        ? `<span class="sb-item-badge badge-free">Free</span>`
+        : `<span class="sb-item-badge badge-paid">¥${def.price}</span>`);
+    if (isNew) badges += `<span class="sb-item-badge badge-new">New</span>`;
+    const thumb = def.thumbnail_url
+      ? `<img class="bc-thumb" src="${def.thumbnail_url}" alt="${def.name}" loading="lazy">`
+      : `<div class="bc-thumb-ph">${def.emoji || '🗺'}</div>`;
+    card.innerHTML = `${thumb}
+      <div class="bc-body">
+        <div class="bc-name">${def.name}</div>
+        <div class="bc-era">${def.era || ''}</div>
+        <div class="bc-badges">${badges}</div>
       </div>`;
-
-    card.addEventListener('click',()=>{ loadMap(def); closeSheet(); });
+    card.addEventListener('click', () => { loadMap(def); setSheet('min'); });
     c.appendChild(card);
   });
 }
 
-// ============================================================
-// Supabaseからデータ取得
-// ============================================================
-async function fetchMaps() {
-  try {
-    const {data,error} = await db.from('maps').select('*')
-      .eq('is_public',true).order('tier').order('created_at',{ascending:false});
-    if (error) throw error;
-    S.allMaps = data || [];
-    buildChips(S.allMaps);
-    buildCards(S.allMaps, S.currentCat);
-  } catch(e) {
-    document.getElementById('cards-std').innerHTML =
-      `<div class="empty-msg">読み込みエラー<br>${e.message}</div>`;
-  }
+/* ── カテゴリフィルター ──────────────────────────────── */
+function filterByCat(maps, cat) {
+  if (cat === 'all') return maps;
+  return maps.filter(m =>
+    m.category === cat ||
+    (cat === 'fictional' && ['fiction','original','fictional'].includes(m.category))
+  );
 }
 
-// ============================================================
-// シートの開閉（3段階スナップ）
-// ============================================================
-const SHEET_HEIGHTS = {min:'28px', mid:'200px', max:'68vh'};
-
-function openSheet(state) {
-  S.sheetState = state;
-  const el = document.getElementById('sheet');
-  el.style.height = SHEET_HEIGHTS[state];
-}
-function closeSheet() { openSheet('mid'); }
-function toggleSheet() {
-  if (S.sheetState==='min') openSheet('mid');
-  else if (S.sheetState==='mid') openSheet('max');
-  else openSheet('min');
-}
-
-// ============================================================
-// タイムスワイプ（左右スワイプで過去↔現在）
-// ============================================================
-function initSwipe() {
-  const mapEl = document.getElementById('map');
-  let startX = null, startY = null;
-
-  const onStart = e => {
-    if (S.sheetState !== 'min') return;
-    startX = (e.touches?.[0]||e).clientX;
-    startY = (e.touches?.[0]||e).clientY;
+/* ── GPS ────────────────────────────────────────────── */
+function startGPS(btnEl) {
+  btnEl.style.opacity = '.5';
+  const fb = () => {
+    placeMarker(35.6812, 139.7671);
+    showToast('GPS取得失敗 — デモ位置（東京）を表示');
+    btnEl.style.opacity = '1';
   };
-  const onEnd = e => {
-    if (startX===null) return;
-    const dx = (e.changedTouches?.[0]||e).clientX - startX;
-    const dy = (e.changedTouches?.[0]||e).clientY - startY;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-      if (!S.activeDef) { startX=null; return; }
-      S.swipeOverlay = S.swipeOverlay===0 ? 1 : 0;
-      const hint = document.getElementById('swipe-hint');
-      hint.textContent = S.swipeOverlay===0
-        ? `← ${S.activeDef.era}` : '← 現代地図';
-      hint.classList.add('show');
-      setTimeout(()=>hint.classList.remove('show'), 1800);
-
-      // フェードで切替
-      if (S.overlay) {
-        S.overlay.setOpacity(S.swipeOverlay===0 ? S.opacity : 0);
-      }
-      Object.values(S.vectorGroups).forEach(g=>{
-        g.eachLayer(l=>l.setStyle&&l.setStyle({opacity:S.swipeOverlay===0?S.opacity:0,fillOpacity:S.swipeOverlay===0?.8:0}));
-      });
-    }
-    startX = null;
-  };
-
-  mapEl.addEventListener('touchstart', onStart, {passive:true});
-  mapEl.addEventListener('touchend',   onEnd,   {passive:true});
-}
-
-// ============================================================
-// オーバーレイをクリア
-// ============================================================
-function clearOverlay() {
-  if (S.overlay) { S.map.removeLayer(S.overlay); S.overlay=null; }
-  Object.values(S.vectorGroups).forEach(g=>S.map.removeLayer(g));
-  S.vectorGroups = {};
-  document.getElementById('layer-pills').innerHTML = '';
-  document.getElementById('ctrl-name').textContent = '地図を選んでください';
-  document.getElementById('ctrl-era').textContent  = '';
-  document.getElementById('time-bar').classList.remove('visible');
-  S.activeMapId = null; S.activeDef = null;
-}
-
-// ============================================================
-// 不透明度
-// ============================================================
-function initOpacitySlider() {
-  const sl = document.getElementById('opacity-slider');
-  sl.addEventListener('input', ()=>{
-    const v = parseInt(sl.value);
-    sl.style.setProperty('--p', v+'%');
-    document.getElementById('opacity-val').textContent = v+'%';
-    S.opacity = v/100;
-    if (S.overlay) S.overlay.setOpacity(S.opacity);
-    Object.values(S.vectorGroups).forEach(g=>{
-      g.eachLayer(l=>l.setStyle&&l.setStyle({opacity:S.opacity,fillOpacity:S.opacity*.8}));
-    });
-  });
-}
-
-// ============================================================
-// GPS
-// ============================================================
-function startGPS() {
-  const btn = document.getElementById('btn-gps');
-  btn.classList.add('locating');
-  const fb = ()=>{ placeMarker(35.6812,139.7671); showToast('デモ位置を表示'); };
-  if (!navigator.geolocation) { btn.style.opacity='.4'; fb(); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    btn.classList.remove('locating');
+  if (!navigator.geolocation) { fb(); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    btnEl.style.opacity = '1';
     placeMarker(pos.coords.latitude, pos.coords.longitude);
-    S.map.flyTo([pos.coords.latitude,pos.coords.longitude],16,{duration:1.5});
-    showToast('現在地を表示中');
-  }, ()=>{ btn.classList.remove('locating'); fb(); },{enableHighAccuracy:true,timeout:8000});
+    S.map.flyTo([pos.coords.latitude, pos.coords.longitude], 16, { duration:1.5 });
+    showToast('現在地を表示中（ベース: OpenStreetMap）');
+  }, fb, { enableHighAccuracy:true, timeout:8000 });
   if (S.watchId) navigator.geolocation.clearWatch(S.watchId);
   S.watchId = navigator.geolocation.watchPosition(
-    pos=>placeMarker(pos.coords.latitude,pos.coords.longitude));
+    pos => placeMarker(pos.coords.latitude, pos.coords.longitude));
 }
 
-function placeMarker(lat,lng) {
-  const icon = L.divIcon({className:'',
+function placeMarker(lat, lng) {
+  const icon = L.divIcon({ className:'',
     html:`<div style="position:relative;width:16px;height:16px;">
       <div class="gps-dot"></div><div class="gps-ring"></div></div>`,
-    iconSize:[32,32],iconAnchor:[16,16]});
-  if (S.gpsMarker) S.gpsMarker.setLatLng([lat,lng]);
-  else S.gpsMarker = L.marker([lat,lng],{icon,zIndexOffset:9999}).addTo(S.map);
+    iconSize:[32,32], iconAnchor:[16,16] });
+  if (S.gpsMarker) S.gpsMarker.setLatLng([lat, lng]);
+  else S.gpsMarker = L.marker([lat, lng],
+    { icon, zIndexOffset:9999 }).addTo(S.map);
 }
 
-// ============================================================
-// コンパス
-// ============================================================
+/* ── コンパス ───────────────────────────────────────── */
 function initCompass() {
   const needle = document.getElementById('compass-needle');
   const h = e => needle.style.transform =
-    `rotate(${e.webkitCompassHeading!=null?e.webkitCompassHeading:360-(e.alpha??0)}deg)`;
-  if (typeof DeviceOrientationEvent!=='undefined') {
-    if (typeof DeviceOrientationEvent.requestPermission==='function')
-      document.getElementById('compass').addEventListener('click',()=>
-        DeviceOrientationEvent.requestPermission().then(r=>r==='granted'&&window.addEventListener('deviceorientation',h)));
-    else window.addEventListener('deviceorientation',h);
+    `rotate(${e.webkitCompassHeading != null
+      ? e.webkitCompassHeading : 360 - (e.alpha ?? 0)}deg)`;
+  if (typeof DeviceOrientationEvent !== 'undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function')
+      document.getElementById('compass').addEventListener('click', () =>
+        DeviceOrientationEvent.requestPermission()
+          .then(r => r === 'granted' && window.addEventListener('deviceorientation', h)));
+    else window.addEventListener('deviceorientation', h);
   }
 }
 
-// ============================================================
-// カテゴリタブ
-// ============================================================
-function initCatTabs() {
-  document.getElementById('cat-tabs').addEventListener('click', e=>{
-    const tab = e.target.closest('.cat-tab');
-    if (!tab) return;
-    document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    S.currentCat = tab.dataset.cat;
-    buildCards(S.allMaps, S.currentCat);
+/* ── ボトムシート（スマホ）─────────────────────────── */
+const SHEET_HEIGHTS = { min:'28px', mid:'190px', max:'68vh' };
+function setSheet(state) {
+  S.sheetH = state;
+  document.getElementById('sheet').style.height = SHEET_HEIGHTS[state];
+}
+function toggleSheet() {
+  setSheet(S.sheetH === 'min' ? 'mid' : S.sheetH === 'mid' ? 'max' : 'min');
+}
+function initSheetGesture() {
+  const handle = document.getElementById('sheet-handle');
+  let sy = null;
+  handle.addEventListener('touchstart', e => { sy = e.touches[0].clientY; },
+    { passive:true });
+  handle.addEventListener('touchend', e => {
+    if (sy === null) return;
+    const dy = sy - e.changedTouches[0].clientY;
+    if      (dy >  30) setSheet(S.sheetH === 'min' ? 'mid' : 'max');
+    else if (dy < -30) setSheet(S.sheetH === 'max' ? 'mid' : 'min');
+    sy = null;
+  }, { passive:true });
+  handle.addEventListener('click', toggleSheet);
+  document.getElementById('map').addEventListener('click', () => {
+    if (S.sheetH !== 'min') setSheet('min');
   });
 }
 
-// ============================================================
-// トースト
-// ============================================================
+/* ── トースト ───────────────────────────────────────── */
 let _tt;
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(_tt); _tt = setTimeout(()=>t.classList.remove('show'),2800);
+  clearTimeout(_tt); _tt = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ============================================================
-// シートスワイプ（上下）
-// ============================================================
-function initSheetGesture() {
-  const handle = document.getElementById('sheet-handle');
-  let sy=null;
-  handle.addEventListener('touchstart',e=>{sy=(e.touches[0]).clientY;},{passive:true});
-  handle.addEventListener('touchend',e=>{
-    if (sy===null) return;
-    const dy = sy - e.changedTouches[0].clientY;
-    if (dy>30) openSheet(S.sheetState==='min'?'mid':'max');
-    else if (dy<-30) openSheet(S.sheetState==='max'?'mid':'min');
-    sy=null;
-  },{passive:true});
-  handle.addEventListener('click', toggleSheet);
-}
-
-// ============================================================
-// BOOT
-// ============================================================
-document.addEventListener('DOMContentLoaded',()=>{
+/* ── 起動 ───────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
   initMap();
-  initOpacitySlider();
+  initSliders();
   initCompass();
-  initSwipe();
   initSheetGesture();
-  initCatTabs();
   fetchMaps();
 
-  document.getElementById('btn-start').addEventListener('click',()=>{
+  /* スプラッシュ */
+  document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('splash').classList.add('hidden');
-    openSheet('mid');
-    // 最初の地図を自動ロード（川越）
-    setTimeout(()=>{
+    setSheet('mid');
+    setTimeout(() => {
       if (S.allMaps.length) {
-        const kawagoe = S.allMaps.find(m=>m.id==='standard-kawagoe-edo');
-        if (kawagoe) loadMap(kawagoe);
+        const first = S.allMaps.find(m => m.id === 'standard-ryoma-kyoto')
+          || S.allMaps[0];
+        if (first) loadMap(first);
       }
-    }, 800);
+    }, 700);
   });
 
-  document.getElementById('btn-gps').addEventListener('click',startGPS);
-  document.getElementById('btn-north').addEventListener('click',()=>{
-    document.getElementById('compass-needle').style.transform='rotate(0deg)';
+  /* PC ボタン */
+  document.getElementById('pc-gps-btn').addEventListener('click', e =>
+    startGPS(e.currentTarget));
+  document.getElementById('pc-north-btn').addEventListener('click', () => {
+    document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
     showToast('北向きにリセット');
   });
 
-  // 地図タップでシートを閉じる
-  document.getElementById('map').addEventListener('click',()=>{
-    if (S.sheetState!=='min') openSheet('min');
+  /* スマホ ボタン */
+  document.getElementById('sp-gps-btn').addEventListener('click', e =>
+    startGPS(e.currentTarget));
+  document.getElementById('sp-north-btn').addEventListener('click', () => {
+    document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
+    showToast('北向きにリセット');
   });
 
-  // スワイプヒントを最初に表示
-  setTimeout(()=>{
-    const h = document.getElementById('swipe-hint');
-    h.textContent='← 左右スワイプで過去↔現在を切替 →';
-    h.classList.add('show');
-    setTimeout(()=>h.classList.remove('show'),3000);
-  }, 3000);
+  /* PC カテゴリタブ */
+  document.getElementById('sb-cattabs').addEventListener('click', e => {
+    const tab = e.target.closest('.sb-cattab');
+    if (!tab) return;
+    document.querySelectorAll('.sb-cattab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    S.currentCat = tab.dataset.cat;
+    buildSidebar(S.allMaps, S.currentCat);
+  });
+
+  /* スマホ カテゴリタブ */
+  document.getElementById('browser-cattabs').addEventListener('click', e => {
+    const tab = e.target.closest('.browser-cattab');
+    if (!tab) return;
+    document.querySelectorAll('.browser-cattab').forEach(t =>
+      t.classList.remove('active'));
+    tab.classList.add('active');
+    buildBrowserCards(S.allMaps, tab.dataset.cat);
+  });
 });
 </script>
 </body>
