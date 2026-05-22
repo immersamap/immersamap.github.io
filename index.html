@@ -475,8 +475,8 @@ input[type=range]::-webkit-slider-thumb {
   /* PC：サイドバー分だけ地図をずらす */
   #map { left:var(--sidebar-w); }
   #sidebar { display:flex; }
-  /* 検索・バッジ・コンパス・現在地はPC用に調整 */
-  #search-overlay { left:var(--sidebar-w); }
+  /* PC: 検索バーはサイドバー内にあるのでオーバーレイ非表示 */
+  #search-overlay { display:none; }
   #compass { top:14px; right:14px; }
   #map-badge { top:max(72px,calc(env(safe-area-inset-top)+62px)); }
   #loc-btn { bottom:14px; }
@@ -958,8 +958,14 @@ function filterByCat(maps, cat) {
     themed:       ['themed','pilgrimage','ruins','local_culture','research'],
   };
   const cats = catMap[cat] || [cat];
-  return maps.filter(m => m.category &&
-    (cats.includes(m.category) || cats.includes(m.subcategory)));
+  return maps.filter(m => {
+    if (!m.category) return false;
+    // categoryまたはsubcategoryが一致
+    if (cats.includes(m.category) || cats.includes(m.subcategory)) return true;
+    // 旧データ互換: aerial → aerial_photo
+    if (cat === 'aerial_photo' && m.category === 'aerial') return true;
+    return false;
+  });
 }
 
 // ============================================================
@@ -1080,6 +1086,9 @@ function openPanel() {
   document.getElementById('panel-detail').style.display = 'block';
   document.getElementById('panel-list-wrap').style.display = 'flex';
   document.getElementById('panel-map-btn').classList.add('open');
+  // パネル展開時：loc-btnをパネルの上に移動
+  document.getElementById('loc-btn').style.bottom =
+    'calc(75vh + env(safe-area-inset-bottom,0px) + 10px)';
 }
 function closePanel() {
   S.panelOpen = false;
@@ -1088,6 +1097,9 @@ function closePanel() {
   document.getElementById('panel-detail').style.display = 'none';
   document.getElementById('panel-list-wrap').style.display = 'none';
   document.getElementById('panel-map-btn').classList.remove('open');
+  // パネル閉じ時：loc-btnを元の位置に戻す
+  document.getElementById('loc-btn').style.bottom =
+    'calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 14px)';
 }
 
 // ============================================================
@@ -1140,8 +1152,10 @@ function initSearch() {
   });
   // 外側クリックで閉じる
   document.addEventListener('click', e => {
-    if (!searchInput.closest('#search-overlay').contains(e.target))
+    if (!document.getElementById('search-overlay').contains(e.target))
       searchResults.style.display = 'none';
+    if (pcInput && !pcInput.closest('.sb-head').contains(e.target))
+      if (pcResults) pcResults.style.display = 'none';
   });
 
   // PCサイドバー検索
