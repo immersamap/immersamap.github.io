@@ -231,7 +231,7 @@ input[type=range]::-webkit-slider-thumb {
   max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mhud-right { display:flex; gap:6px; pointer-events:all; }
 .mhud-btn {
-  width:38px; height:38px; border-radius:5px;
+  height:38px; border-radius:5px; padding:0 12px;
   border:1px solid var(--border); background:var(--surface);
   backdrop-filter:blur(8px); color:var(--parchment);
   font-size:16px; cursor:pointer;
@@ -431,6 +431,36 @@ input[type=range]::-webkit-slider-thumb {
 
 /* Leaflet デフォルトUIを非表示 */
 .leaflet-control-zoom { display:none !important; }
+
+/* スマホ用FABボタン */
+#sp-fab {
+  display:none;
+  position:fixed;
+  right:12px;
+  z-index:20;
+  flex-direction:column;
+  gap:8px;
+}
+.sp-fab-btn {
+  width:40px; height:40px; border-radius:6px;
+  border:1px solid var(--border); background:var(--surface);
+  backdrop-filter:blur(8px); color:var(--parchment);
+  font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.sp-fab-btn:active { transform:scale(.92); }
+
+@media (max-width: 767px) {
+  #sp-fab {
+    display:flex;
+    /* コンパス(40px) + top位置 + gap */
+    top:max(120px,calc(env(safe-area-inset-top)+106px));
+  }
+}
+@media (min-width: 768px) {
+  #sp-fab { display:none !important; }
+}
 .leaflet-control-attribution {
   background:rgba(18,12,4,0.75) !important;
   color:rgba(242,232,208,0.7) !important;
@@ -456,12 +486,16 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 @media (max-width: 767px) {
-  /* スマホ: サイドバーを非表示、ボトムシートを表示 */
   #sidebar { display:none !important; }
   #map { left:0; }
   #mobile-hud { display:flex; }
   #sheet { display:flex; flex-direction:column; }
-  #compass { top:max(60px,calc(env(safe-area-inset-top)+46px)); right:12px; }
+  /* コンパスはHUDボタンの下に配置（重ならないよう） */
+  #compass {
+    top:max(70px,calc(env(safe-area-inset-top)+56px));
+    right:12px;
+    width:40px; height:40px;
+  }
 }
 </style>
 </head>
@@ -537,9 +571,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="mhud-mapname" id="sp-now-name">地図を選んでください</div>
   </div>
   <div class="mhud-right">
-    <button class="mhud-btn" id="sp-gps-btn"   aria-label="現在地">📍</button>
-    <button class="mhud-btn" id="sp-north-btn" aria-label="北向きに戻す">🔺</button>
-    <button class="mhud-btn" id="sp-menu-btn"  aria-label="地図を選ぶ">🗺</button>
+    <button class="mhud-btn" id="sp-menu-btn" aria-label="地図を選ぶ">🗺 地図を選ぶ</button>
   </div>
 </div>
 
@@ -794,6 +826,11 @@ function loadMap(def) {
       maxZoom: def.zoom_max || 18,
       attribution: attr,
     }).addTo(S.map);
+    // 年度別写真はzoom14以上が必要なので自動ズーム
+    if (def.zoom_min && def.zoom_min >= 14 && S.map.getZoom() < 14) {
+      S.map.setZoom(14);
+      showToast(name + ' — ズームイン済（zoom14以上必要）');
+    }
     buildLayerPills([]);
     S.map.flyTo([def.center_lat, def.center_lng],
       def.zoom_default || 14, { duration:1.2 });
@@ -1082,9 +1119,13 @@ function buildCardSection(elId, maps) {
 function filterByCat(maps, cat) {
   if (cat === 'all') return maps;
   return maps.filter(m => {
-    if (cat === 'fictional') return ['fiction','original','fictional'].includes(m.category);
+    if (!m.category) return false;
+    if (cat === 'fictional')    return ['fiction','original','fictional'].includes(m.category);
     if (cat === 'aerial_photo') return ['aerial','aerial_photo'].includes(m.category);
-    if (cat === 'terrain')   return m.category === 'terrain';
+    if (cat === 'terrain')      return ['terrain'].includes(m.category);
+    if (cat === 'story')        return ['story','bakumatsu','meiji_people','war_history'].includes(m.category) || m.subcategory === 'bakumatsu';
+    if (cat === 'historical')   return ['historical','ancient','edo','modern_japan','world_history'].includes(m.category);
+    if (cat === 'themed')       return ['themed','pilgrimage','ruins','local_culture','research'].includes(m.category);
     return m.category === cat;
   });
 }
@@ -1203,9 +1244,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* スマホ ボタン */
-  document.getElementById('sp-gps-btn').addEventListener('click', e =>
+  // スマホFABボタン（#sp-fab内）
+  document.getElementById('sp-gps-btn')?.addEventListener('click', e =>
     startGPS(e.currentTarget));
-  document.getElementById('sp-north-btn').addEventListener('click', () => {
+  document.getElementById('sp-north-btn')?.addEventListener('click', () => {
     document.getElementById('compass-needle').style.transform = 'rotate(0deg)';
     showToast('北向きにリセット');
   });
