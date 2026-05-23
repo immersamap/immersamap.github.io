@@ -218,6 +218,23 @@ html, body {
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
+/* zoom範囲外ガイド（地図中央） */
+#zoom-guide {
+  position:fixed; top:50%; left:50%; z-index:15;
+  transform:translate(-50%,-50%);
+  background:var(--surface); border:1.5px solid var(--gold);
+  border-radius:var(--radius); padding:14px 20px;
+  display:none; align-items:center; gap:10px;
+  font-size:13px; color:var(--parchment);
+  backdrop-filter:blur(10px);
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  pointer-events:none; text-align:center;
+  max-width:260px; line-height:1.6;
+}
+#zoom-guide.show { display:flex; flex-direction:column; align-items:center; }
+#zoom-guide-icon { font-size:28px; margin-bottom:4px; }
+#zoom-guide-text { font-size:12px; color:var(--parchment2); }
+
 /* ============================================================
    出典表記（地図右下・常時表示）
    ============================================================ */
@@ -554,6 +571,12 @@ input[type=range]::-webkit-slider-thumb {
   <span id="tile-loading-text">読み込み中...</span>
 </div>
 
+<!-- zoom範囲外ガイド（地図中央に表示） -->
+<div id="zoom-guide">
+  <span id="zoom-guide-icon">🔍</span>
+  <span id="zoom-guide-text"></span>
+</div>
+
 <!-- ⑥ スマホ ボトムパネル -->
 <div id="panel">
   <!-- 閉じた状態：常時見えるボタン -->
@@ -743,6 +766,10 @@ function loadMap(def) {
   if (S.overlayTile) { S.map.removeLayer(S.overlayTile); S.overlayTile = null; }
   Object.values(S.vectorGroups).forEach(g => S.map.removeLayer(g));
   S.vectorGroups = {};
+  // 前の地図のzoom-guideとzoomイベントをクリア
+  const prevGuide = document.getElementById('zoom-guide');
+  if (prevGuide) prevGuide.classList.remove('show');
+  S.map.off('zoomend.zoomguide');
 
   S.activeId  = def.id;
   S.activeDef = def;
@@ -805,33 +832,34 @@ function loadMap(def) {
     });
     buildLayerPills([]);
 
-    // zoom範囲の案内メッセージを設定（effectiveMin/MaxZoomを使用）
-    const minZ = effectiveMinZoom;
-    const maxZ = effectiveMaxZoom;
-    const curZ = S.map.getZoom();
-    const zoomNote = document.getElementById('panel-zoom-note');
-    const pcZoomNote = document.getElementById('pc-zoom-note');
-    let zoomMsg = '';
-    if (curZ < minZ) {
-      zoomMsg = `ズームインすると表示されます（現在のズーム: ${curZ}、必要: ${minZ}以上）`;
-      S.map.setZoom(minZ); // 自動ズーム
-    } else if (curZ > maxZ) {
-      zoomMsg = `ズームアウトすると表示されます（現在のズーム: ${curZ}、最大: ${maxZ}）`;
-    }
-    if (zoomNote)   { zoomNote.textContent   = zoomMsg; zoomNote.style.display   = zoomMsg ? 'block' : 'none'; }
-    if (pcZoomNote) { pcZoomNote.textContent = zoomMsg; pcZoomNote.style.display = zoomMsg ? 'block' : 'none'; }
+    // zoom範囲外の場合は地図上にガイドを表示する関数
+    const updateZoomGuide = () => {
+      const z   = S.map.getZoom();
+      const guide     = document.getElementById('zoom-guide');
+      const guideText = document.getElementById('zoom-guide-text');
+      const guideIcon = document.getElementById('zoom-guide-icon');
+      const zoomNote   = document.getElementById('panel-zoom-note');
+      const pcZoomNote = document.getElementById('pc-zoom-note');
+      let msg = '', icon = '';
+      if (z < effectiveMinZoom) {
+        icon = '🔍＋';
+        msg  = `ズームインすると表示されます\n（拡大してください）`;
+      } else if (z > effectiveMaxZoom) {
+        icon = '🔍－';
+        msg  = `ズームアウトすると表示されます\n（縮小してください）`;
+      }
+      if (guide) {
+        if (msg) { guide.classList.add('show'); guideIcon.textContent = icon; guideText.textContent = msg; }
+        else     { guide.classList.remove('show'); }
+      }
+      const plainMsg = msg.replace('\n', ' ');
+      if (zoomNote)   { zoomNote.textContent = plainMsg; zoomNote.style.display = msg ? 'block' : 'none'; }
+      if (pcZoomNote) { pcZoomNote.textContent = plainMsg; pcZoomNote.style.display = msg ? 'block' : 'none'; }
+    };
 
-    // zoomレベル変化時も案内を更新
+    updateZoomGuide();
     S.map.off('zoomend.zoomguide');
-    S.map.on('zoomend.zoomguide', () => {
-      const z = S.map.getZoom();
-      let msg = '';
-      if (z < minZ) msg = `ズームインすると表示されます（必要: ${minZ}以上）`;
-      else if (z > maxZ) msg = `ズームアウトすると表示されます（最大: ${maxZ}）`;
-      if (zoomNote)   { zoomNote.textContent   = msg; zoomNote.style.display   = msg ? 'block' : 'none'; }
-      if (pcZoomNote) { pcZoomNote.textContent = msg; pcZoomNote.style.display = msg ? 'block' : 'none'; }
-    });
-
+    S.map.on('zoomend.zoomguide', updateZoomGuide);
     showToast(name + ' を表示中');
 
   } else {
