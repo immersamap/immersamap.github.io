@@ -491,9 +491,9 @@ input[type=range]::-webkit-slider-thumb {
   /* スマホ：検索バーは画面幅全体（コンパスはその下に独立） */
   #search-overlay { left:0; right:0; }
   /* コンパスは検索バーの完全に下（重ならない） */
-  #compass { top:max(78px,calc(env(safe-area-inset-top)+68px)); right:12px; width:40px; height:40px; }
+  #compass { top:max(85px,calc(env(safe-area-inset-top)+75px)); right:12px; width:40px; height:40px; }
   /* バッジは検索バーの完全に下・左端 */
-  #map-badge { top:max(78px,calc(env(safe-area-inset-top)+68px)); left:12px; }
+  #map-badge { top:max(85px,calc(env(safe-area-inset-top)+75px)); left:12px; }
   /* 現在地ボタンはパネル高さ分上にオフセット */
   #loc-btn { bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 14px); }
   #panel { display:flex; flex-direction:column; height:var(--panel-h); }
@@ -771,10 +771,28 @@ function loadMap(def) {
     const attrStr = attr
       ? `<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">${attr}</a>`
       : '';
+    // tiles_urlからzoom範囲を自動推定（DBのzoom_minが未設定の場合のフォールバック）
+    const guessMinZoom = (url) => {
+      if (!url) return 2;
+      if (url.includes('nendophoto')) return 14;
+      if (url.includes('ort_riku10') || url.includes('ort_1928')) return 13;
+      if (url.includes('gazo') || url.includes('ort_old') || url.includes('ort_USA')) return 10;
+      return 2;
+    };
+    const guessMaxZoom = (url) => {
+      if (!url) return 18;
+      if (url.includes('nendophoto')) return 18;
+      if (url.includes('gazo') || url.includes('ort_old') || url.includes('ort_USA')) return 17;
+      if (url.includes('ort_riku10') || url.includes('ort_1928')) return 18;
+      if (url.includes('relief') || url.includes('hillshade')) return 16;
+      return 18;
+    };
+    const effectiveMinZoom = def.zoom_min || guessMinZoom(def.tiles_url);
+    const effectiveMaxZoom = def.zoom_max || guessMaxZoom(def.tiles_url);
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
-      minZoom: def.zoom_min || 2,
-      maxZoom: def.zoom_max || 18,
+      minZoom: effectiveMinZoom,
+      maxZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
     S.overlayTile.once('tileload', hideTileLoading);
@@ -784,9 +802,9 @@ function loadMap(def) {
     });
     buildLayerPills([]);
 
-    // zoom範囲の案内メッセージを設定
-    const minZ = def.zoom_min || 2;
-    const maxZ = def.zoom_max || 18;
+    // zoom範囲の案内メッセージを設定（effectiveMin/MaxZoomを使用）
+    const minZ = effectiveMinZoom;
+    const maxZ = effectiveMaxZoom;
     const curZ = S.map.getZoom();
     const zoomNote = document.getElementById('panel-zoom-note');
     const pcZoomNote = document.getElementById('pc-zoom-note');
