@@ -487,12 +487,12 @@ input[type=range]::-webkit-slider-thumb {
 @media (max-width:767px) {
   #sidebar { display:none !important; }
   #map { left:0; }
-  /* スマホ：検索バーは右端をコンパス分(52px)空ける */
-  #search-overlay { left:0; right:60px; }
-  /* コンパスは右上（検索バーの下） */
-  #compass { top:max(72px,calc(env(safe-area-inset-top)+62px)); right:12px; width:40px; height:40px; }
-  /* バッジは検索バーの下・左端 */
-  #map-badge { top:max(72px,calc(env(safe-area-inset-top)+62px)); left:12px; }
+  /* スマホ：検索バーは画面幅全体（コンパスはその下に独立） */
+  #search-overlay { left:0; right:0; }
+  /* コンパスは検索バーの完全に下（重ならない） */
+  #compass { top:max(78px,calc(env(safe-area-inset-top)+68px)); right:12px; width:40px; height:40px; }
+  /* バッジは検索バーの完全に下・左端 */
+  #map-badge { top:max(78px,calc(env(safe-area-inset-top)+68px)); left:12px; }
   /* 現在地ボタンはパネル高さ分上にオフセット */
   #loc-btn { bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 14px); }
   #panel { display:flex; flex-direction:column; height:var(--panel-h); }
@@ -777,12 +777,16 @@ function loadMap(def) {
       attribution: attrStr,
     }).addTo(S.map);
     S.overlayTile.once('tileload', hideTileLoading);
-    S.overlayTile.on('tileerror', hideTileLoading);
+    S.overlayTile.on('tileerror', () => {
+      hideTileLoading();
+      showToast('この地域のデータがない可能性があります');
+    });
     buildLayerPills([]);
 
-    // 航空写真：現在位置を保持（flyToしない）
-    if (isNendo && S.map.getZoom() < 14) {
-      S.map.setZoom(14);
+    // zoom不足の場合は自動ズーム（現在位置は保持）
+    const minZ = def.zoom_min || 2;
+    if (S.map.getZoom() < minZ) {
+      S.map.setZoom(minZ);
     }
     showToast(name + ' を表示中');
 
@@ -1289,16 +1293,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // スプラッシュ
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('splash').classList.add('hidden');
-    const tryLoad = () => {
-      if (S.allMaps.length) {
-        const first = S.allMaps.find(m=>m.id==='standard-ryoma-kyoto') || S.allMaps[0];
-        if (first) loadMap(first);
-      } else {
-        tryLoad._c = (tryLoad._c||0)+1;
-        if (tryLoad._c < 12) setTimeout(tryLoad, 500);
-      }
-    };
-    setTimeout(tryLoad, 300);
+    // 地図は自動選択しない。利用者が選ぶ
+    // パネルを開いて地図一覧を表示する
+    openPanel();
   });
 
   // スマホ：「地図を選ぶ」ボタン → 1タップで全開
