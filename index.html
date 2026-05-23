@@ -218,6 +218,23 @@ html, body {
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
+/* フローティングコントロール（地図上・常時表示） */
+#float-ctrl {
+  position:fixed; left:0; right:0; z-index:18;
+  background:var(--surface); backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);
+  padding:8px 14px 6px;
+  display:none; /* スマホのみ表示 */
+  flex-direction:column; gap:6px;
+  pointer-events:all;
+}
+#float-opacity-row {
+  display:flex; align-items:center; gap:10px;
+}
+.float-lbl { font-size:11px; color:var(--sepia); white-space:nowrap; min-width:36px; }
+.float-val { font-size:11px; color:var(--gold); min-width:32px; text-align:right;
+  font-family:'Cinzel',serif; }
+
 /* zoom範囲外ガイド（地図中央） */
 #zoom-guide {
   position:fixed; top:50%; left:50%; z-index:50;
@@ -494,11 +511,10 @@ input[type=range]::-webkit-slider-thumb {
    レスポンシブ切替
    ============================================================ */
 @media (min-width:768px) {
-  /* PC：サイドバー分だけ地図をずらす */
   #map { left:var(--sidebar-w); }
   #sidebar { display:flex; }
-  /* PC: 検索バーはサイドバー内にあるのでオーバーレイ非表示 */
   #search-overlay { display:none; }
+  #float-ctrl { display:none !important; } /* PCはサイドバーで操作 */
   /* zoom-guideをサイドバー分右にずらして地図の中央に表示 */
   #zoom-guide { left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2); }
   #compass { top:14px; right:14px; }
@@ -511,6 +527,7 @@ input[type=range]::-webkit-slider-thumb {
 @media (max-width:767px) {
   #sidebar { display:none !important; }
   #map { left:0; }
+  #float-ctrl { display:flex; } /* スマホのみ表示 */
   /* スマホ：検索バーはコンパス分右端を空ける */
   #search-overlay { left:0; right:56px; }
   /* コンパスは検索バーの完全に下（重ならない） */
@@ -521,6 +538,14 @@ input[type=range]::-webkit-slider-thumb {
   /* 現在地ボタンはパネル高さ分上にオフセット */
   #loc-btn { bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 14px); }
   #panel { display:flex; flex-direction:column; height:var(--panel-h); }
+  /* float-ctrlはパネルの上に配置 */
+  #float-ctrl {
+    bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px));
+  }
+  /* loc-btnはfloat-ctrlの上 */
+  #loc-btn {
+    bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 60px + 14px);
+  }
 }
 </style>
 </head>
@@ -576,6 +601,16 @@ input[type=range]::-webkit-slider-thumb {
   <span id="tile-loading-text">読み込み中...</span>
 </div>
 
+<!-- フローティングコントロール（地図上・常時表示） -->
+<div id="float-ctrl">
+  <div id="float-opacity-row">
+    <span class="float-lbl">透明度</span>
+    <input type="range" id="float-opacity" min="0" max="100" value="80" step="1" style="--p:80%">
+    <span class="float-val" id="float-opacity-val">80%</span>
+  </div>
+  <div class="layer-pills" id="float-layer-pills"></div>
+</div>
+
 <!-- zoom範囲外ガイド（地図中央に表示） -->
 <div id="zoom-guide">
   <span id="zoom-guide-icon">🔍</span>
@@ -603,12 +638,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="panel-zoom-note" id="panel-zoom-note">
       もう少しズームインすると表示されます
     </div>
-    <div class="ctrl-row">
-      <span class="ctrl-lbl">透明度</span>
-      <input type="range" id="sp-opacity" min="0" max="100" value="80" step="1" style="--p:80%">
-      <span class="ctrl-val" id="sp-opacity-val">80%</span>
-    </div>
-    <div class="layer-pills" id="sp-layer-pills"></div>
+    <!-- 透明度スライダー・レイヤーピルはfloat-ctrlに移動 -->
   </div>
   <!-- 地図選択リスト -->
   <div class="panel-list-wrap" id="panel-list-wrap" style="display:none;">
@@ -946,7 +976,7 @@ function mkPopup(p) {
 // レイヤーピル（PC・スマホ同期）
 // ============================================================
 function buildLayerPills(layers) {
-  ['pc-layer-pills','sp-layer-pills'].forEach(id => {
+  ['pc-layer-pills','sp-layer-pills','float-layer-pills'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.innerHTML = '';
@@ -971,13 +1001,13 @@ function buildLayerPills(layers) {
 // 不透明度（PC・スマホ同期）
 // ============================================================
 function initSliders() {
-  ['pc-opacity','sp-opacity'].forEach(id => {
+  ['pc-opacity','sp-opacity','float-opacity'].forEach(id => {
     const sl = document.getElementById(id);
     if (!sl) return;
     sl.addEventListener('input', () => {
       const v = parseInt(sl.value);
       S.opacity = v / 100;
-      ['pc-opacity','sp-opacity'].forEach(sid => {
+      ['pc-opacity','sp-opacity','float-opacity'].forEach(sid => {
         const s = document.getElementById(sid);
         if (!s) return;
         s.value = v;
@@ -1191,9 +1221,10 @@ function openPanel() {
   document.getElementById('panel-detail').style.display = 'block';
   document.getElementById('panel-list-wrap').style.display = 'flex';
   document.getElementById('panel-map-btn').classList.add('open');
-  // パネル展開時：loc-btnをパネルの上に移動
   document.getElementById('loc-btn').style.bottom =
-    'calc(75vh + env(safe-area-inset-bottom,0px) + 10px)';
+    'calc(75vh + env(safe-area-inset-bottom,0px) + 60px + 14px)';
+  const fc = document.getElementById('float-ctrl');
+  if (fc) fc.style.bottom = 'calc(75vh + env(safe-area-inset-bottom,0px))';
 }
 function closePanel() {
   S.panelOpen = false;
@@ -1202,9 +1233,10 @@ function closePanel() {
   document.getElementById('panel-detail').style.display = 'none';
   document.getElementById('panel-list-wrap').style.display = 'none';
   document.getElementById('panel-map-btn').classList.remove('open');
-  // パネル閉じ時：loc-btnを元の位置に戻す
   document.getElementById('loc-btn').style.bottom =
-    'calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 14px)';
+    'calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 60px + 14px)';
+  const fc = document.getElementById('float-ctrl');
+  if (fc) fc.style.bottom = 'calc(var(--panel-h) + env(safe-area-inset-bottom,0px))';
 }
 
 // ============================================================
