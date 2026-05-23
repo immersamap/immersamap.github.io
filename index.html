@@ -738,6 +738,9 @@ const S = {
   allMaps:[], currentCat:'all',
   gpsMarker:null, watchId:null,
   panelOpen:false, isPC:false,
+  zoomGuideListener:null,  // zoomendリスナー管理用
+  effectiveMinZoom:2,      // 現在選択中の地図のzoom_min
+  effectiveMaxZoom:18,     // 現在選択中の地図のzoom_max
 };
 
 // ============================================================
@@ -770,8 +773,8 @@ function loadMap(def) {
   S.vectorGroups = {};
   // 前の地図のzoom-guideとzoomイベントをクリア
   const prevGuide = document.getElementById('zoom-guide');
-  if (prevGuide) prevGuide.classList.remove('show');
-  S.map.off('zoomend.zoomguide');
+  if (prevGuide) { prevGuide.classList.remove('show'); prevGuide.style.display='none'; }
+  if (S.zoomGuideListener) { S.map.off('zoomend', S.zoomGuideListener); S.zoomGuideListener = null; }
 
   S.activeId  = def.id;
   S.activeDef = def;
@@ -850,8 +853,9 @@ function loadMap(def) {
     buildLayerPills([]);
 
     updateZoomGuide();
-    S.map.off('zoomend.zoomguide');
-    S.map.on('zoomend.zoomguide', updateZoomGuide);
+    if (S.zoomGuideListener) S.map.off('zoomend', S.zoomGuideListener);
+    S.zoomGuideListener = updateZoomGuide;
+    S.map.on('zoomend', S.zoomGuideListener);
     showToast(name + ' を表示中');
 
   } else {
@@ -1230,10 +1234,15 @@ async function doSearch(query, resultsEl) {
         const el = document.createElement('div');
         el.className = 'search-result-item';
         el.textContent = item.display_name.split(',').slice(0,3).join(', ');
-        el.addEventListener('click', () => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation(); // 外側クリックイベントの伝播を止める
           S.map.flyTo([parseFloat(item.lat), parseFloat(item.lon)], 16, {duration:1.2});
           resultsEl.style.display = 'none';
-          document.getElementById('search-input').value = '';
+          // 両方の検索inputをクリア
+          const si = document.getElementById('search-input');
+          const pi = document.getElementById('pc-search-input');
+          if (si) si.value = '';
+          if (pi) pi.value = '';
           showToast(item.display_name.split(',')[0] + ' に移動');
         });
         resultsEl.appendChild(el);
