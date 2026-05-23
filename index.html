@@ -380,7 +380,7 @@ input[type=range]::-webkit-slider-thumb {
   display:none; flex-direction:column;
 }
 .sb-head { padding:14px 16px 10px; border-bottom:1px solid var(--border);
-  flex-shrink:0; }
+  flex-shrink:0; position:relative; overflow:visible; }
 .sb-logo { font-family:'Cinzel',serif; font-size:16px;
   letter-spacing:.14em; color:var(--gold-l); margin-bottom:10px; }
 /* PC検索（サイドバー内） */
@@ -396,7 +396,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 .sb-search-input::placeholder { color:var(--sepia); }
 .sb-search-results {
-  position:absolute; left:16px; right:16px; z-index:100;
+  position:absolute; left:0; right:0; z-index:200;
   background:var(--ink2); border:1px solid var(--border);
   border-radius:0 0 var(--radius) var(--radius);
   max-height:200px; overflow-y:auto; display:none;
@@ -502,6 +502,7 @@ input[type=range]::-webkit-slider-thumb {
   /* zoom-guideをサイドバー分右にずらして地図の中央に表示 */
   #zoom-guide { left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2); }
   #compass { top:14px; right:14px; }
+  #compass-label { top:60px; right:14px; }
   #map-badge { top:max(72px,calc(env(safe-area-inset-top)+62px)); }
   #loc-btn { bottom:14px; }
   #panel { display:none !important; }
@@ -514,6 +515,7 @@ input[type=range]::-webkit-slider-thumb {
   #search-overlay { left:0; right:0; }
   /* コンパスは検索バーの完全に下（重ならない） */
   #compass { top:max(85px,calc(env(safe-area-inset-top)+75px)); right:12px; width:40px; height:40px; }
+  #compass-label { top:max(132px,calc(env(safe-area-inset-top)+122px)); right:12px; }
   /* バッジは検索バーの完全に下・左端 */
   #map-badge { top:max(85px,calc(env(safe-area-inset-top)+75px)); left:12px; }
   /* 現在地ボタンはパネル高さ分上にオフセット */
@@ -548,13 +550,14 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- ② コンパス（右上・タップで北向きリセット） -->
-<div id="compass" aria-label="コンパス（タップで北向きリセット）">
+<div id="compass" aria-label="コンパス" title="タップで北向きに戻す">
   <div class="c-ring"></div>
   <div class="c-needle" id="compass-needle">
     <div class="c-n"></div><div class="c-s"></div>
   </div>
   <span class="c-lbl">N</span>
 </div>
+<div id="compass-label">タップで北向きに</div>
 
 <!-- ③ 地図名・出典バッジ（左上・常時表示） -->
 <div id="map-badge">
@@ -762,6 +765,9 @@ function initMap() {
   setTimeout(() =>
     document.getElementById('loading').classList.add('hidden'), 2500);
   S.isPC = window.innerWidth >= 768;
+
+  // zoomendを永続的にバインド（地図切替に依存しない）
+  S.map.on('zoomend', updateZoomGuide);
 }
 
 // ============================================================
@@ -774,7 +780,7 @@ function loadMap(def) {
   // 前の地図のzoom-guideとzoomイベントをクリア
   const prevGuide = document.getElementById('zoom-guide');
   if (prevGuide) { prevGuide.classList.remove('show'); prevGuide.style.display='none'; }
-  if (S.zoomGuideListener) { S.map.off('zoomend', S.zoomGuideListener); S.zoomGuideListener = null; }
+  // zoomendはinitMapで永続バインド済み
 
   S.activeId  = def.id;
   S.activeDef = def;
@@ -853,9 +859,7 @@ function loadMap(def) {
     buildLayerPills([]);
 
     updateZoomGuide();
-    if (S.zoomGuideListener) S.map.off('zoomend', S.zoomGuideListener);
-    S.zoomGuideListener = updateZoomGuide;
-    S.map.on('zoomend', S.zoomGuideListener);
+    // zoomendはinitMap内で永続バインド済み（ここでは不要）
     showToast(name + ' を表示中');
 
   } else {
