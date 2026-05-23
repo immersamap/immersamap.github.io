@@ -511,8 +511,8 @@ input[type=range]::-webkit-slider-thumb {
 @media (max-width:767px) {
   #sidebar { display:none !important; }
   #map { left:0; }
-  /* スマホ：検索バーは画面幅全体（コンパスはその下に独立） */
-  #search-overlay { left:0; right:0; }
+  /* スマホ：検索バーはコンパス分右端を空ける */
+  #search-overlay { left:0; right:56px; }
   /* コンパスは検索バーの完全に下（重ならない） */
   #compass { top:max(85px,calc(env(safe-area-inset-top)+75px)); right:12px; width:40px; height:40px; }
   #compass-label { top:max(132px,calc(env(safe-area-inset-top)+122px)); right:12px; }
@@ -835,7 +835,7 @@ function loadMap(def) {
     const effectiveMaxZoom = S.effectiveMaxZoom;
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
-      minZoom: effectiveMinZoom,
+      minZoom: 0,
       maxZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
@@ -845,16 +845,7 @@ function loadMap(def) {
     });
     S.overlayTile.on('tileerror', () => {
       hideTileLoading();
-      const curZ = S.map.getZoom();
-      const minZ = S.effectiveMinZoom || 2;
-      const maxZ = S.effectiveMaxZoom || 18;
-      if (curZ >= minZ && curZ <= maxZ) {
-        // zoom範囲内なのにタイルがない → 地域のデータなし
-        showToast('この地域・年代のデータがありません');
-      } else {
-        // zoom範囲外 → ガイドを強制表示
-        updateZoomGuide();
-      }
+      // データなし地域はOSMが透けて見えるだけ → エラー表示不要
     });
     buildLayerPills([]);
 
@@ -1025,10 +1016,8 @@ function updateZoomGuide() {
   const pcZoomNote = document.getElementById('pc-zoom-note');
 
   let msg = '', icon = '';
-  if (z < minZ) {
-    icon = '🔍＋';
-    msg  = '拡大すると空中写真が表示されます';
-  } else if (z > maxZ) {
+  // zoom超過時のみガイド表示（zoom不足でもタイルは表示するため）
+  if (z > maxZ) {
     icon = '🔍－';
     msg  = '縮小すると空中写真が表示されます';
   }
@@ -1240,14 +1229,18 @@ async function doSearch(query, resultsEl) {
         el.textContent = item.display_name.split(',').slice(0,3).join(', ');
         el.addEventListener('click', (e) => {
           e.stopPropagation(); // 外側クリックイベントの伝播を止める
-          S.map.flyTo([parseFloat(item.lat), parseFloat(item.lon)], 16, {duration:1.2});
+          // パネルを閉じてからflyTo（スマホでパネルが地図操作を妨げるのを防ぐ）
+          if (typeof closePanel === 'function') closePanel();
           resultsEl.style.display = 'none';
-          // 両方の検索inputをクリア
           const si = document.getElementById('search-input');
           const pi = document.getElementById('pc-search-input');
           if (si) si.value = '';
           if (pi) pi.value = '';
-          showToast(item.display_name.split(',')[0] + ' に移動');
+          // 少し待ってからflyTo（DOM更新を待つ）
+          setTimeout(() => {
+            S.map.flyTo([parseFloat(item.lat), parseFloat(item.lon)], 16, {duration:1.2});
+            showToast(item.display_name.split(',')[0] + ' に移動');
+          }, 100);
         });
         resultsEl.appendChild(el);
       });
