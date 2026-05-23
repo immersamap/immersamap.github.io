@@ -224,9 +224,10 @@ html, body {
   background:var(--surface); backdrop-filter:blur(10px);
   border-top:1px solid var(--border);
   padding:8px 14px 6px;
-  display:none; /* スマホのみ表示 */
+  display:none; /* loadMap後に表示 */
   flex-direction:column; gap:6px;
   pointer-events:all;
+  transition:bottom .35s cubic-bezier(.16,1,.3,1);
 }
 #float-opacity-row {
   display:flex; align-items:center; gap:10px;
@@ -544,7 +545,7 @@ input[type=range]::-webkit-slider-thumb {
   }
   /* loc-btnはfloat-ctrlの上 */
   #loc-btn {
-    bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 60px + 14px);
+    bottom:calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 70px);
   }
 }
 </style>
@@ -894,6 +895,15 @@ function loadMap(def) {
 }
 
 function setMapUI(name, era, attr, emoji, isNendo) {
+  // float-ctrlをスマホのみ表示（地図選択後）
+  const fc = document.getElementById('float-ctrl');
+  if (fc && window.innerWidth < 768) {
+    fc.style.display = 'flex';
+    // パネル高さ分上に配置
+    const panelH = S.panelOpen ? window.innerHeight * 0.75 : 100;
+    fc.style.bottom = (panelH + (parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue('--panel-h')) || 0)) + 'px';
+  }
   // バッジ（左上）
   document.getElementById('badge-name').textContent = name;
   document.getElementById('badge-attr').textContent = attr ? `出典：${attr}` : '';
@@ -976,10 +986,12 @@ function mkPopup(p) {
 // レイヤーピル（PC・スマホ同期）
 // ============================================================
 function buildLayerPills(layers) {
-  ['pc-layer-pills','sp-layer-pills','float-layer-pills'].forEach(id => {
+  ['pc-layer-pills','float-layer-pills'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.innerHTML = '';
+    // レイヤーがない時は非表示
+    el.style.display = layers.length ? 'flex' : 'none';
     layers.forEach(name => {
       const btn = document.createElement('button');
       btn.className = 'lpill on';
@@ -1001,13 +1013,13 @@ function buildLayerPills(layers) {
 // 不透明度（PC・スマホ同期）
 // ============================================================
 function initSliders() {
-  ['pc-opacity','sp-opacity','float-opacity'].forEach(id => {
+  ['pc-opacity','float-opacity'].forEach(id => {
     const sl = document.getElementById(id);
     if (!sl) return;
     sl.addEventListener('input', () => {
       const v = parseInt(sl.value);
       S.opacity = v / 100;
-      ['pc-opacity','sp-opacity','float-opacity'].forEach(sid => {
+      ['pc-opacity','float-opacity'].forEach(sid => {
         const s = document.getElementById(sid);
         if (!s) return;
         s.value = v;
@@ -1221,10 +1233,9 @@ function openPanel() {
   document.getElementById('panel-detail').style.display = 'block';
   document.getElementById('panel-list-wrap').style.display = 'flex';
   document.getElementById('panel-map-btn').classList.add('open');
-  document.getElementById('loc-btn').style.bottom =
-    'calc(75vh + env(safe-area-inset-bottom,0px) + 60px + 14px)';
+  document.getElementById('loc-btn').style.bottom = (window.innerHeight * 0.75 + 70) + 'px';
   const fc = document.getElementById('float-ctrl');
-  if (fc) fc.style.bottom = 'calc(75vh + env(safe-area-inset-bottom,0px))';
+  if (fc) { fc.style.bottom = (window.innerHeight * 0.75) + 'px'; }
 }
 function closePanel() {
   S.panelOpen = false;
@@ -1233,10 +1244,9 @@ function closePanel() {
   document.getElementById('panel-detail').style.display = 'none';
   document.getElementById('panel-list-wrap').style.display = 'none';
   document.getElementById('panel-map-btn').classList.remove('open');
-  document.getElementById('loc-btn').style.bottom =
-    'calc(var(--panel-h) + env(safe-area-inset-bottom,0px) + 60px + 14px)';
+  document.getElementById('loc-btn').style.bottom = '170px';
   const fc = document.getElementById('float-ctrl');
-  if (fc) fc.style.bottom = 'calc(var(--panel-h) + env(safe-area-inset-bottom,0px))';
+  if (fc) { fc.style.bottom = '100px'; }
 }
 
 // ============================================================
