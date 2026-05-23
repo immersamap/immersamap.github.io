@@ -231,7 +231,7 @@ html, body {
   pointer-events:none; text-align:center;
   max-width:260px; line-height:1.6;
 }
-#zoom-guide.show { display:flex; flex-direction:column; align-items:center; }
+#zoom-guide.show { display:flex !important; flex-direction:column; align-items:center; }
 #zoom-guide-icon { font-size:28px; margin-bottom:4px; }
 #zoom-guide-text { font-size:12px; color:var(--parchment2); }
 
@@ -830,10 +830,22 @@ function loadMap(def) {
       maxZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
-    S.overlayTile.once('tileload', hideTileLoading);
+    S.overlayTile.once('tileload', () => {
+      hideTileLoading();
+      updateZoomGuide(); // タイル読み込み完了後にzoom状態を確認
+    });
     S.overlayTile.on('tileerror', () => {
       hideTileLoading();
-      showToast('この地域のデータがない可能性があります');
+      const curZ = S.map.getZoom();
+      const minZ = S.effectiveMinZoom || 2;
+      const maxZ = S.effectiveMaxZoom || 18;
+      if (curZ >= minZ && curZ <= maxZ) {
+        // zoom範囲内なのにタイルがない → 地域のデータなし
+        showToast('この地域・年代のデータがありません');
+      } else {
+        // zoom範囲外 → ガイドを強制表示
+        updateZoomGuide();
+      }
     });
     buildLayerPills([]);
 
