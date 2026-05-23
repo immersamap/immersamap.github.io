@@ -102,6 +102,7 @@ html, body {
   border:1px solid var(--border); border-radius:var(--radius);
   max-height:220px; overflow-y:auto; display:none;
   box-shadow:0 4px 16px rgba(0,0,0,.4);
+  z-index:40; position:relative;
 }
 .search-result-item {
   padding:11px 16px; font-size:12px; color:var(--parchment2);
@@ -783,11 +784,33 @@ function loadMap(def) {
     });
     buildLayerPills([]);
 
-    // zoom不足の場合は自動ズーム（現在位置は保持）
+    // zoom範囲の案内メッセージを設定
     const minZ = def.zoom_min || 2;
-    if (S.map.getZoom() < minZ) {
-      S.map.setZoom(minZ);
+    const maxZ = def.zoom_max || 18;
+    const curZ = S.map.getZoom();
+    const zoomNote = document.getElementById('panel-zoom-note');
+    const pcZoomNote = document.getElementById('pc-zoom-note');
+    let zoomMsg = '';
+    if (curZ < minZ) {
+      zoomMsg = `ズームインすると表示されます（現在のズーム: ${curZ}、必要: ${minZ}以上）`;
+      S.map.setZoom(minZ); // 自動ズーム
+    } else if (curZ > maxZ) {
+      zoomMsg = `ズームアウトすると表示されます（現在のズーム: ${curZ}、最大: ${maxZ}）`;
     }
+    if (zoomNote)   { zoomNote.textContent   = zoomMsg; zoomNote.style.display   = zoomMsg ? 'block' : 'none'; }
+    if (pcZoomNote) { pcZoomNote.textContent = zoomMsg; pcZoomNote.style.display = zoomMsg ? 'block' : 'none'; }
+
+    // zoomレベル変化時も案内を更新
+    S.map.off('zoomend.zoomguide');
+    S.map.on('zoomend.zoomguide', () => {
+      const z = S.map.getZoom();
+      let msg = '';
+      if (z < minZ) msg = `ズームインすると表示されます（必要: ${minZ}以上）`;
+      else if (z > maxZ) msg = `ズームアウトすると表示されます（最大: ${maxZ}）`;
+      if (zoomNote)   { zoomNote.textContent   = msg; zoomNote.style.display   = msg ? 'block' : 'none'; }
+      if (pcZoomNote) { pcZoomNote.textContent = msg; pcZoomNote.style.display = msg ? 'block' : 'none'; }
+    });
+
     showToast(name + ' を表示中');
 
   } else {
@@ -1144,28 +1167,26 @@ async function doSearch(query, resultsEl) {
 }
 
 function initSearch() {
-  // 共通：スマホ・PC両方の検索入力
-  const searchInput = document.getElementById('search-input');
+  // スマホ検索
+  const searchInput   = document.getElementById('search-input');
   const searchResults = document.getElementById('search-results');
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => doSearch(searchInput.value, searchResults), 400);
-  });
-  searchInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doSearch(searchInput.value, searchResults);
-    if (e.key === 'Escape') { searchResults.style.display='none'; }
-  });
-  // 外側クリックで閉じる
-  document.addEventListener('click', e => {
-    if (!document.getElementById('search-overlay').contains(e.target))
-      searchResults.style.display = 'none';
-    if (pcInput && !pcInput.closest('.sb-head').contains(e.target))
-      if (pcResults) pcResults.style.display = 'none';
-  });
-
-  // PCサイドバー検索
-  const pcInput = document.getElementById('pc-search-input');
+  // PC検索（先に宣言）
+  const pcInput   = document.getElementById('pc-search-input');
   const pcResults = document.getElementById('pc-search-results');
+
+  // スマホ検索イベント
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => doSearch(searchInput.value, searchResults), 400);
+    });
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch(searchInput.value, searchResults);
+      if (e.key === 'Escape') searchResults.style.display = 'none';
+    });
+  }
+
+  // PC検索イベント
   if (pcInput) {
     pcInput.addEventListener('input', () => {
       clearTimeout(searchTimer);
@@ -1173,14 +1194,19 @@ function initSearch() {
     });
     pcInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') doSearch(pcInput.value, pcResults);
-    });
-    // PCの検索結果でクリックしたら地図に移動
-    pcResults.addEventListener('click', e => {
-      const item = e.target.closest('.sb-search-result-item');
-      if (!item) return;
-      // doSearchのeventListenerで処理済み
+      if (e.key === 'Escape') pcResults.style.display = 'none';
     });
   }
+
+  // 外側クリックで検索結果を閉じる
+  document.addEventListener('click', e => {
+    const overlay = document.getElementById('search-overlay');
+    const sbHead  = document.querySelector('.sb-head');
+    if (overlay && !overlay.contains(e.target))
+      searchResults.style.display = 'none';
+    if (sbHead && !sbHead.contains(e.target) && pcResults)
+      pcResults.style.display = 'none';
+  });
 }
 
 // ============================================================
