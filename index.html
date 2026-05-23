@@ -200,7 +200,7 @@ html, body {
    ⑤ タイル読み込みインジケーター（地図中央）
    ============================================================ */
 #tile-loading {
-  position:fixed; top:50%; left:50%; z-index:15;
+  position:fixed; top:50%; left:50%; z-index:50;
   transform:translate(-50%,-50%);
   background:var(--surface); border:1px solid var(--border);
   border-radius:24px; padding:8px 16px;
@@ -220,7 +220,7 @@ html, body {
 
 /* zoom範囲外ガイド（地図中央） */
 #zoom-guide {
-  position:fixed; top:50%; left:50%; z-index:15;
+  position:fixed; top:50%; left:50%; z-index:50;
   transform:translate(-50%,-50%);
   background:var(--surface); border:1.5px solid var(--gold);
   border-radius:var(--radius); padding:14px 20px;
@@ -499,6 +499,8 @@ input[type=range]::-webkit-slider-thumb {
   #sidebar { display:flex; }
   /* PC: 検索バーはサイドバー内にあるのでオーバーレイ非表示 */
   #search-overlay { display:none; }
+  /* zoom-guideをサイドバー分右にずらして地図の中央に表示 */
+  #zoom-guide { left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2); }
   #compass { top:14px; right:14px; }
   #map-badge { top:max(72px,calc(env(safe-area-inset-top)+62px)); }
   #loc-btn { bottom:14px; }
@@ -843,14 +845,21 @@ function loadMap(def) {
       let msg = '', icon = '';
       if (z < effectiveMinZoom) {
         icon = '🔍＋';
-        msg  = `ズームインすると表示されます\n（拡大してください）`;
+        msg  = `拡大すると表示されます`;
       } else if (z > effectiveMaxZoom) {
         icon = '🔍－';
-        msg  = `ズームアウトすると表示されます\n（縮小してください）`;
+        msg  = `縮小すると表示されます`;
       }
       if (guide) {
-        if (msg) { guide.classList.add('show'); guideIcon.textContent = icon; guideText.textContent = msg; }
-        else     { guide.classList.remove('show'); }
+        if (msg) {
+          guide.classList.add('show');
+          guideIcon.textContent = icon;
+          guideText.textContent = msg;
+          guide.style.display = 'flex';
+        } else {
+          guide.classList.remove('show');
+          guide.style.display = 'none';
+        }
       }
       const plainMsg = msg.replace('\n', ' ');
       if (zoomNote)   { zoomNote.textContent = plainMsg; zoomNote.style.display = msg ? 'block' : 'none'; }
