@@ -819,8 +819,11 @@ function loadMap(def) {
       if (url.includes('relief') || url.includes('hillshade')) return 16;
       return 18;
     };
-    const effectiveMinZoom = def.zoom_min || guessMinZoom(def.tiles_url);
-    const effectiveMaxZoom = def.zoom_max || guessMaxZoom(def.tiles_url);
+    // S（state）に保存して常に最新値を参照
+    S.effectiveMinZoom = def.zoom_min || guessMinZoom(def.tiles_url);
+    S.effectiveMaxZoom = def.zoom_max || guessMaxZoom(def.tiles_url);
+    const effectiveMinZoom = S.effectiveMinZoom;
+    const effectiveMaxZoom = S.effectiveMaxZoom;
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
       minZoom: effectiveMinZoom,
@@ -833,38 +836,6 @@ function loadMap(def) {
       showToast('この地域のデータがない可能性があります');
     });
     buildLayerPills([]);
-
-    // zoom範囲外の場合は地図上にガイドを表示する関数
-    const updateZoomGuide = () => {
-      const z   = S.map.getZoom();
-      const guide     = document.getElementById('zoom-guide');
-      const guideText = document.getElementById('zoom-guide-text');
-      const guideIcon = document.getElementById('zoom-guide-icon');
-      const zoomNote   = document.getElementById('panel-zoom-note');
-      const pcZoomNote = document.getElementById('pc-zoom-note');
-      let msg = '', icon = '';
-      if (z < effectiveMinZoom) {
-        icon = '🔍＋';
-        msg  = `拡大すると表示されます`;
-      } else if (z > effectiveMaxZoom) {
-        icon = '🔍－';
-        msg  = `縮小すると表示されます`;
-      }
-      if (guide) {
-        if (msg) {
-          guide.classList.add('show');
-          guideIcon.textContent = icon;
-          guideText.textContent = msg;
-          guide.style.display = 'flex';
-        } else {
-          guide.classList.remove('show');
-          guide.style.display = 'none';
-        }
-      }
-      const plainMsg = msg.replace('\n', ' ');
-      if (zoomNote)   { zoomNote.textContent = plainMsg; zoomNote.style.display = msg ? 'block' : 'none'; }
-      if (pcZoomNote) { pcZoomNote.textContent = plainMsg; pcZoomNote.style.display = msg ? 'block' : 'none'; }
-    };
 
     updateZoomGuide();
     S.map.off('zoomend.zoomguide');
@@ -1012,6 +983,45 @@ function initSliders() {
       });
     });
   });
+}
+
+// ============================================================
+// zoom範囲外ガイド（グローバル関数・常に最新のS.effectiveMinZoomを参照）
+// ============================================================
+function updateZoomGuide() {
+  if (!S.overlayTile) {
+    // オーバーレイなし（ベクター地図or地図未選択）はガイド非表示
+    const guide = document.getElementById('zoom-guide');
+    if (guide) { guide.classList.remove('show'); guide.style.display = 'none'; }
+    return;
+  }
+  const z       = S.map.getZoom();
+  const minZ    = S.effectiveMinZoom || 2;
+  const maxZ    = S.effectiveMaxZoom || 18;
+  const guide   = document.getElementById('zoom-guide');
+  const guideText = document.getElementById('zoom-guide-text');
+  const guideIcon = document.getElementById('zoom-guide-icon');
+  const zoomNote   = document.getElementById('panel-zoom-note');
+  const pcZoomNote = document.getElementById('pc-zoom-note');
+
+  let msg = '', icon = '';
+  if (z < minZ) {
+    icon = '🔍＋';
+    msg  = '拡大すると空中写真が表示されます';
+  } else if (z > maxZ) {
+    icon = '🔍－';
+    msg  = '縮小すると空中写真が表示されます';
+  }
+
+  if (guide) {
+    guideIcon.textContent = icon;
+    guideText.textContent = msg;
+    if (msg) { guide.classList.add('show'); guide.style.display = 'flex'; }
+    else     { guide.classList.remove('show'); guide.style.display = 'none'; }
+  }
+  const plainMsg = msg;
+  if (zoomNote)   { zoomNote.textContent = plainMsg; zoomNote.style.display = msg ? 'block' : 'none'; }
+  if (pcZoomNote) { pcZoomNote.textContent = plainMsg; pcZoomNote.style.display = msg ? 'block' : 'none'; }
 }
 
 // ============================================================
