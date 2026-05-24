@@ -831,14 +831,12 @@ function loadMap(def) {
     // tiles_urlからzoom範囲を自動推定（DBのzoom_minが未設定の場合のフォールバック）
     const guessMinZoom = (url) => {
       if (!url) return 2;
-      if (url.includes('nendophoto')) return 14;
       if (url.includes('ort_riku10') || url.includes('ort_1928')) return 13;
       if (url.includes('gazo') || url.includes('ort_old') || url.includes('ort_USA')) return 10;
       return 2;
     };
     const guessMaxZoom = (url) => {
       if (!url) return 18;
-      if (url.includes('nendophoto')) return 18;
       if (url.includes('gazo') || url.includes('ort_old') || url.includes('ort_USA')) return 17;
       if (url.includes('ort_riku10') || url.includes('ort_1928')) return 18;
       if (url.includes('relief') || url.includes('hillshade')) return 16;
