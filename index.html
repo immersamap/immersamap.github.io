@@ -119,30 +119,12 @@ html, body {
    ② コンパス（右上・単独・Google Maps SDK標準位置）
       タップで北向きリセット
    ============================================================ */
-#compass {
-  position:fixed; z-index:25;
-  width:44px; height:44px;
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer;
-}
-.c-ring {
-  position:absolute; inset:0; border-radius:50%;
-  border:1px solid rgba(212,160,23,.35);
-  background:var(--surface); backdrop-filter:blur(8px);
-}
-.c-needle {
-  position:relative; z-index:1;
-  display:flex; flex-direction:column; align-items:center;
-  transition:transform .3s;
-}
-.c-n { width:0; height:0;
-  border-left:4px solid transparent; border-right:4px solid transparent;
-  border-bottom:13px solid var(--rust); }
-.c-s { width:0; height:0;
-  border-left:4px solid transparent; border-right:4px solid transparent;
-  border-top:13px solid rgba(212,160,23,.4); }
-.c-lbl { position:absolute; top:3px; font-family:'Cinzel',serif;
-  font-size:7px; color:var(--rust); font-weight:600; }
+
+
+
+
+
+
 
 /* ============================================================
    ③ 現在地表示バッジ（左上・地図名と出典を常時表示）
@@ -518,8 +500,8 @@ input[type=range]::-webkit-slider-thumb {
   #float-ctrl { display:none !important; } /* PCはサイドバーで操作 */
   /* zoom-guideをサイドバー分右にずらして地図の中央に表示 */
   #zoom-guide { left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2); }
-  #compass { top:14px; right:14px; }
-  #compass-label { top:60px; right:14px; }
+  
+  
   #map-badge { top:max(72px,calc(env(safe-area-inset-top)+62px)); }
   #loc-btn { bottom:14px; }
   #panel { display:none !important; }
@@ -531,9 +513,9 @@ input[type=range]::-webkit-slider-thumb {
   #float-ctrl { display:flex; } /* スマホのみ表示 */
   /* スマホ：検索バーはコンパス分右端を空ける */
   #search-overlay { left:0; right:56px; }
-  /* コンパスは検索バーの完全に下（重ならない） */
-  #compass { top:max(85px,calc(env(safe-area-inset-top)+75px)); right:12px; width:40px; height:40px; }
-  #compass-label { top:max(132px,calc(env(safe-area-inset-top)+122px)); right:12px; }
+  
+  
+  
   /* バッジは検索バーの完全に下・左端 */
   #map-badge { top:max(85px,calc(env(safe-area-inset-top)+75px)); left:12px; }
   /* 現在地ボタンはパネル高さ分上にオフセット */
@@ -576,14 +558,6 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- ② コンパス（右上・タップで北向きリセット） -->
-<div id="compass" aria-label="コンパス：タップで北向きに戻す" title="タップで北向きに戻す">
-  <div class="c-ring"></div>
-  <div class="c-needle" id="compass-needle">
-    <div class="c-n"></div><div class="c-s"></div>
-  </div>
-  <span class="c-lbl">N</span>
-</div>
-<div id="compass-label">タップで北向きに</div>
 
 <!-- ③ 地図名・出典バッジ（左上・常時表示） -->
 <div id="map-badge">
@@ -774,6 +748,7 @@ const S = {
   panelOpen:false, isPC:false,
   zoomGuideListener:null,  // zoomendリスナー管理用
   effectiveMinZoom:2,      // 現在選択中の地図のzoom_min
+  isNendoPhoto:false,      // nendophoto（年度別）かどうか
   effectiveMaxZoom:18,     // 現在選択中の地図のzoom_max
 };
 
@@ -864,14 +839,18 @@ function loadMap(def) {
     S.effectiveMaxZoom = def.zoom_max || guessMaxZoom(def.tiles_url);
     const effectiveMinZoom = S.effectiveMinZoom;
     const effectiveMaxZoom = S.effectiveMaxZoom;
-    // minNativeZoom: タイルが実際に存在する最小ズーム
-    // これより縮小した場合はminNativeZoomのタイルを拡大表示する（1940年代と同様の動作）
-    const effectiveMinNative = def.zoom_min || guessMinZoom(def.tiles_url);
+    // nendophoto（年度別zoom14以上）はminNativeZoomを設定しない
+    // → ズームアウト時に大量タイルでブラウザが固まるため
+    // gazo/ort系（zoom10以上）はminNativeZoomを設定して
+    //   ズームアウトしてもデータ存在エリアを表示する
+    const isNendoPhoto = def.tiles_url && def.tiles_url.includes('nendophoto');
+    S.isNendoPhoto = isNendoPhoto;
+    const minNative = (def.zoom_min || guessMinZoom(def.tiles_url));
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
       minZoom: 0,
       maxZoom: effectiveMaxZoom,
-      minNativeZoom: effectiveMinNative,
+      minNativeZoom: isNendoPhoto ? effectiveMinZoom : minNative,
       maxNativeZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
@@ -1060,8 +1039,11 @@ function updateZoomGuide() {
   const pcZoomNote = document.getElementById('pc-zoom-note');
 
   let msg = '', icon = '';
-  // zoom超過時のみガイド表示（zoom不足でもタイルは表示するため）
-  if (z > maxZ) {
+  if (S.isNendoPhoto && z < minZ) {
+    // 年度別写真はzoom14未満でガイド表示
+    icon = '🔍＋';
+    msg  = '拡大すると空中写真が表示されます';
+  } else if (z > maxZ) {
     icon = '🔍－';
     msg  = '縮小すると空中写真が表示されます';
   }
@@ -1390,36 +1372,7 @@ function placeMarker(lat, lng) {
     {icon, zIndexOffset:9999}).addTo(S.map);
 }
 
-// ============================================================
-// コンパス（タップで北向きリセット）
-// ============================================================
-function initCompass() {
-  const needle = document.getElementById('compass-needle');
-  const h = e => {
-    const deg = e.webkitCompassHeading != null
-      ? e.webkitCompassHeading : 360 - (e.alpha ?? 0);
-    needle.style.transform = `rotate(${deg}deg)`;
-  };
-  // コンパスラベルを常時薄く表示
-  const compassLabel = document.getElementById('compass-label');
-  if (compassLabel) compassLabel.style.opacity = '0.75';
 
-  // タップで北向きリセット
-  document.getElementById('compass').addEventListener('click', () => {
-    needle.style.transform = 'rotate(0deg)';
-    showToast('北向きにリセットしました');
-    // iOS: コンパス権限リクエスト
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission()
-        .then(r => r==='granted' && window.addEventListener('deviceorientation',h));
-    }
-  });
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission !== 'function') {
-    window.addEventListener('deviceorientation', h);
-  }
-}
 
 // ============================================================
 // カテゴリタブ初期化
@@ -1457,7 +1410,6 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   initSliders();
-  initCompass();
   initSearch();
   initLocBtn();
   initCatTabs();
