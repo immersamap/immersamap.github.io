@@ -576,7 +576,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- ② コンパス（右上・タップで北向きリセット） -->
-<div id="compass" aria-label="コンパス" title="タップで北向きに戻す">
+<div id="compass" aria-label="コンパス：タップで北向きに戻す" title="タップで北向きに戻す">
   <div class="c-ring"></div>
   <div class="c-needle" id="compass-needle">
     <div class="c-n"></div><div class="c-s"></div>
@@ -864,10 +864,15 @@ function loadMap(def) {
     S.effectiveMaxZoom = def.zoom_max || guessMaxZoom(def.tiles_url);
     const effectiveMinZoom = S.effectiveMinZoom;
     const effectiveMaxZoom = S.effectiveMaxZoom;
+    // minNativeZoom: タイルが実際に存在する最小ズーム
+    // これより縮小した場合はminNativeZoomのタイルを拡大表示する（1940年代と同様の動作）
+    const effectiveMinNative = def.zoom_min || guessMinZoom(def.tiles_url);
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
       minZoom: 0,
       maxZoom: effectiveMaxZoom,
+      minNativeZoom: effectiveMinNative,
+      maxNativeZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
     S.overlayTile.once('tileload', () => {
@@ -1271,7 +1276,7 @@ async function doSearch(query, resultsEl) {
         const el = document.createElement('div');
         el.className = 'search-result-item';
         el.textContent = item.display_name.split(',').slice(0,3).join(', ');
-        // タッチ・クリック両対応（pointerdownで確実に処理）
+        // タッチ・クリック両対応
         const handleSelect = (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -1284,13 +1289,15 @@ async function doSearch(query, resultsEl) {
           if (si) si.value = '';
           if (pi) pi.value = '';
           if (typeof closePanel === 'function') closePanel();
-          // setTimeoutでLeafletの初期化を待つ
+          // Leafletのイベント処理を待ってからflyTo
           setTimeout(() => {
             S.map.flyTo([lat, lon], 16, {duration:1.2});
             showToast(name + ' に移動');
-          }, 150);
+          }, 50);
         };
         el.addEventListener('pointerdown', handleSelect);
+        el.addEventListener('touchend', handleSelect, {passive:false});
+        el.addEventListener('click', handleSelect);
         resultsEl.appendChild(el);
       });
     }
@@ -1393,6 +1400,10 @@ function initCompass() {
       ? e.webkitCompassHeading : 360 - (e.alpha ?? 0);
     needle.style.transform = `rotate(${deg}deg)`;
   };
+  // コンパスラベルを常時薄く表示
+  const compassLabel = document.getElementById('compass-label');
+  if (compassLabel) compassLabel.style.opacity = '0.75';
+
   // タップで北向きリセット
   document.getElementById('compass').addEventListener('click', () => {
     needle.style.transform = 'rotate(0deg)';
