@@ -846,16 +846,15 @@ function loadMap(def) {
     const isNendoPhoto = def.tiles_url && def.tiles_url.includes('nendophoto');
     S.isNendoPhoto = isNendoPhoto;
     const minNative = (def.zoom_min || guessMinZoom(def.tiles_url));
-    // maxZoom:22 → どのズームでもタイルを表示しようとする
-    // maxNativeZoom → タイルが実際に存在する最大ズーム（超えたら拡大表示）
-    // minNativeZoom → タイルが実際に存在する最小ズーム
-    //   nendophoto: zoom14未満は拡大せず非表示（ガイドで案内）
-    //   gazo/ort系: zoom10未満も拡大表示（1940年代と同様）
+    // nendophoto（年度別）: minNativeZoom=14でzoom14未満は空白
+    //   → データがある地域のみzoom14以上で表示
+    // gazo/ort系: minNativeZoom=min_zoom でズームアウトでも拡大表示
+    // maxNativeZoom: タイルの実際の最大zoom（超えたら拡大表示）
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
       minZoom: 0,
       maxZoom: 22,
-      minNativeZoom: isNendoPhoto ? effectiveMinZoom : minNative,
+      minNativeZoom: minNative,
       maxNativeZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
@@ -1049,11 +1048,8 @@ function updateZoomGuide() {
   const pcZoomNote = document.getElementById('pc-zoom-note');
 
   let msg = '', icon = '';
-  if (S.isNendoPhoto && z < minZ) {
-    // 年度別写真はzoom14未満でガイド表示
-    icon = '🔍＋';
-    msg  = '拡大すると空中写真が表示されます';
-  } else if (z > maxZ) {
+  // zoom超過時のみガイド表示（maxNativeZoom超えでタイルが拡大表示される限界）
+  if (z > maxZ) {
     icon = '🔍－';
     msg  = '縮小すると空中写真が表示されます';
   }
