@@ -846,10 +846,15 @@ function loadMap(def) {
     const isNendoPhoto = def.tiles_url && def.tiles_url.includes('nendophoto');
     S.isNendoPhoto = isNendoPhoto;
     const minNative = (def.zoom_min || guessMinZoom(def.tiles_url));
+    // maxZoom:22 → どのズームでもタイルを表示しようとする
+    // maxNativeZoom → タイルが実際に存在する最大ズーム（超えたら拡大表示）
+    // minNativeZoom → タイルが実際に存在する最小ズーム
+    //   nendophoto: zoom14未満は拡大せず非表示（ガイドで案内）
+    //   gazo/ort系: zoom10未満も拡大表示（1940年代と同様）
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
       minZoom: 0,
-      maxZoom: effectiveMaxZoom,
+      maxZoom: 22,
       minNativeZoom: isNendoPhoto ? effectiveMinZoom : minNative,
       maxNativeZoom: effectiveMaxZoom,
       attribution: attrStr,
@@ -866,6 +871,11 @@ function loadMap(def) {
 
     updateZoomGuide();
     // zoomendはinitMap内で永続バインド済み（ここでは不要）
+    // zoom超過の場合は自動調整（現在位置を保持）
+    const curZoom = S.map.getZoom();
+    if (curZoom > effectiveMaxZoom) {
+      S.map.setZoom(effectiveMaxZoom, {animate: false});
+    }
     showToast(name + ' を表示中');
 
   } else {
@@ -1352,7 +1362,11 @@ function startGPS() {
   navigator.geolocation.getCurrentPosition(pos => {
     btn.style.opacity = '1';
     placeMarker(pos.coords.latitude, pos.coords.longitude);
-    S.map.flyTo([pos.coords.latitude, pos.coords.longitude], 16, {duration:1.5});
+    // 空中写真表示中の場合、zoom16が表示可能範囲内かチェック
+    const targetZoom = S.activeDef && S.activeDef.tiles_url
+      ? Math.min(16, S.effectiveMaxZoom || 18)
+      : 16;
+    S.map.flyTo([pos.coords.latitude, pos.coords.longitude], targetZoom, {duration:1.5});
     showToast('現在地を表示しています');
   }, fb, {enableHighAccuracy:true, timeout:8000});
   if (S.watchId) navigator.geolocation.clearWatch(S.watchId);
