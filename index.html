@@ -793,6 +793,16 @@ function loadMap(def) {
   const name = def.name;
   const era  = def.era || '';
   const isNendo = def.tiles_url && def.tiles_url.includes('nendophoto');
+
+  // nendophotoの場合、撮影範囲の説明をパネルに表示
+  const zoomNoteEl   = document.getElementById('panel-zoom-note');
+  const pcZoomNoteEl = document.getElementById('pc-zoom-note');
+  const nendoMsg = isNendo
+    ? '※ 年度別写真は撮影年度や地域によって表示範囲が異なります'
+    : '';
+  if (zoomNoteEl)   { zoomNoteEl.textContent   = nendoMsg; zoomNoteEl.style.display   = nendoMsg ? 'block' : 'none'; }
+  if (pcZoomNoteEl) { pcZoomNoteEl.textContent = nendoMsg; pcZoomNoteEl.style.display = nendoMsg ? 'block' : 'none'; }
+
   const attr = def.is_standard && (def.category === 'aerial_photo' || def.category === 'aerial' || def.category === 'terrain')
     ? '国土地理院'
     : (def.attribution || '');
@@ -1031,7 +1041,8 @@ function initSliders() {
 // ============================================================
 // zoom範囲外ガイド（グローバル関数・常に最新のS.effectiveMinZoomを参照）
 // ============================================================
-function updateZoomGuide() {
+function updateZoomGuide() { return; // ガイド廃止
+  // 以下は無効化
   if (!S.overlayTile) {
     // オーバーレイなし（ベクター地図or地図未選択）はガイド非表示
     const guide = document.getElementById('zoom-guide');
@@ -1048,11 +1059,8 @@ function updateZoomGuide() {
   const pcZoomNote = document.getElementById('pc-zoom-note');
 
   let msg = '', icon = '';
-  // zoom超過時のみガイド表示（maxNativeZoom超えでタイルが拡大表示される限界）
-  if (z > maxZ) {
-    icon = '🔍－';
-    msg  = '縮小すると空中写真が表示されます';
-  }
+  // maxZoom:22に設定しているため、zoom超過は発生しない
+  // ガイド表示は廃止
 
   if (guide) {
     guideIcon.textContent = icon;
