@@ -1271,21 +1271,26 @@ async function doSearch(query, resultsEl) {
         const el = document.createElement('div');
         el.className = 'search-result-item';
         el.textContent = item.display_name.split(',').slice(0,3).join(', ');
-        el.addEventListener('click', (e) => {
-          e.stopPropagation(); // 外側クリックイベントの伝播を止める
-          // パネルを閉じてからflyTo（スマホでパネルが地図操作を妨げるのを防ぐ）
-          if (typeof closePanel === 'function') closePanel();
+        // タッチ・クリック両対応（pointerdownで確実に処理）
+        const handleSelect = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const lat = parseFloat(item.lat);
+          const lon = parseFloat(item.lon);
+          const name = item.display_name.split(',')[0];
           resultsEl.style.display = 'none';
           const si = document.getElementById('search-input');
           const pi = document.getElementById('pc-search-input');
           if (si) si.value = '';
           if (pi) pi.value = '';
-          // 少し待ってからflyTo（DOM更新を待つ）
+          if (typeof closePanel === 'function') closePanel();
+          // setTimeoutでLeafletの初期化を待つ
           setTimeout(() => {
-            S.map.flyTo([parseFloat(item.lat), parseFloat(item.lon)], 16, {duration:1.2});
-            showToast(item.display_name.split(',')[0] + ' に移動');
-          }, 100);
-        });
+            S.map.flyTo([lat, lon], 16, {duration:1.2});
+            showToast(name + ' に移動');
+          }, 150);
+        };
+        el.addEventListener('pointerdown', handleSelect);
         resultsEl.appendChild(el);
       });
     }
@@ -1329,7 +1334,8 @@ function initSearch() {
   }
 
   // 外側クリックで検索結果を閉じる
-  document.addEventListener('click', e => {
+  // マウスクリックのみで検索結果を閉じる（タッチはpointerdownで処理済み）
+  document.addEventListener('mousedown', e => {
     const overlay = document.getElementById('search-overlay');
     const sbHead  = document.querySelector('.sb-head');
     if (overlay && !overlay.contains(e.target))
