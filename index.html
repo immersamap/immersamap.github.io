@@ -847,22 +847,17 @@ function loadMap(def) {
     S.effectiveMaxZoom = def.zoom_max || guessMaxZoom(def.tiles_url);
     const effectiveMinZoom = S.effectiveMinZoom;
     const effectiveMaxZoom = S.effectiveMaxZoom;
-    // nendophoto（年度別zoom14以上）はminNativeZoomを設定しない
-    // → ズームアウト時に大量タイルでブラウザが固まるため
-    // gazo/ort系（zoom10以上）はminNativeZoomを設定して
-    //   ズームアウトしてもデータ存在エリアを表示する
+    // minZoom: タイルが実際に存在する最小ズーム以下ではリクエストしない
     const isNendoPhoto = def.tiles_url && def.tiles_url.includes('nendophoto');
     S.isNendoPhoto = isNendoPhoto;
     const minNative = (def.zoom_min || guessMinZoom(def.tiles_url));
-    // nendophoto（年度別）: minNativeZoom=14でzoom14未満は空白
-    //   → データがある地域のみzoom14以上で表示
-    // gazo/ort系: minNativeZoom=min_zoom でズームアウトでも拡大表示
-    // maxNativeZoom: タイルの実際の最大zoom（超えたら拡大表示）
+    // minZoom: タイルが実際に存在する最小ズーム以下ではリクエストしない
+    //   → ズームアウトで空白になる（固まらない）
+    // maxZoom:22 / maxNativeZoom: zoom超過でも最大タイルを拡大表示
     S.overlayTile = L.tileLayer(def.tiles_url, {
       opacity: S.opacity, zIndex: 2,
-      minZoom: 0,
+      minZoom: minNative,
       maxZoom: 22,
-      minNativeZoom: minNative,
       maxNativeZoom: effectiveMaxZoom,
       attribution: attrStr,
     }).addTo(S.map);
