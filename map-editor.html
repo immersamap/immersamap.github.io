@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImmersaMap — 地図エディタ</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#1a1008; --surface:#221507; --border:rgba(212,160,23,.25);
+  --gold:#d4a017; --gold2:#f0c040; --parchment:#f2e8d0; --muted:#8b6914;
+  --blue:#4a9fff; --red:#e74c3c; --green:#27ae60;
+}
+body{font-family:'Helvetica Neue',sans-serif;background:var(--bg);color:var(--parchment);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ===== ヘッダー ===== */
+#header{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+#header h1{font-size:14px;color:var(--gold);letter-spacing:.1em;white-space:nowrap;}
+.mode-tabs{display:flex;gap:4px;}
+.mode-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;transition:all .2s;white-space:nowrap;}
+.mode-tab.active{background:var(--gold);color:var(--bg);border-color:var(--gold);font-weight:600;}
+.mode-tab:hover:not(.active){background:rgba(212,160,23,.12);color:var(--gold);}
+.sep{color:var(--border);font-size:18px;}
+button{padding:6px 14px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-weight:500;transition:all .2s;white-space:nowrap;}
+.btn-primary{background:var(--gold);color:var(--bg);}
+.btn-primary:hover{background:var(--gold2);}
+.btn-danger{background:var(--red);color:white;}
+.btn-danger:hover{opacity:.85;}
+.btn-secondary{background:rgba(212,160,23,.12);color:var(--gold);border:1px solid var(--border);}
+.btn-secondary:hover{background:rgba(212,160,23,.22);}
+.btn-success{background:var(--green);color:white;}
+.btn-success:hover{opacity:.85;}
+.btn-blue{background:var(--blue);color:white;}
+.btn-blue:hover{opacity:.85;}
+
+/* ===== メイン ===== */
+#main{display:flex;flex:1;overflow:hidden;}
+#map{flex:1;z-index:1;}
+
+/* ===== サイドパネル ===== */
+#side{width:300px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.side-section{border-bottom:1px solid var(--border);padding:12px;}
+.side-title{font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;}
+.side-scroll{flex:1;overflow-y:auto;padding:8px;}
+
+/* ===== フォーム ===== */
+input[type=text],input[type=number],textarea,select{
+  background:#2a1e08;border:1px solid var(--border);color:var(--parchment);
+  padding:6px 10px;border-radius:4px;font-size:12px;width:100%;margin-bottom:6px;
+}
+textarea{resize:vertical;min-height:60px;}
+label{font-size:11px;color:var(--muted);display:block;margin-bottom:2px;}
+input[type=range]{width:100%;accent-color:var(--gold);}
+
+/* ===== フィーチャーリスト ===== */
+.feat-item{background:rgba(212,160,23,.06);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:all .2s;}
+.feat-item:hover{background:rgba(212,160,23,.12);}
+.feat-item.active{background:rgba(212,160,23,.18);border-color:var(--gold);}
+.feat-header{display:flex;align-items:center;justify-content:space-between;}
+.feat-name{font-size:12px;}
+.feat-type{font-size:10px;color:var(--muted);}
+.feat-btns{display:flex;gap:4px;margin-top:6px;}
+.feat-btns button{padding:2px 8px;font-size:10px;}
+
+/* ===== ツールバー（地図上） ===== */
+#toolbar{position:absolute;top:10px;left:10px;z-index:20;display:flex;flex-direction:column;gap:4px;}
+.tool-btn{width:36px;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--parchment);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.tool-btn:hover{background:rgba(212,160,23,.2);}
+.tool-btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold);}
+.tool-btn[title]:hover::after{content:attr(title);position:absolute;left:44px;top:50%;transform:translateY(-50%);background:#333;color:white;padding:4px 8px;border-radius:4px;font-size:11px;white-space:nowrap;pointer-events:none;}
+
+/* ===== MODE B: 画像オーバーレイ ===== */
+#img-overlay-ctrl{display:none;}
+#img-preview{width:100%;border-radius:4px;border:1px solid var(--border);margin-bottom:8px;display:none;}
+
+/* ===== MODE C: AI解析 ===== */
+#ai-panel{display:none;}
+#ai-progress{padding:12px;background:rgba(74,159,255,.1);border:1px solid rgba(74,159,255,.3);border-radius:6px;margin-bottom:8px;display:none;}
+#ai-log{font-size:11px;color:var(--blue);line-height:1.8;max-height:200px;overflow-y:auto;}
+.ai-step{display:flex;align-items:center;gap:8px;padding:4px 0;}
+.ai-step-icon{font-size:14px;}
+.ai-step-text{font-size:12px;color:var(--parchment);}
+
+/* ===== ステータスバー ===== */
+#status{padding:5px 16px;background:#0d0800;border-top:1px solid var(--border);font-size:11px;color:var(--muted);flex-shrink:0;}
+
+/* ===== 保存ダイアログ ===== */
+#save-dialog{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;}
+#save-dialog.open{display:flex;}
+#save-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;width:340px;max-width:90vw;}
+#save-box h3{color:var(--gold);font-size:14px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🗺 地図エディタ</h1>
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="A">✏️ いちから作成</button>
+    <button class="mode-tab" data-mode="B">🖼 画像重ね合わせ</button>
+    <button class="mode-tab" data-mode="C">🤖 AI自動マッピング</button>
+  </div>
+  <span class="sep">|</span>
+  <button class="btn-success" id="btn-save-map">💾 保存</button>
+  <button class="btn-secondary" id="btn-preview">👁 プレビュー</button>
+</div>
+
+<div id="main" style="position:relative;">
+  <!-- 地図ツールバー -->
+  <div id="toolbar">
+    <button class="tool-btn active" id="tool-select" title="選択・移動">🖱</button>
+    <button class="tool-btn" id="tool-point" title="ポイント追加">📍</button>
+    <button class="tool-btn" id="tool-line" title="ライン描画">〰</button>
+    <button class="tool-btn" id="tool-polygon" title="ポリゴン描画">⬡</button>
+    <button class="tool-btn" id="tool-delete" title="削除モード">🗑</button>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="side">
+    <!-- MODE A: フィーチャーリスト -->
+    <div id="panel-A">
+      <div class="side-section">
+        <div class="side-title">操作方法</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+          ツールを選んで地図上をクリック<br>
+          📍 ポイント / 〰 ライン / ⬡ ポリゴン<br>
+          ラインとポリゴンはダブルクリックで確定
+        </div>
+      </div>
+      <div class="side-section" style="display:flex;gap:6px;">
+        <button class="btn-danger" id="btn-clear-all-feat" style="flex:1;">全クリア</button>
+        <button class="btn-secondary" id="btn-import-json" style="flex:1;">📂 JSON読込</button>
+      </div>
+      <div class="side-title" style="padding:8px 12px 4px;">フィーチャー一覧</div>
+      <div class="side-scroll" id="feat-list">
+        <div style="font-size:11px;color:var(--muted);padding:8px;">フィーチャーなし</div>
+      </div>
+      <!-- 選択中フィーチャーの編集 -->
+      <div class="side-section" id="feat-edit" style="display:none;">
+        <div class="side-title">フィーチャー編集</div>
+        <label>名前</label>
+        <input type="text" id="feat-name" placeholder="例：東京城">
+        <label>説明</label>
+        <textarea id="feat-desc" placeholder="例：江戸時代の城郭"></textarea>
+        <label>色</label>
+        <input type="text" id="feat-color" placeholder="#ff6600" style="margin-bottom:8px;">
+        <button class="btn-primary" id="btn-feat-update" style="width:100%;">更新</button>
+      </div>
+    </div>
+
+    <!-- MODE B: 画像重ね合わせ -->
+    <div id="panel-B" style="display:none;flex-direction:column;height:100%;">
+      <div class="side-section">
+        <div class="side-title">画像のアップロード</div>
+        <input type="file" id="img-upload" accept="image/*" style="margin-bottom:8px;">
+        <img id="img-preview">
+        <label>透明度</label>
+        <input type="range" id="img-opacity" min="0" max="100" value="70">
+        <label>回転 (度)</label>
+        <input type="number" id="img-rotate" value="0" min="-180" max="180">
+      </div>
+      <div class="side-section">
+        <div class="side-title">位置の調整</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px;">
+          画像をドラッグして位置を調整<br>
+          コーナーをドラッグしてサイズを変更<br>
+          地図をクリックして制御点を追加
+        </div>
+        <div id="ctrl-pts-info" style="font-size:11px;color:var(--blue);">制御点: 0個</div>
+      </div>
+      <div class="side-section">
+        <div class="side-title">GeoJSON変換</div>
+        <button class="btn-primary" id="btn-trace" style="width:100%;margin-bottom:6px;">
+          ✏️ トレース開始（MODE Aへ）
+        </button>
+      </div>
+    </div>
+
+    <!-- MODE C: AI自動マッピング -->
+    <div id="panel-C" style="display:none;flex-direction:column;">
+      <div class="side-section">
+        <div class="side-title">古地図画像のアップロード</div>
+        <input type="file" id="ai-img-upload" accept="image/*" style="margin-bottom:8px;">
+        <img id="ai-img-preview" style="width:100%;border-radius:4px;border:1px solid var(--border);margin-bottom:8px;display:none;">
+        <label>解析対象地域（任意）</label>
+        <input type="text" id="ai-region" placeholder="例：東京 日本橋周辺">
+        <label>地図の種類</label>
+        <select id="ai-map-type">
+          <option value="castle">城郭図</option>
+          <option value="town">町絵図・城下町</option>
+          <option value="road">街道・道中図</option>
+          <option value="general">一般的な古地図</option>
+        </select>
+        <button class="btn-blue" id="btn-ai-analyze" style="width:100%;margin-top:4px;">
+          🤖 AI解析を開始
+        </button>
+      </div>
+      <div class="side-section" id="ai-progress" style="display:none;">
+        <div class="side-title">解析進捗</div>
+        <div id="ai-log"></div>
+      </div>
+      <div class="side-section" id="ai-result" style="display:none;">
+        <div class="side-title">解析結果</div>
+        <div id="ai-result-summary" style="font-size:11px;color:var(--parchment);margin-bottom:8px;"></div>
+        <button class="btn-success" id="btn-ai-apply" style="width:100%;margin-bottom:6px;">
+          ✅ 結果を適用してMODE Aで編集
+        </button>
+        <button class="btn-secondary" id="btn-ai-retry" style="width:100%;">
+          🔄 再解析
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 保存ダイアログ -->
+<div id="save-dialog">
+  <div id="save-box">
+    <h3>💾 地図を保存</h3>
+    <label>地図名</label>
+    <input type="text" id="save-name" placeholder="例：川越城下町 1830年頃">
+    <label>説明・時代</label>
+    <input type="text" id="save-era" placeholder="例：江戸時代後期 天保年間">
+    <label>絵文字アイコン</label>
+    <input type="text" id="save-emoji" placeholder="🏯" style="width:80px;">
+    <label>カテゴリ</label>
+    <select id="save-category">
+      <option value="historical">古地図・歴史</option>
+      <option value="story">ゆかりの地・物語</option>
+      <option value="original">オリジナル</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn-primary" id="btn-save-confirm" style="flex:1;">保存</button>
+      <button class="btn-secondary" id="btn-save-cancel" style="flex:1;">キャンセル</button>
+    </div>
+    <div id="save-status" style="font-size:11px;margin-top:8px;"></div>
+  </div>
+</div>
+
+<div id="status">地図上でフィーチャーを追加してください</div>
+
+<script>
+// ============================================================
+// Supabase初期化
+// ============================================================
+const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ============================================================
+// 地図初期化
+// ============================================================
+const map = L.map('map', {center:[35.6812, 139.7671], zoom:13});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:19, attribution:'© OpenStreetMap contributors'
+}).addTo(map);
+
+// ============================================================
+// 状態管理
+// ============================================================
+let currentMode = 'A';
+let currentTool = 'select';
+let features   = [];    // [{id, type, name, desc, color, layer}]
+let selectedId = null;
+let drawingPts = [];
+let tempLine   = null;
+let tempMarkers = [];
+let aiGeoJSON  = null;
+let imgOverlay = null;
+let nextId     = 1;
+
+const COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
+function randColor(){ return COLORS[Math.floor(Math.random()*COLORS.length)]; }
+
+// ============================================================
+// モード切替
+// ============================================================
+document.querySelectorAll('.mode-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentMode = btn.dataset.mode;
+    document.querySelectorAll('.mode-tab').forEach(b => b.classList.toggle('active', b===btn));
+    ['A','B','C'].forEach(m => {
+      const p = document.getElementById('panel-'+m);
+      if (p) p.style.display = m===currentMode ? (m==='A'?'flex':'flex') : 'none';
+      if (p) p.style.flexDirection = 'column';
+    });
+    setStatus(currentMode==='A' ? 'ツールを選んで地図上にフィーチャーを追加'
+            : currentMode==='B' ? '画像をアップロードして地図上に重ねてください'
+            : '古地図画像をアップロードしてAI解析を開始してください');
+    stopDrawing();
+  });
+});
+
+// ============================================================
+// ツール切替
+// ============================================================
+document.querySelectorAll('.tool-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    stopDrawing();
+    currentTool = btn.id.replace('tool-','');
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    map.getContainer().style.cursor =
+      currentTool==='select' ? '' :
+      currentTool==='delete' ? 'not-allowed' : 'crosshair';
+    setStatus(
+      currentTool==='point'   ? '地図上をクリックしてポイントを追加' :
+      currentTool==='line'    ? '地図上をクリックして頂点を追加（ダブルクリックで確定）' :
+      currentTool==='polygon' ? '地図上をクリックして頂点を追加（ダブルクリックで確定）' :
+      currentTool==='delete'  ? 'フィーチャーをクリックして削除' : '地図をクリックして選択'
+    );
+  });
+});
+
+// ============================================================
+// 地図クリックイベント
+// ============================================================
+map.on('click', e => {
+  if (currentMode !== 'A') return;
+  const {lat, lng} = e.latlng;
+
+  if (currentTool === 'point') {
+    addFeature('point', [[lat,lng]]);
+    return;
+  }
+  if (currentTool === 'line' || currentTool === 'polygon') {
+    drawingPts.push([lat,lng]);
+    // プレビューマーカー
+    const m = L.circleMarker([lat,lng],{radius:4,color:'#4a9fff',fillColor:'#4a9fff',fillOpacity:1}).addTo(map);
+    tempMarkers.push(m);
+    // プレビューライン
+    if (tempLine) map.removeLayer(tempLine);
+    if (drawingPts.length > 1) {
+      const pts = currentTool==='polygon'
+        ? [...drawingPts, drawingPts[0]] : drawingPts;
+      tempLine = L.polyline(pts, {color:'#4a9fff',weight:2,dashArray:'4,3'}).addTo(map);
+    }
+    setStatus(`${drawingPts.length}点 — ダブルクリックで確定`);
+  }
+});
+
+map.on('dblclick', e => {
+  if (currentMode !== 'A') return;
+  if ((currentTool==='line'||currentTool==='polygon') && drawingPts.length >= 2) {
+    const type = currentTool;
+    const pts = [...drawingPts];
+    stopDrawing();
+    addFeature(type, pts);
+  }
+});
+
+function stopDrawing() {
+  drawingPts = [];
+  tempMarkers.forEach(m => map.removeLayer(m)); tempMarkers = [];
+  if (tempLine) { map.removeLayer(tempLine); tempLine = null; }
+}
+
+// ============================================================
+// フィーチャー追加
+// ============================================================
+function addFeature(type, coords, name='', desc='', color='') {
+  if (!color) color = randColor();
+  if (!name)  name  = type==='point' ? 'ポイント'+(features.length+1)
+                    : type==='line'  ? 'ライン'+(features.length+1)
+                    : 'ポリゴン'+(features.length+1);
+  const id = nextId++;
+  let layer;
+
+  if (type==='point') {
+    layer = L.circleMarker(coords[0], {
+      radius:8, color, weight:2, fillColor:color, fillOpacity:0.8
+    }).addTo(map);
+  } else if (type==='line') {
+    layer = L.polyline(coords, {color, weight:3}).addTo(map);
+  } else {
+    layer = L.polygon(coords, {color, weight:2, fillColor:color, fillOpacity:0.2}).addTo(map);
+  }
+
+  layer.bindTooltip(name, {permanent:false});
+  layer.on('click', () => {
+    if (currentTool==='delete') { deleteFeature(id); return; }
+    selectFeature(id);
+  });
+
+  const feat = {id, type, name, desc, color, coords, layer};
+  features.push(feat);
+  renderFeatList();
+  selectFeature(id);
+  setStatus(`✅ ${name} を追加しました`);
+}
+
+// ============================================================
+// フィーチャー選択
+// ============================================================
+function selectFeature(id) {
+  selectedId = id;
+  const feat = features.find(f=>f.id===id);
+  if (!feat) return;
+  document.querySelectorAll('.feat-item').forEach(el =>
+    el.classList.toggle('active', +el.dataset.id===id));
+  const ed = document.getElementById('feat-edit');
+  ed.style.display = 'block';
+  document.getElementById('feat-name').value  = feat.name;
+  document.getElementById('feat-desc').value  = feat.desc||'';
+  document.getElementById('feat-color').value = feat.color||'';
+}
+
+// ============================================================
+// フィーチャー更新
+// ============================================================
+document.getElementById('btn-feat-update').addEventListener('click', () => {
+  const feat = features.find(f=>f.id===selectedId);
+  if (!feat) return;
+  feat.name  = document.getElementById('feat-name').value || feat.name;
+  feat.desc  = document.getElementById('feat-desc').value;
+  feat.color = document.getElementById('feat-color').value || feat.color;
+  // レイヤースタイル更新
+  if (feat.layer.setStyle) feat.layer.setStyle({color:feat.color,fillColor:feat.color});
+  feat.layer.unbindTooltip();
+  feat.layer.bindTooltip(feat.name, {permanent:false});
+  renderFeatList();
+  setStatus(`✅ ${feat.name} を更新しました`);
+});
+
+// ============================================================
+// フィーチャー削除
+// ============================================================
+function deleteFeature(id) {
+  const idx = features.findIndex(f=>f.id===id);
+  if (idx<0) return;
+  map.removeLayer(features[idx].layer);
+  features.splice(idx, 1);
+  if (selectedId===id) {
+    selectedId=null;
+    document.getElementById('feat-edit').style.display='none';
+  }
+  renderFeatList();
+  setStatus('フィーチャーを削除しました');
+}
+
+// ============================================================
+// フィーチャーリスト描画
+// ============================================================
+function renderFeatList() {
+  const list = document.getElementById('feat-list');
+  if (features.length===0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px;">フィーチャーなし</div>';
+    return;
+  }
+  list.innerHTML = features.map(f => `
+    <div class="feat-item${f.id===selectedId?' active':''}" data-id="${f.id}" onclick="selectFeature(${f.id})">
+      <div class="feat-header">
+        <span class="feat-name" style="color:${f.color}">${f.name}</span>
+        <span class="feat-type">${f.type==='point'?'📍':f.type==='line'?'〰':'⬡'}</span>
+      </div>
+      <div class="feat-btns">
+        <button class="btn-secondary" onclick="event.stopPropagation();focusFeat(${f.id})">🔍</button>
+        <button class="btn-danger" onclick="event.stopPropagation();deleteFeature(${f.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function focusFeat(id) {
+  const feat = features.find(f=>f.id===id);
+  if (!feat||!feat.layer) return;
+  if (feat.layer.getBounds) map.fitBounds(feat.layer.getBounds().pad(0.3));
+  else if (feat.layer.getLatLng) map.setView(feat.layer.getLatLng(), 15);
+}
+
+// 全クリア
+document.getElementById('btn-clear-all-feat').addEventListener('click', () => {
+  features.forEach(f => map.removeLayer(f.layer));
+  features = []; selectedId = null;
+  document.getElementById('feat-edit').style.display='none';
+  renderFeatList();
+  setStatus('全フィーチャーをクリアしました');
+});
+
+// ============================================================
+// MODE B: 画像重ね合わせ
+// ============================================================
+document.getElementById('img-upload').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const src = ev.target.result;
+    document.getElementById('img-preview').src = src;
+    document.getElementById('img-preview').style.display = 'block';
+
+    // 地図の中心を基準に画像オーバーレイを追加
+    if (imgOverlay) map.removeLayer(imgOverlay);
+    const center = map.getCenter();
+    const z = map.getZoom();
+    const deg = 0.05 * Math.pow(2, 14-z); // ズームに応じたサイズ
+    const bounds = [
+      [center.lat - deg, center.lng - deg],
+      [center.lat + deg, center.lng + deg]
+    ];
+    imgOverlay = L.imageOverlay(src, bounds, {opacity:0.7, interactive:true}).addTo(map);
+    setStatus('画像を追加しました。透明度スライダーで調整してください');
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('img-opacity').addEventListener('input', e => {
+  if (imgOverlay) imgOverlay.setOpacity(e.target.value/100);
+});
+
+document.getElementById('btn-trace').addEventListener('click', () => {
+  // MODE Aに切り替えてトレース開始
+  document.querySelector('[data-mode="A"]').click();
+  setStatus('画像の上にフィーチャーをトレースしてください');
+});
+
+// ============================================================
+// MODE C: AI自動マッピング
+// ============================================================
+let aiImgBase64 = null;
+
+document.getElementById('ai-img-upload').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const src = ev.target.result;
+    aiImgBase64 = src.split(',')[1];
+    const preview = document.getElementById('ai-img-preview');
+    preview.src = src; preview.style.display = 'block';
+
+    // 地図上にも表示
+    if (imgOverlay) map.removeLayer(imgOverlay);
+    const center = map.getCenter();
+    const z = map.getZoom();
+    const deg = 0.05 * Math.pow(2, 14-z);
+    const bounds = [[center.lat-deg,center.lng-deg],[center.lat+deg,center.lng+deg]];
+    imgOverlay = L.imageOverlay(src, bounds, {opacity:0.6}).addTo(map);
+    setStatus('画像をアップロードしました。「AI解析を開始」をクリックしてください');
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('btn-ai-analyze').addEventListener('click', async () => {
+  if (!aiImgBase64) { setStatus('⚠️ 画像をアップロードしてください'); return; }
+
+  const region  = document.getElementById('ai-region').value || '不明';
+  const mapType = document.getElementById('ai-map-type').value;
+  const mapTypeLabel = {'castle':'城郭図','town':'町絵図・城下町','road':'街道・道中図','general':'古地図'}[mapType];
+
+  const progress = document.getElementById('ai-progress');
+  const log = document.getElementById('ai-log');
+  progress.style.display = 'block';
+  document.getElementById('ai-result').style.display = 'none';
+  document.getElementById('btn-ai-analyze').disabled = true;
+  log.innerHTML = '';
+
+  function addLog(icon, text, color='var(--parchment)') {
+    log.innerHTML += `<div class="ai-step"><span class="ai-step-icon">${icon}</span><span class="ai-step-text" style="color:${color}">${text}</span></div>`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  addLog('🔍','画像を解析中...');
+
+  const prompt = `あなたは地図解析の専門家です。
+この画像は${mapTypeLabel}です。対象地域: ${region}
+
+以下の作業を行ってください:
+1. 画像から主要な地物（城・建物・道路・川・境界線・地名など）を特定
+2. 現在の地図座標（緯度経度）にマッピング
+3. GeoJSON形式で出力
+
+地域が特定できる場合は実際の座標を使用してください。
+不明な場合は画像の相対位置から推定座標を生成してください。
+
+出力フォーマット（JSONのみ、コードブロック不要）:
+{
+  "region_name": "地域名",
+  "estimated_center": [緯度, 経度],
+  "zoom": ズームレベル(10-16),
+  "features": [
+    {
+      "name": "地物名",
+      "type": "point|line|polygon",
+      "description": "説明",
+      "coordinates": [[緯度,経度], ...],
+      "category": "castle|building|road|river|boundary|landmark",
+      "color": "#HEXカラー"
+    }
+  ],
+  "analysis_notes": "解析に関するメモ"
+}`;
+
+  try {
+    addLog('📡','Claude API に送信中...');
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image', source:{type:'base64', media_type:'image/jpeg', data:aiImgBase64}},
+            {type:'text',  text:prompt}
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+    const data = await response.json();
+    const text = data.content.map(c=>c.text||'').join('');
+    addLog('✅','解析完了', 'var(--green)');
+
+    // JSONを抽出
+    addLog('🔧','GeoJSONを生成中...');
+    let parsed;
+    try {
+      // コードブロックの除去
+      const clean = text.replace(/```json?/g,'').replace(/```/g,'').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      // JSON抽出を試みる
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) parsed = JSON.parse(m[0]);
+      else throw new Error('JSON解析失敗');
+    }
+
+    aiGeoJSON = parsed;
+    const fc = parsed.features || [];
+    addLog('📍', `${fc.length}個の地物を検出`, 'var(--blue)');
+
+    // 地図上にプレビュー表示
+    if (parsed.estimated_center) {
+      map.flyTo(parsed.estimated_center, parsed.zoom || 14, {duration:1.5});
+    }
+
+    // プレビューレイヤーを追加
+    fc.forEach(f => {
+      if (!f.coordinates || f.coordinates.length === 0) return;
+      const color = f.color || '#3498db';
+      if (f.type==='point') {
+        L.circleMarker(f.coordinates[0], {radius:7,color,fillColor:color,fillOpacity:0.8})
+         .bindTooltip(f.name).addTo(map);
+      } else if (f.type==='line') {
+        L.polyline(f.coordinates, {color,weight:3}).bindTooltip(f.name).addTo(map);
+      } else {
+        L.polygon(f.coordinates, {color,weight:2,fillColor:color,fillOpacity:0.2})
+         .bindTooltip(f.name).addTo(map);
+      }
+    });
+
+    // 結果表示
+    const resultDiv = document.getElementById('ai-result');
+    resultDiv.style.display = 'block';
+    document.getElementById('ai-result-summary').innerHTML =
+      `<b style="color:var(--gold)">${parsed.region_name||'不明'}</b><br>` +
+      `検出地物: ${fc.length}件<br>` +
+      (parsed.analysis_notes ? `<span style="color:var(--muted)">${parsed.analysis_notes}</span>` : '');
+
+    setStatus(`✅ AI解析完了: ${fc.length}件の地物を検出しました`);
+
+  } catch(err) {
+    addLog('❌', `エラー: ${err.message}`, 'var(--red)');
+    setStatus(`❌ AI解析エラー: ${err.message}`);
+  } finally {
+    document.getElementById('btn-ai-analyze').disabled = false;
+  }
+});
+
+// AI結果を適用してMODE Aで編集
+document.getElementById('btn-ai-apply').addEventListener('click', () => {
+  if (!aiGeoJSON || !aiGeoJSON.features) return;
+
+  // 既存フィーチャーをクリア
+  features.forEach(f => map.removeLayer(f.layer));
+  features = []; selectedId = null;
+
+  // AI生成フィーチャーをMODE Aに取り込む
+  aiGeoJSON.features.forEach(f => {
+    if (!f.coordinates || f.coordinates.length===0) return;
+    addFeature(f.type||'point', f.coordinates, f.name, f.description||'', f.color||'');
+  });
+
+  // MODE Aに切り替え
+  document.querySelector('[data-mode="A"]').click();
+  setStatus(`✅ ${aiGeoJSON.features.length}件のフィーチャーをインポートしました。編集を続けてください`);
+});
+
+document.getElementById('btn-ai-retry').addEventListener('click', () => {
+  document.getElementById('ai-result').style.display = 'none';
+  document.getElementById('ai-progress').style.display = 'none';
+  aiGeoJSON = null;
+});
+
+// ============================================================
+// GeoJSON エクスポート
+// ============================================================
+function exportGeoJSON() {
+  return {
+    type: 'FeatureCollection',
+    features: features.map(f => ({
+      type: 'Feature',
+      properties: {name:f.name, description:f.desc||'', color:f.color, featureType:f.type},
+      geometry: f.type==='point'
+        ? {type:'Point', coordinates:[f.coords[0][1],f.coords[0][0]]}
+        : f.type==='line'
+        ? {type:'LineString', coordinates:f.coords.map(c=>[c[1],c[0]])}
+        : {type:'Polygon', coordinates:[f.coords.map(c=>[c[1],c[0]])]}
+    }))
+  };
+}
+
+// ============================================================
+// 保存
+// ============================================================
+document.getElementById('btn-save-map').addEventListener('click', () => {
+  if (features.length===0) { setStatus('⚠️ フィーチャーがありません'); return; }
+  document.getElementById('save-dialog').classList.add('open');
+});
+
+document.getElementById('btn-save-cancel').addEventListener('click', () => {
+  document.getElementById('save-dialog').classList.remove('open');
+});
+
+document.getElementById('btn-save-confirm').addEventListener('click', async () => {
+  const name     = document.getElementById('save-name').value.trim();
+  const era      = document.getElementById('save-era').value.trim();
+  const emoji    = document.getElementById('save-emoji').value.trim() || '🗺';
+  const category = document.getElementById('save-category').value;
+  const statusEl = document.getElementById('save-status');
+
+  if (!name) { statusEl.textContent = '⚠️ 地図名を入力してください'; return; }
+
+  const gj = exportGeoJSON();
+  // 中心座標を計算
+  const allLats = features.flatMap(f=>f.coords.map(c=>c[0]));
+  const allLngs = features.flatMap(f=>f.coords.map(c=>c[1]));
+  const clat = allLats.reduce((a,b)=>a+b,0)/allLats.length;
+  const clng = allLngs.reduce((a,b)=>a+b,0)/allLngs.length;
+  const id = 'custom-' + Date.now();
+
+  statusEl.textContent = '保存中...';
+  const {error} = await db.from('maps').upsert({
+    id, name, era, emoji, category,
+    tier: 'standard', is_standard: false, is_public: true, price: 0,
+    center_lat: Math.round(clat*1000)/1000,
+    center_lng: Math.round(clng*1000)/1000,
+    zoom_default: map.getZoom(),
+    geojson: JSON.stringify(gj),
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    statusEl.style.color='var(--red)';
+    statusEl.textContent = '❌ 保存失敗: ' + error.message;
+  } else {
+    statusEl.style.color='var(--green)';
+    statusEl.textContent = '✅ 保存しました！ImmersaMapで確認できます';
+    setTimeout(() => document.getElementById('save-dialog').classList.remove('open'), 2000);
+  }
+});
+
+// ============================================================
+// プレビュー（JSON出力）
+// ============================================================
+document.getElementById('btn-preview').addEventListener('click', () => {
+  const gj = exportGeoJSON();
+  const w = window.open('','_blank');
+  w.document.write(`<pre style="background:#111;color:#0f0;padding:20px;font-size:12px;">${JSON.stringify(gj,null,2)}</pre>`);
+});
+
+// ============================================================
+// JSON読込
+// ============================================================
+document.getElementById('btn-import-json').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json,.geojson';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const gj = JSON.parse(ev.target.result);
+        if (gj.type === 'FeatureCollection') {
+          gj.features.forEach(f => {
+            const props = f.properties || {};
+            const geom  = f.geometry;
+            let type, coords;
+            if (geom.type==='Point') {
+              type='point'; coords=[[geom.coordinates[1],geom.coordinates[0]]];
+            } else if (geom.type==='LineString') {
+              type='line'; coords=geom.coordinates.map(c=>[c[1],c[0]]);
+            } else if (geom.type==='Polygon') {
+              type='polygon'; coords=geom.coordinates[0].map(c=>[c[1],c[0]]);
+            } else return;
+            addFeature(type, coords, props.name||'', props.description||'', props.color||'');
+          });
+          setStatus(`✅ ${gj.features.length}件のフィーチャーを読み込みました`);
+        }
+      } catch(e) { setStatus('❌ JSON解析エラー: ' + e.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+});
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+// 初期パネル表示
+document.getElementById('panel-A').style.display = 'flex';
+document.getElementById('panel-A').style.flexDirection = 'column';
+</script>
+</body>
+</html>
