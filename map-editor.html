@@ -595,9 +595,14 @@ document.getElementById('btn-ai-analyze').addEventListener('click', async () => 
 
   try {
     addLog('📡','Claude API に送信中...');
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Supabase Edge Function経由でClaude APIを呼び出し（CORS回避）
+    const EDGE_URL = `${SUPABASE_URL}/functions/v1/claude-proxy`;
+    const response = await fetch(EDGE_URL, {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:4000,
@@ -611,7 +616,10 @@ document.getElementById('btn-ai-analyze').addEventListener('click', async () => 
       })
     });
 
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error(`API Error: ${response.status} - ${errBody.slice(0,100)}`);
+    }
     const data = await response.json();
     const text = data.content.map(c=>c.text||'').join('');
     addLog('✅','解析完了', 'var(--green)');
