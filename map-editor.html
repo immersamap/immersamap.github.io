@@ -76,13 +76,39 @@ input[type=range]{width:100%;accent-color:var(--gold);}
 #img-overlay-ctrl{display:none;}
 #img-preview{width:100%;border-radius:4px;border:1px solid var(--border);margin-bottom:8px;display:none;}
 
-/* ===== MODE C: AI解析 ===== */
-#ai-panel{display:none;}
-#ai-progress{padding:12px;background:rgba(74,159,255,.1);border:1px solid rgba(74,159,255,.3);border-radius:6px;margin-bottom:8px;display:none;}
-#ai-log{font-size:11px;color:var(--blue);line-height:1.8;max-height:200px;overflow-y:auto;}
-.ai-step{display:flex;align-items:center;gap:8px;padding:4px 0;}
-.ai-step-icon{font-size:14px;}
-.ai-step-text{font-size:12px;color:var(--parchment);}
+/* 画像オーバーレイ操作ハンドル */
+.overlay-wrap{position:absolute;pointer-events:none;z-index:400;}
+.overlay-img{width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none;pointer-events:auto;cursor:move;transform-origin:center center;}
+.overlay-handle{position:absolute;width:14px;height:14px;background:var(--gold);border:2px solid #fff;border-radius:50%;pointer-events:auto;cursor:nwse-resize;box-shadow:0 0 4px rgba(0,0,0,.5);z-index:1;}
+.overlay-handle.h-nw{top:-7px;left:-7px;cursor:nwse-resize;}
+.overlay-handle.h-ne{top:-7px;right:-7px;cursor:nesw-resize;}
+.overlay-handle.h-sw{bottom:-7px;left:-7px;cursor:nesw-resize;}
+.overlay-handle.h-se{bottom:-7px;right:-7px;cursor:nwse-resize;}
+.overlay-handle.h-rot{top:-30px;left:50%;margin-left:-7px;cursor:grab;background:var(--blue);}
+.overlay-handle.h-rot::before{content:"";position:absolute;left:50%;top:14px;width:1px;height:16px;background:var(--blue);transform:translateX(-50%);}
+
+/* 位置合わせモード切替ボタン */
+.align-mode-btn.active{background:var(--gold)!important;color:var(--bg)!important;border-color:var(--gold)!important;}
+
+/* GCPピンのスタイル */
+.gcp-pin{font-size:24px;text-align:center;line-height:1;}
+.gcp-pin-img{filter:drop-shadow(0 0 2px rgba(0,0,0,.6));}
+.gcp-item{background:rgba(74,159,255,.08);border:1px solid rgba(74,159,255,.3);border-radius:4px;padding:6px 8px;margin-bottom:4px;font-size:11px;display:flex;justify-content:space-between;align-items:center;}
+.gcp-item .gcp-num{color:var(--blue);font-weight:600;}
+.gcp-item .gcp-del{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px;}
+.gcp-item.partial{background:rgba(231,76,60,.08);border-color:rgba(231,76,60,.3);}
+
+/* GCP入力中表示 */
+#gcp-hint{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;padding:8px 16px;border-radius:6px;z-index:500;font-size:13px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.4);display:none;pointer-events:none;}
+#gcp-hint.show{display:block;}
+
+/* GCP用画像オーバーレイ（小窓） */
+#gcp-img-window{position:absolute;top:80px;left:20px;width:380px;background:#000;border:2px solid var(--gold);border-radius:6px;z-index:450;display:none;box-shadow:0 4px 16px rgba(0,0,0,.6);overflow:hidden;}
+#gcp-img-window.show{display:block;}
+#gcp-img-window-header{background:var(--surface);padding:6px 10px;font-size:11px;color:var(--gold);display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none;}
+#gcp-img-window-body{position:relative;overflow:hidden;max-height:380px;}
+#gcp-img-window-body img{display:block;width:100%;cursor:crosshair;user-select:none;-webkit-user-drag:none;}
+.gcp-img-marker{position:absolute;width:20px;height:20px;background:var(--blue);color:#fff;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 4px rgba(0,0,0,.6);}
 
 /* ===== ステータスバー ===== */
 #status{padding:5px 16px;background:#0d0800;border-top:1px solid var(--border);font-size:11px;color:var(--muted);flex-shrink:0;}
@@ -101,7 +127,6 @@ input[type=range]{width:100%;accent-color:var(--gold);}
   <div class="mode-tabs">
     <button class="mode-tab active" data-mode="A">✏️ いちから作成</button>
     <button class="mode-tab" data-mode="B">🖼 画像重ね合わせ</button>
-    <button class="mode-tab" data-mode="C">🤖 AI自動マッピング</button>
   </div>
   <span class="sep">|</span>
   <button class="btn-success" id="btn-save-map">💾 保存</button>
@@ -119,6 +144,20 @@ input[type=range]{width:100%;accent-color:var(--gold);}
   </div>
 
   <div id="map"></div>
+
+  <!-- GCP指定中ヒント -->
+  <div id="gcp-hint"></div>
+
+  <!-- GCP指定用：画像小窓 -->
+  <div id="gcp-img-window">
+    <div id="gcp-img-window-header">
+      <span>🖼 古地図 — クリックで基準点を指定</span>
+      <span id="gcp-img-close" style="cursor:pointer;color:var(--red);">✕</span>
+    </div>
+    <div id="gcp-img-window-body">
+      <img id="gcp-img" src="" alt="">
+    </div>
+  </div>
 
   <div id="side">
     <!-- MODE A: フィーチャーリスト -->
@@ -154,63 +193,74 @@ input[type=range]{width:100%;accent-color:var(--gold);}
 
     <!-- MODE B: 画像重ね合わせ -->
     <div id="panel-B" style="display:none;flex-direction:column;height:100%;">
+      <!-- ステップ1: 画像アップロード -->
       <div class="side-section">
-        <div class="side-title">画像のアップロード</div>
+        <div class="side-title">① 画像をアップロード</div>
         <input type="file" id="img-upload" accept="image/*" style="margin-bottom:8px;">
         <img id="img-preview">
-        <label>透明度</label>
+      </div>
+
+      <!-- ステップ2: 表示制御 -->
+      <div class="side-section" id="img-display-section" style="display:none;">
+        <div class="side-title">② 表示制御</div>
+        <label>透明度 <span id="opacity-val" style="color:var(--gold);">70%</span></label>
         <input type="range" id="img-opacity" min="0" max="100" value="70">
-        <label>回転 (度)</label>
-        <input type="number" id="img-rotate" value="0" min="-180" max="180">
-      </div>
-      <div class="side-section">
-        <div class="side-title">位置の調整</div>
-        <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px;">
-          画像をドラッグして位置を調整<br>
-          コーナーをドラッグしてサイズを変更<br>
-          地図をクリックして制御点を追加
+        <div style="font-size:10px;color:var(--muted);margin-top:-2px;margin-bottom:8px;">
+          <kbd style="background:#333;padding:1px 6px;border-radius:3px;font-size:10px;">Space</kbd> で 0%↔70% 切替
         </div>
-        <div id="ctrl-pts-info" style="font-size:11px;color:var(--blue);">制御点: 0個</div>
+        <label>回転 <span id="rotate-val" style="color:var(--gold);">0°</span></label>
+        <input type="range" id="img-rotate" min="-180" max="180" value="0" step="0.5">
+        <div style="display:flex;gap:4px;margin-top:4px;">
+          <button class="btn-secondary" id="btn-rotate-reset" style="flex:1;font-size:11px;">リセット</button>
+          <button class="btn-secondary" id="btn-rotate-90l" style="font-size:11px;">↶90°</button>
+          <button class="btn-secondary" id="btn-rotate-90r" style="font-size:11px;">90°↷</button>
+        </div>
       </div>
-      <div class="side-section">
-        <div class="side-title">GeoJSON変換</div>
+
+      <!-- ステップ3: 位置合わせ方法選択 -->
+      <div class="side-section" id="img-align-section" style="display:none;">
+        <div class="side-title">③ 位置合わせ</div>
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <button class="align-mode-btn btn-secondary active" data-align="manual" style="flex:1;font-size:11px;">手動調整</button>
+          <button class="align-mode-btn btn-secondary" data-align="gcp" style="flex:1;font-size:11px;">基準点指定</button>
+        </div>
+
+        <!-- 手動調整 -->
+        <div id="align-manual">
+          <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+            画像中央をドラッグして移動<br>
+            四隅のハンドルでサイズ変更<br>
+            右クリックで一時的に地図操作
+          </div>
+        </div>
+
+        <!-- GCP指定 -->
+        <div id="align-gcp" style="display:none;">
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
+            古地図と現代地図に対応する3点以上の点を打って、自動位置合わせします。<br>
+            <span style="color:var(--blue);">「画像上の点 → 地図上の点」のペアで指定</span>
+          </div>
+          <div id="gcp-list" style="margin-bottom:8px;"></div>
+          <button class="btn-blue" id="btn-gcp-add" style="width:100%;margin-bottom:4px;font-size:11px;">
+            ＋ 基準点を追加
+          </button>
+          <button class="btn-primary" id="btn-gcp-apply" style="width:100%;margin-bottom:4px;font-size:11px;" disabled>
+            ✓ 位置合わせを適用
+          </button>
+          <button class="btn-secondary" id="btn-gcp-clear" style="width:100%;font-size:11px;">
+            基準点を全クリア
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ4: トレース開始 -->
+      <div class="side-section" id="img-trace-section" style="display:none;">
+        <div class="side-title">④ トレース</div>
         <button class="btn-primary" id="btn-trace" style="width:100%;margin-bottom:6px;">
           ✏️ トレース開始（MODE Aへ）
         </button>
-      </div>
-    </div>
-
-    <!-- MODE C: AI自動マッピング -->
-    <div id="panel-C" style="display:none;flex-direction:column;">
-      <div class="side-section">
-        <div class="side-title">古地図画像のアップロード</div>
-        <input type="file" id="ai-img-upload" accept="image/*" style="margin-bottom:8px;">
-        <img id="ai-img-preview" style="width:100%;border-radius:4px;border:1px solid var(--border);margin-bottom:8px;display:none;">
-        <label>解析対象地域（任意）</label>
-        <input type="text" id="ai-region" placeholder="例：東京 日本橋周辺">
-        <label>地図の種類</label>
-        <select id="ai-map-type">
-          <option value="castle">城郭図</option>
-          <option value="town">町絵図・城下町</option>
-          <option value="road">街道・道中図</option>
-          <option value="general">一般的な古地図</option>
-        </select>
-        <button class="btn-blue" id="btn-ai-analyze" style="width:100%;margin-top:4px;">
-          🤖 AI解析を開始
-        </button>
-      </div>
-      <div class="side-section" id="ai-progress" style="display:none;">
-        <div class="side-title">解析進捗</div>
-        <div id="ai-log"></div>
-      </div>
-      <div class="side-section" id="ai-result" style="display:none;">
-        <div class="side-title">解析結果</div>
-        <div id="ai-result-summary" style="font-size:11px;color:var(--parchment);margin-bottom:8px;"></div>
-        <button class="btn-success" id="btn-ai-apply" style="width:100%;margin-bottom:6px;">
-          ✅ 結果を適用してMODE Aで編集
-        </button>
-        <button class="btn-secondary" id="btn-ai-retry" style="width:100%;">
-          🔄 再解析
+        <button class="btn-danger" id="btn-img-remove" style="width:100%;font-size:11px;">
+          🗑 画像を削除
         </button>
       </div>
     </div>
@@ -269,7 +319,6 @@ let selectedId = null;
 let drawingPts = [];
 let tempLine   = null;
 let tempMarkers = [];
-let aiGeoJSON  = null;
 let imgOverlay = null;
 let nextId     = 1;
 
@@ -283,14 +332,15 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     currentMode = btn.dataset.mode;
     document.querySelectorAll('.mode-tab').forEach(b => b.classList.toggle('active', b===btn));
-    ['A','B','C'].forEach(m => {
+    ['A','B'].forEach(m => {
       const p = document.getElementById('panel-'+m);
-      if (p) p.style.display = m===currentMode ? (m==='A'?'flex':'flex') : 'none';
+      if (p) p.style.display = m===currentMode ? 'flex' : 'none';
       if (p) p.style.flexDirection = 'column';
     });
     setStatus(currentMode==='A' ? 'ツールを選んで地図上にフィーチャーを追加'
-            : currentMode==='B' ? '画像をアップロードして地図上に重ねてください'
-            : '古地図画像をアップロードしてAI解析を開始してください');
+                                : '画像をアップロードして地図上に重ねてください');
+    // モード切替時に画像オーバーレイの操作可否を切替
+    if (window.setOverlayInteractive) setOverlayInteractive(currentMode === 'B');
     stopDrawing();
   });
 });
@@ -491,218 +541,536 @@ document.getElementById('img-upload').addEventListener('change', e => {
     const src = ev.target.result;
     document.getElementById('img-preview').src = src;
     document.getElementById('img-preview').style.display = 'block';
-
-    // 地図の中心を基準に画像オーバーレイを追加
-    if (imgOverlay) map.removeLayer(imgOverlay);
-    const center = map.getCenter();
-    const z = map.getZoom();
-    const deg = 0.05 * Math.pow(2, 14-z); // ズームに応じたサイズ
-    const bounds = [
-      [center.lat - deg, center.lng - deg],
-      [center.lat + deg, center.lng + deg]
-    ];
-    imgOverlay = L.imageOverlay(src, bounds, {opacity:0.7, interactive:true}).addTo(map);
-    setStatus('画像を追加しました。透明度スライダーで調整してください');
+    document.getElementById('gcp-img').src = src;
+    // 地図中心に既定サイズで重ね合わせ開始
+    createOverlay(src);
+    // ステップ②③④を表示
+    document.getElementById('img-display-section').style.display = 'block';
+    document.getElementById('img-align-section').style.display = 'block';
+    document.getElementById('img-trace-section').style.display = 'block';
+    setStatus('画像を追加しました。位置・サイズを調整してください');
   };
   reader.readAsDataURL(file);
 });
 
+// ============================================================
+// MODE B: カスタム画像オーバーレイ（移動・リサイズ・回転）
+// ============================================================
+// Leaflet標準のimageOverlayは回転・ハンドル操作ができないので、
+// 自前の<div>オーバーレイをmap pane上に重ねて、boundsで地理座標に紐づけて管理する
+let overlayState = {
+  src: null,
+  bounds: null,          // [[lat,lng],[lat,lng]]
+  rotationDeg: 0,
+  opacity: 0.7,
+  wrapEl: null,
+  imgEl: null,
+};
+
+function createOverlay(src) {
+  removeOverlay();
+  overlayState.src = src;
+  // 地図中心に既定サイズで配置
+  const c = map.getCenter();
+  const z = map.getZoom();
+  const deg = 0.05 * Math.pow(2, 14-z);
+  overlayState.bounds = [[c.lat-deg, c.lng-deg], [c.lat+deg, c.lng+deg]];
+  overlayState.rotationDeg = 0;
+  overlayState.opacity = 0.7;
+  // DOM作成（地図のoverlayPaneに乗せる）
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay-wrap';
+  wrap.innerHTML = `
+    <img class="overlay-img" src="${src}" draggable="false">
+    <div class="overlay-handle h-nw"></div>
+    <div class="overlay-handle h-ne"></div>
+    <div class="overlay-handle h-sw"></div>
+    <div class="overlay-handle h-se"></div>
+    <div class="overlay-handle h-rot"></div>
+  `;
+  map.getPanes().overlayPane.appendChild(wrap);
+  overlayState.wrapEl = wrap;
+  overlayState.imgEl = wrap.querySelector('.overlay-img');
+  overlayState.imgEl.style.opacity = overlayState.opacity;
+  // インタラクション登録
+  attachOverlayInteractions();
+  // 描画
+  redrawOverlay();
+  // mapイベントでオーバーレイ位置を更新
+  map.on('move zoom viewreset', redrawOverlay);
+}
+
+function redrawOverlay() {
+  if (!overlayState.wrapEl || !overlayState.bounds) return;
+  const [sw, ne] = overlayState.bounds;
+  // boundsの4隅をピクセル座標へ
+  const pSW = map.latLngToLayerPoint([sw[0], sw[1]]);
+  const pNE = map.latLngToLayerPoint([ne[0], ne[1]]);
+  const left = Math.min(pSW.x, pNE.x);
+  const top  = Math.min(pSW.y, pNE.y);
+  const w = Math.abs(pNE.x - pSW.x);
+  const h = Math.abs(pNE.y - pSW.y);
+  const wrap = overlayState.wrapEl;
+  wrap.style.left = left + 'px';
+  wrap.style.top  = top + 'px';
+  wrap.style.width = w + 'px';
+  wrap.style.height = h + 'px';
+  // 回転は子要素imgのみに適用（ハンドルは回転しない方が掴みやすい）
+  overlayState.imgEl.style.transform = `rotate(${overlayState.rotationDeg}deg)`;
+}
+
+function removeOverlay() {
+  if (overlayState.wrapEl) {
+    overlayState.wrapEl.remove();
+    overlayState.wrapEl = null;
+    overlayState.imgEl = null;
+    map.off('move zoom viewreset', redrawOverlay);
+  }
+  overlayState.src = null;
+  overlayState.bounds = null;
+}
+
+// モード切替時に画像オーバーレイの操作可否を切替
+window.setOverlayInteractive = function(enable) {
+  if (!overlayState.wrapEl) return;
+  overlayState.wrapEl.style.pointerEvents = enable ? 'auto' : 'none';
+  overlayState.wrapEl.querySelectorAll('.overlay-handle').forEach(h => {
+    h.style.display = enable ? 'block' : 'none';
+  });
+  // 非B時は操作系全部不可、画像は見えるまま
+};
+
+function attachOverlayInteractions() {
+  const wrap = overlayState.wrapEl;
+  const img  = overlayState.imgEl;
+
+  // 画像本体ドラッグで移動
+  let dragStart = null;
+  img.addEventListener('mousedown', e => {
+    if (currentMode !== 'B') return;
+    e.preventDefault(); e.stopPropagation();
+    map.dragging.disable();
+    dragStart = {x:e.clientX, y:e.clientY, bounds: JSON.parse(JSON.stringify(overlayState.bounds))};
+    document.body.style.cursor = 'move';
+  });
+
+  // 四隅ハンドルでリサイズ
+  ['nw','ne','sw','se'].forEach(corner => {
+    const handle = wrap.querySelector('.h-'+corner);
+    handle.addEventListener('mousedown', e => {
+      if (currentMode !== 'B') return;
+      e.preventDefault(); e.stopPropagation();
+      map.dragging.disable();
+      dragStart = {x:e.clientX, y:e.clientY,
+                   bounds:JSON.parse(JSON.stringify(overlayState.bounds)),
+                   corner};
+    });
+  });
+
+  // 回転ハンドル
+  const rotHandle = wrap.querySelector('.h-rot');
+  rotHandle.addEventListener('mousedown', e => {
+    if (currentMode !== 'B') return;
+    e.preventDefault(); e.stopPropagation();
+    map.dragging.disable();
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    dragStart = {x:e.clientX, y:e.clientY, cx, cy,
+                 startAngle: Math.atan2(e.clientY-cy, e.clientX-cx)*180/Math.PI,
+                 startRot: overlayState.rotationDeg, mode:'rotate'};
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragStart || currentMode !== 'B') return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    if (dragStart.mode === 'rotate') {
+      const angle = Math.atan2(e.clientY-dragStart.cy, e.clientX-dragStart.cx)*180/Math.PI;
+      overlayState.rotationDeg = dragStart.startRot + (angle - dragStart.startAngle);
+      document.getElementById('img-rotate').value = overlayState.rotationDeg.toFixed(1);
+      document.getElementById('rotate-val').textContent = overlayState.rotationDeg.toFixed(0) + '°';
+      redrawOverlay();
+      return;
+    }
+    // 地理座標差分を求める
+    const [sw, ne] = dragStart.bounds;
+    const pSW = map.latLngToContainerPoint([sw[0], sw[1]]);
+    const pNE = map.latLngToContainerPoint([ne[0], ne[1]]);
+    if (dragStart.corner) {
+      // リサイズ
+      let nL = pSW.x, nR = pNE.x, nT = pNE.y, nB = pSW.y;
+      if (dragStart.corner.includes('w')) nL = pSW.x + dx;
+      if (dragStart.corner.includes('e')) nR = pNE.x + dx;
+      if (dragStart.corner.includes('n')) nT = pNE.y + dy;
+      if (dragStart.corner.includes('s')) nB = pSW.y + dy;
+      // ピクセル→地理
+      const newSW = map.containerPointToLatLng([Math.min(nL,nR), Math.max(nT,nB)]);
+      const newNE = map.containerPointToLatLng([Math.max(nL,nR), Math.min(nT,nB)]);
+      overlayState.bounds = [[newSW.lat, newSW.lng], [newNE.lat, newNE.lng]];
+    } else {
+      // 移動
+      const newSW = map.containerPointToLatLng([pSW.x+dx, pSW.y+dy]);
+      const newNE = map.containerPointToLatLng([pNE.x+dx, pNE.y+dy]);
+      overlayState.bounds = [[newSW.lat, newSW.lng], [newNE.lat, newNE.lng]];
+    }
+    redrawOverlay();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (dragStart) {
+      dragStart = null;
+      map.dragging.enable();
+      document.body.style.cursor = '';
+    }
+  });
+
+  // 右クリックで一時的に地図操作（pointerEvents:none）
+  wrap.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    wrap.style.pointerEvents = 'none';
+    setTimeout(() => { if (currentMode==='B') wrap.style.pointerEvents = 'auto'; }, 3000);
+    setStatus('3秒間、画像を貫通して地図操作できます');
+  });
+}
+
+// 透明度
 document.getElementById('img-opacity').addEventListener('input', e => {
-  if (imgOverlay) imgOverlay.setOpacity(e.target.value/100);
+  const v = parseInt(e.target.value, 10);
+  overlayState.opacity = v / 100;
+  if (overlayState.imgEl) overlayState.imgEl.style.opacity = overlayState.opacity;
+  document.getElementById('opacity-val').textContent = v + '%';
 });
 
+// 回転スライダー
+document.getElementById('img-rotate').addEventListener('input', e => {
+  overlayState.rotationDeg = parseFloat(e.target.value);
+  document.getElementById('rotate-val').textContent = overlayState.rotationDeg.toFixed(0) + '°';
+  redrawOverlay();
+});
+document.getElementById('btn-rotate-reset').addEventListener('click', () => {
+  overlayState.rotationDeg = 0;
+  document.getElementById('img-rotate').value = 0;
+  document.getElementById('rotate-val').textContent = '0°';
+  redrawOverlay();
+});
+document.getElementById('btn-rotate-90l').addEventListener('click', () => {
+  overlayState.rotationDeg = (overlayState.rotationDeg - 90) % 360;
+  document.getElementById('img-rotate').value = overlayState.rotationDeg;
+  document.getElementById('rotate-val').textContent = overlayState.rotationDeg.toFixed(0) + '°';
+  redrawOverlay();
+});
+document.getElementById('btn-rotate-90r').addEventListener('click', () => {
+  overlayState.rotationDeg = (overlayState.rotationDeg + 90) % 360;
+  document.getElementById('img-rotate').value = overlayState.rotationDeg;
+  document.getElementById('rotate-val').textContent = overlayState.rotationDeg.toFixed(0) + '°';
+  redrawOverlay();
+});
+
+// 画像削除
+document.getElementById('btn-img-remove').addEventListener('click', () => {
+  if (!confirm('画像を削除しますか？')) return;
+  removeOverlay();
+  gcpClearAll();
+  document.getElementById('img-upload').value = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-display-section').style.display = 'none';
+  document.getElementById('img-align-section').style.display = 'none';
+  document.getElementById('img-trace-section').style.display = 'none';
+  setStatus('画像を削除しました');
+});
+
+// ============================================================
+// MODE B: スペースキーで透明度0/70%トグル
+// ============================================================
+let opacityToggleSaved = 0.7;
+document.addEventListener('keydown', e => {
+  if (currentMode !== 'B') return;
+  if (e.code !== 'Space') return;
+  // 入力中はスキップ
+  if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+  e.preventDefault();
+  if (!overlayState.imgEl) return;
+  if (overlayState.opacity > 0.01) {
+    opacityToggleSaved = overlayState.opacity;
+    overlayState.opacity = 0;
+  } else {
+    overlayState.opacity = opacityToggleSaved;
+  }
+  overlayState.imgEl.style.opacity = overlayState.opacity;
+  const pct = Math.round(overlayState.opacity * 100);
+  document.getElementById('img-opacity').value = pct;
+  document.getElementById('opacity-val').textContent = pct + '%';
+});
+
+// ============================================================
+// MODE B: 位置合わせモード切替
+// ============================================================
+let alignMode = 'manual';
+document.querySelectorAll('.align-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.align-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    alignMode = btn.dataset.align;
+    document.getElementById('align-manual').style.display = alignMode==='manual' ? 'block' : 'none';
+    document.getElementById('align-gcp').style.display = alignMode==='gcp' ? 'block' : 'none';
+    document.getElementById('gcp-img-window').classList.toggle('show', alignMode==='gcp' && overlayState.src);
+    if (alignMode === 'gcp') {
+      // GCPモード時は画像オーバーレイの操作を一時停止
+      if (overlayState.wrapEl) overlayState.wrapEl.style.pointerEvents = 'none';
+      renderGcpList();
+    } else {
+      if (overlayState.wrapEl && currentMode==='B') overlayState.wrapEl.style.pointerEvents = 'auto';
+      hideGcpHint();
+    }
+  });
+});
+
+// ============================================================
+// MODE B: GCP（Ground Control Point）による位置合わせ
+// ============================================================
+// gcps: [{imgX:0-1, imgY:0-1, mapLat, mapLng}, ...]
+// imgX,imgYは画像内の相対座標（0-1）。表示時に小窓のサイズに掛け算する
+let gcps = [];
+let gcpPendingImg = null;   // {imgX,imgY} 画像クリック済みで地図クリック待ち
+let gcpMapMarkers = [];     // 地図上のGCPマーカー
+
+function showGcpHint(msg) {
+  const el = document.getElementById('gcp-hint');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideGcpHint() {
+  document.getElementById('gcp-hint').classList.remove('show');
+}
+
+document.getElementById('btn-gcp-add').addEventListener('click', () => {
+  if (!overlayState.src) { setStatus('⚠️ 先に画像をアップロードしてください'); return; }
+  // 小窓を必ず表示
+  document.getElementById('gcp-img-window').classList.add('show');
+  showGcpHint(`基準点 #${gcps.length+1}：まず古地図（左上の小窓）をクリック`);
+  gcpPendingImg = 'awaiting';
+});
+
+document.getElementById('btn-gcp-clear').addEventListener('click', () => {
+  if (!confirm('基準点をすべて削除しますか？')) return;
+  gcpClearAll();
+});
+
+document.getElementById('btn-gcp-apply').addEventListener('click', () => {
+  if (gcps.length < 3) { setStatus('⚠️ 基準点が3点以上必要です'); return; }
+  applyGcpAlignment();
+});
+
+function gcpClearAll() {
+  gcps = [];
+  gcpPendingImg = null;
+  gcpMapMarkers.forEach(m => map.removeLayer(m));
+  gcpMapMarkers = [];
+  document.querySelectorAll('.gcp-img-marker').forEach(el => el.remove());
+  renderGcpList();
+  hideGcpHint();
+}
+
+// 古地図小窓上のクリックで画像内座標を記録
+document.getElementById('gcp-img').addEventListener('click', e => {
+  if (alignMode !== 'gcp') return;
+  const img = e.target;
+  const rect = img.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top)  / rect.height;
+  if (gcpPendingImg === 'awaiting') {
+    gcpPendingImg = {imgX:x, imgY:y};
+    // 小窓に一時マーカー
+    addGcpImgMarker(x, y, gcps.length+1, true);
+    showGcpHint(`基準点 #${gcps.length+1}：次に現代地図の対応する場所をクリック`);
+  }
+});
+
+function addGcpImgMarker(x, y, num, temp=false) {
+  const body = document.getElementById('gcp-img-window-body');
+  const m = document.createElement('div');
+  m.className = 'gcp-img-marker';
+  m.style.left = (x*100) + '%';
+  m.style.top  = (y*100) + '%';
+  m.textContent = num;
+  if (temp) m.style.background = 'var(--gold)';
+  m.dataset.gcpNum = num;
+  body.appendChild(m);
+}
+
+// 地図クリック（GCPモード時のみ）
+map.on('click', e => {
+  if (currentMode !== 'B' || alignMode !== 'gcp') return;
+  if (!gcpPendingImg || gcpPendingImg === 'awaiting') return;
+  // 地図側の対応点を確定
+  const num = gcps.length + 1;
+  gcps.push({imgX:gcpPendingImg.imgX, imgY:gcpPendingImg.imgY,
+             mapLat:e.latlng.lat, mapLng:e.latlng.lng});
+  // 一時マーカーを正式マーカーに昇格
+  document.querySelectorAll('.gcp-img-marker').forEach(el => {
+    if (el.dataset.gcpNum == num) el.style.background = 'var(--blue)';
+  });
+  const mk = L.marker([e.latlng.lat, e.latlng.lng], {
+    icon: L.divIcon({
+      className:'gcp-pin-marker',
+      html: `<div style="background:var(--blue);color:#fff;border:2px solid #fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;box-shadow:0 0 4px rgba(0,0,0,.6);">${num}</div>`,
+      iconSize:[24,24], iconAnchor:[12,12]
+    })
+  }).addTo(map);
+  gcpMapMarkers.push(mk);
+  gcpPendingImg = null;
+  renderGcpList();
+  if (gcps.length < 3) {
+    showGcpHint(`基準点 #${num} 完了。あと ${3-gcps.length} 点必要です（または「位置合わせを適用」可能になります）`);
+  } else {
+    showGcpHint(`基準点 ${gcps.length} 点 — 「✓ 位置合わせを適用」で反映できます`);
+  }
+});
+
+function renderGcpList() {
+  const el = document.getElementById('gcp-list');
+  if (gcps.length === 0) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted);">基準点なし</div>';
+  } else {
+    el.innerHTML = gcps.map((g,i) => `
+      <div class="gcp-item">
+        <span><span class="gcp-num">#${i+1}</span> (${g.mapLat.toFixed(4)}, ${g.mapLng.toFixed(4)})</span>
+        <button class="gcp-del" data-idx="${i}">✕</button>
+      </div>`).join('');
+    el.querySelectorAll('.gcp-del').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = parseInt(b.dataset.idx, 10);
+        gcps.splice(i, 1);
+        if (gcpMapMarkers[i]) { map.removeLayer(gcpMapMarkers[i]); gcpMapMarkers.splice(i,1); }
+        // 番号振り直し
+        document.querySelectorAll('.gcp-img-marker').forEach(el => el.remove());
+        gcps.forEach((g, idx) => addGcpImgMarker(g.imgX, g.imgY, idx+1));
+        // 地図マーカーも振り直し
+        gcpMapMarkers.forEach(m => map.removeLayer(m));
+        gcpMapMarkers = [];
+        gcps.forEach((g, idx) => {
+          const mk = L.marker([g.mapLat, g.mapLng], {
+            icon: L.divIcon({
+              className:'gcp-pin-marker',
+              html: `<div style="background:var(--blue);color:#fff;border:2px solid #fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;box-shadow:0 0 4px rgba(0,0,0,.6);">${idx+1}</div>`,
+              iconSize:[24,24], iconAnchor:[12,12]
+            })
+          }).addTo(map);
+          gcpMapMarkers.push(mk);
+        });
+        renderGcpList();
+      });
+    });
+  }
+  document.getElementById('btn-gcp-apply').disabled = gcps.length < 3;
+}
+
+// アフィン変換: GCP→bounds・回転 を推定
+function applyGcpAlignment() {
+  if (gcps.length < 3) return;
+  // 画像座標(0-1正規化) → 地理座標 [lng,lat] の最小二乗アフィン変換を推定
+  // lng = a*x + b*y + c
+  // lat = d*x + e*y + f
+  const A = gcps.map(g => [g.imgX, g.imgY, 1]);
+  const Blng = gcps.map(g => g.mapLng);
+  const Blat = gcps.map(g => g.mapLat);
+  const [a,b,c] = lsq3(A, Blng);
+  const [d,e,f] = lsq3(A, Blat);
+  // 画像の4隅(0,0),(1,0),(0,1),(1,1)の地理座標を計算
+  const imgToGeo = (x,y) => [d*x+e*y+f, a*x+b*y+c]; // [lat,lng]
+  const tl = imgToGeo(0,0);
+  const tr = imgToGeo(1,0);
+  const bl = imgToGeo(0,1);
+  const br = imgToGeo(1,1);
+  // 4隅の bbox を求めて bounds に
+  const lats = [tl[0],tr[0],bl[0],br[0]];
+  const lngs = [tl[1],tr[1],bl[1],br[1]];
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  // 回転角度は (0,0)→(1,0) ベクトルの方位から推定
+  const dxLng = tr[1] - tl[1];
+  const dyLat = tr[0] - tl[0];
+  // 画面上では緯度+方向は上(=Y-)、経度+方向は右(=X+)
+  // 通常画像は左上(0,0)を原点に右下(1,1)。回転0°ならtl→trは経度方向。
+  // 回転角は atan2(-dyLat, dxLng) で求まる（dyLat>0 ⇒ 北向きなら-θ）
+  const rot = Math.atan2(-dyLat, dxLng) * 180 / Math.PI;
+  // 適用
+  overlayState.bounds = [[minLat, minLng], [maxLat, maxLng]];
+  overlayState.rotationDeg = rot;
+  document.getElementById('img-rotate').value = rot.toFixed(1);
+  document.getElementById('rotate-val').textContent = rot.toFixed(0) + '°';
+  redrawOverlay();
+  // 残差を計算
+  let maxResid = 0;
+  gcps.forEach(g => {
+    const [predLat, predLng] = imgToGeo(g.imgX, g.imgY);
+    const dlat = (predLat - g.mapLat) * 111000;
+    const dlng = (predLng - g.mapLng) * 91000;
+    maxResid = Math.max(maxResid, Math.hypot(dlat, dlng));
+  });
+  setStatus(`✅ ${gcps.length}点で位置合わせ完了（最大残差 ${maxResid.toFixed(0)}m）。手動モードで微調整可能です`);
+  // 手動モードに戻す
+  document.querySelector('.align-mode-btn[data-align="manual"]').click();
+}
+
+// 3x3最小二乗解 (Aᵀ A) p = Aᵀ b
+function lsq3(A, b) {
+  const n = A.length;
+  const ATA = [[0,0,0],[0,0,0],[0,0,0]];
+  const ATb = [0,0,0];
+  for (let i=0;i<n;i++) for (let j=0;j<3;j++) {
+    ATb[j] += A[i][j] * b[i];
+    for (let k=0;k<3;k++) ATA[j][k] += A[i][j] * A[i][k];
+  }
+  // ガウス消去
+  const M = ATA.map((r,i)=>[...r, ATb[i]]);
+  for (let i=0;i<3;i++) {
+    let mx = i;
+    for (let j=i+1;j<3;j++) if (Math.abs(M[j][i]) > Math.abs(M[mx][i])) mx = j;
+    [M[i], M[mx]] = [M[mx], M[i]];
+    for (let j=i+1;j<3;j++) {
+      const r = M[j][i] / M[i][i];
+      for (let k=i;k<4;k++) M[j][k] -= r * M[i][k];
+    }
+  }
+  const x = [0,0,0];
+  for (let i=2;i>=0;i--) {
+    x[i] = M[i][3];
+    for (let j=i+1;j<3;j++) x[i] -= M[i][j] * x[j];
+    x[i] /= M[i][i];
+  }
+  return x;
+}
+
+// GCP小窓を閉じる
+document.getElementById('gcp-img-close').addEventListener('click', () => {
+  document.getElementById('gcp-img-window').classList.remove('show');
+});
+
+// GCP小窓のヘッダードラッグで移動
+(function() {
+  const win = document.getElementById('gcp-img-window');
+  const head = document.getElementById('gcp-img-window-header');
+  let dragging = null;
+  head.addEventListener('mousedown', e => {
+    if (e.target.id === 'gcp-img-close') return;
+    dragging = {x:e.clientX, y:e.clientY, left:win.offsetLeft, top:win.offsetTop};
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    win.style.left = (dragging.left + e.clientX - dragging.x) + 'px';
+    win.style.top  = (dragging.top  + e.clientY - dragging.y) + 'px';
+  });
+  document.addEventListener('mouseup', () => dragging = null);
+})();
+
+// トレース開始
 document.getElementById('btn-trace').addEventListener('click', () => {
   // MODE Aに切り替えてトレース開始
   document.querySelector('[data-mode="A"]').click();
   setStatus('画像の上にフィーチャーをトレースしてください');
-});
-
-// ============================================================
-// MODE C: AI自動マッピング
-// ============================================================
-let aiImgBase64 = null;
-
-document.getElementById('ai-img-upload').addEventListener('change', e => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const src = ev.target.result;
-    aiImgBase64 = src.split(',')[1];
-    const preview = document.getElementById('ai-img-preview');
-    preview.src = src; preview.style.display = 'block';
-
-    // 地図上にも表示
-    if (imgOverlay) map.removeLayer(imgOverlay);
-    const center = map.getCenter();
-    const z = map.getZoom();
-    const deg = 0.05 * Math.pow(2, 14-z);
-    const bounds = [[center.lat-deg,center.lng-deg],[center.lat+deg,center.lng+deg]];
-    imgOverlay = L.imageOverlay(src, bounds, {opacity:0.6}).addTo(map);
-    setStatus('画像をアップロードしました。「AI解析を開始」をクリックしてください');
-  };
-  reader.readAsDataURL(file);
-});
-
-document.getElementById('btn-ai-analyze').addEventListener('click', async () => {
-  if (!aiImgBase64) { setStatus('⚠️ 画像をアップロードしてください'); return; }
-
-  const region  = document.getElementById('ai-region').value || '不明';
-  const mapType = document.getElementById('ai-map-type').value;
-  const mapTypeLabel = {'castle':'城郭図','town':'町絵図・城下町','road':'街道・道中図','general':'古地図'}[mapType];
-
-  const progress = document.getElementById('ai-progress');
-  const log = document.getElementById('ai-log');
-  progress.style.display = 'block';
-  document.getElementById('ai-result').style.display = 'none';
-  document.getElementById('btn-ai-analyze').disabled = true;
-  log.innerHTML = '';
-
-  function addLog(icon, text, color='var(--parchment)') {
-    log.innerHTML += `<div class="ai-step"><span class="ai-step-icon">${icon}</span><span class="ai-step-text" style="color:${color}">${text}</span></div>`;
-    log.scrollTop = log.scrollHeight;
-  }
-
-  addLog('🔍','画像を解析中...');
-
-  const prompt = `あなたは地図解析の専門家です。
-この画像は${mapTypeLabel}です。対象地域: ${region}
-
-以下の作業を行ってください:
-1. 画像から主要な地物（城・建物・道路・川・境界線・地名など）を特定
-2. 現在の地図座標（緯度経度）にマッピング
-3. GeoJSON形式で出力
-
-地域が特定できる場合は実際の座標を使用してください。
-不明な場合は画像の相対位置から推定座標を生成してください。
-
-出力フォーマット（JSONのみ、コードブロック不要）:
-{
-  "region_name": "地域名",
-  "estimated_center": [緯度, 経度],
-  "zoom": ズームレベル(10-16),
-  "features": [
-    {
-      "name": "地物名",
-      "type": "point|line|polygon",
-      "description": "説明",
-      "coordinates": [[緯度,経度], ...],
-      "category": "castle|building|road|river|boundary|landmark",
-      "color": "#HEXカラー"
-    }
-  ],
-  "analysis_notes": "解析に関するメモ"
-}`;
-
-  try {
-    addLog('📡','Claude API に送信中...');
-    // Supabase Edge Function経由でClaude APIを呼び出し（CORS回避）
-    const EDGE_URL = `${SUPABASE_URL}/functions/v1/claude-proxy`;
-    const response = await fetch(EDGE_URL, {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-      },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:4000,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image', source:{type:'base64', media_type:'image/jpeg', data:aiImgBase64}},
-            {type:'text',  text:prompt}
-          ]
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      throw new Error(`API Error: ${response.status} - ${errBody.slice(0,100)}`);
-    }
-    const data = await response.json();
-    const text = data.content.map(c=>c.text||'').join('');
-    addLog('✅','解析完了', 'var(--green)');
-
-    // JSONを抽出
-    addLog('🔧','GeoJSONを生成中...');
-    let parsed;
-    try {
-      // コードブロックの除去
-      const clean = text.replace(/```json?/g,'').replace(/```/g,'').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      // JSON抽出を試みる
-      const m = text.match(/\{[\s\S]*\}/);
-      if (m) parsed = JSON.parse(m[0]);
-      else throw new Error('JSON解析失敗');
-    }
-
-    aiGeoJSON = parsed;
-    const fc = parsed.features || [];
-    addLog('📍', `${fc.length}個の地物を検出`, 'var(--blue)');
-
-    // 地図上にプレビュー表示
-    if (parsed.estimated_center) {
-      map.flyTo(parsed.estimated_center, parsed.zoom || 14, {duration:1.5});
-    }
-
-    // プレビューレイヤーを追加
-    fc.forEach(f => {
-      if (!f.coordinates || f.coordinates.length === 0) return;
-      const color = f.color || '#3498db';
-      if (f.type==='point') {
-        L.circleMarker(f.coordinates[0], {radius:7,color,fillColor:color,fillOpacity:0.8})
-         .bindTooltip(f.name).addTo(map);
-      } else if (f.type==='line') {
-        L.polyline(f.coordinates, {color,weight:3}).bindTooltip(f.name).addTo(map);
-      } else {
-        L.polygon(f.coordinates, {color,weight:2,fillColor:color,fillOpacity:0.2})
-         .bindTooltip(f.name).addTo(map);
-      }
-    });
-
-    // 結果表示
-    const resultDiv = document.getElementById('ai-result');
-    resultDiv.style.display = 'block';
-    document.getElementById('ai-result-summary').innerHTML =
-      `<b style="color:var(--gold)">${parsed.region_name||'不明'}</b><br>` +
-      `検出地物: ${fc.length}件<br>` +
-      (parsed.analysis_notes ? `<span style="color:var(--muted)">${parsed.analysis_notes}</span>` : '');
-
-    setStatus(`✅ AI解析完了: ${fc.length}件の地物を検出しました`);
-
-  } catch(err) {
-    addLog('❌', `エラー: ${err.message}`, 'var(--red)');
-    setStatus(`❌ AI解析エラー: ${err.message}`);
-  } finally {
-    document.getElementById('btn-ai-analyze').disabled = false;
-  }
-});
-
-// AI結果を適用してMODE Aで編集
-document.getElementById('btn-ai-apply').addEventListener('click', () => {
-  if (!aiGeoJSON || !aiGeoJSON.features) return;
-
-  // 既存フィーチャーをクリア
-  features.forEach(f => map.removeLayer(f.layer));
-  features = []; selectedId = null;
-
-  // AI生成フィーチャーをMODE Aに取り込む
-  aiGeoJSON.features.forEach(f => {
-    if (!f.coordinates || f.coordinates.length===0) return;
-    addFeature(f.type||'point', f.coordinates, f.name, f.description||'', f.color||'');
-  });
-
-  // MODE Aに切り替え
-  document.querySelector('[data-mode="A"]').click();
-  setStatus(`✅ ${aiGeoJSON.features.length}件のフィーチャーをインポートしました。編集を続けてください`);
-});
-
-document.getElementById('btn-ai-retry').addEventListener('click', () => {
-  document.getElementById('ai-result').style.display = 'none';
-  document.getElementById('ai-progress').style.display = 'none';
-  aiGeoJSON = null;
 });
 
 // ============================================================
