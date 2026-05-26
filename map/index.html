@@ -827,11 +827,11 @@ function loadMap(def) {
     // 古地図表示
     showTileLoading('読み込み中...');
     
-    // 古地図画像URL マッピング（国会図書館 デジタルコレクション）
+    // 古地図画像URL マッピング（国会図書館 コンテンツビューア）
     const oldMapImages = {
-      'edo-1730-kyoho': 'https://dl.ndl.go.jp/api/iiif/1093454/canvas/1/full/max/0/default.jpg',
-      'edo-1860-ansei': 'https://dl.ndl.go.jp/api/iiif/1093457/canvas/1/full/max/0/default.jpg',
-      'edo-1870-meiji': 'https://dl.ndl.go.jp/api/iiif/1093458/canvas/1/full/max/0/default.jpg'
+      'edo-1730-kyoho': 'https://dl.ndl.go.jp/api/iiif/1093454/canvas/1/image/1/full/max/0/default.jpg',
+      'edo-1860-ansei': 'https://dl.ndl.go.jp/api/iiif/1093457/canvas/1/image/1/full/max/0/default.jpg',
+      'edo-1870-meiji': 'https://dl.ndl.go.jp/api/iiif/1093458/canvas/1/image/1/full/max/0/default.jpg'
     };
     
     const imageUrl = oldMapImages[def.id];
