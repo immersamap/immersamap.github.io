@@ -824,49 +824,22 @@ function loadMap(def) {
     hideTileLoading();
 
   } else if (def.category === 'old_map') {
-    // 古地図表示
-    showTileLoading('読み込み中...');
+    // 古地図表示（暫定版）
+    hideTileLoading();
+    S.map.flyTo([def.center_lat, def.center_lng], def.zoom_default || 13, {duration:1.2});
+    buildLayerPills([]);
+    updateZoomGuide();
     
-    // 古地図画像URL マッピング（国会図書館 コンテンツビューア）
-    const oldMapImages = {
-      'edo-1730-kyoho': 'https://dl.ndl.go.jp/api/iiif/1093454/canvas/1/image/1/full/max/0/default.jpg',
-      'edo-1860-ansei': 'https://dl.ndl.go.jp/api/iiif/1093457/canvas/1/image/1/full/max/0/default.jpg',
-      'edo-1870-meiji': 'https://dl.ndl.go.jp/api/iiif/1093458/canvas/1/image/1/full/max/0/default.jpg'
+    // 古地図情報を表示
+    const oldMapInfo = {
+      'edo-1730-kyoho': '享保江戸大絵図（1730年） - 江戸中期の詳細な街道図\n現在、高解像度版を準備中です',
+      'edo-1860-ansei': '安政江戸全図（1860年代） - 江戸末期の全図\n現在、高解像度版を準備中です',
+      'edo-1870-meiji': '明治初期東京地図（1870年代） - 明治初期の東京\n現在、高解像度版を準備中です'
     };
     
-    const imageUrl = oldMapImages[def.id];
-    if (imageUrl) {
-      const bounds = [[35.695, 139.767], [35.653, 139.832]];
-      
-      // エラー処理付きの ImageOverlay
-      S.overlayTile = L.imageOverlay(imageUrl, bounds, {
-        opacity: S.opacity,
-        zIndex: 2,
-        crossOrigin: 'anonymous'
-      }).addTo(S.map);
-      
-      // 画像読み込みの監視
-      const img = S.overlayTile._image;
-      if (img) {
-        img.onload = () => {
-          console.log('古地図読み込み成功:', def.id);
-          hideTileLoading();
-        };
-        img.onerror = () => {
-          console.error('古地図読み込みエラー:', def.id);
-          showToast('古地図の読み込みに失敗しました');
-          hideTileLoading();
-        };
-      }
-      
-      S.map.flyTo([def.center_lat, def.center_lng], def.zoom_default || 13, {duration:1.2});
-      buildLayerPills([]);
-      updateZoomGuide();
-      showToast(name + ' を表示中');
-    } else {
-      hideTileLoading();
-      showToast('古地図画像が見つかりません');
-    }
+    const message = oldMapInfo[def.id] || name;
+    showToast(message);
+    console.log('古地図選択:', def.id, message);
 
   } else if (def.tiles_url) {
     showTileLoading('読み込み中...');
