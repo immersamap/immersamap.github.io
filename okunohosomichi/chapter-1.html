@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   グローバルスタイル（既存のindex.htmlから継承）
+   グローバルスタイル（Color Palette）
    ============================================================ */
 :root {
   --ink:#1a1008;
@@ -123,19 +123,88 @@ main {
 }
 
 /* ============================================================
-   地図領域
+   地図領域（改修：70vh に拡大）
    ============================================================ */
 #map {
   flex:0 0 auto;
-  height:40vh;
-  min-height:250px;
+  height:70vh;
+  min-height:300px;
   z-index:1;
+  background:var(--ink);
 }
 
-/* Leaflet のポップアップ */
-.leaflet-popup-content {
-  color:var(--ink);
-  font-size:12px;
+/* Leaflet タイルのセピア化（Alex Zhang 推奨） */
+.immersamap-tiles {
+  filter: sepia(0.15) contrast(1.05);
+}
+
+/* Leaflet ポップアップのカスタムスタイル */
+.leaflet-popup-content-wrapper {
+  background: rgba(26, 16, 8, 0.95) !important;
+  border: 2px solid var(--gold) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(26, 16, 8, 0.95) !important;
+}
+
+.location-popup {
+  width: 280px;
+  color: var(--parchment);
+  font-family: 'Noto Serif JP', serif;
+}
+
+.location-popup h3 {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  color: var(--gold-l);
+  margin: 0 0 12px 0;
+  letter-spacing: 0.1em;
+}
+
+.location-popup .verse {
+  font-size: 14px;
+  color: var(--gold);
+  font-style: italic;
+  line-height: 1.6;
+  margin: 0 0 10px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--sepia);
+}
+
+.location-popup .description {
+  font-size: 13px;
+  color: var(--parchment2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.leaflet-popup-close-button {
+  color: var(--gold);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.leaflet-popup-close-button:hover {
+  opacity: 1;
+}
+
+/* ポップアップアニメーション */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.leaflet-popup {
+  animation: popupFadeIn 0.3s ease-out;
 }
 
 /* ============================================================
@@ -170,7 +239,7 @@ main {
   letter-spacing:0.1em;
 }
 
-.chapter-button:hover {
+.chapter-button:hover:not(:disabled) {
   background:rgba(212,160,23,0.1);
 }
 
@@ -204,8 +273,8 @@ main {
 
 .playback-button.playing {
   background:rgba(192,57,43,0.2);
-  border-color:var(--rust);
-  color:var(--rust);
+  border-color:#c0392b;
+  color:#c0392b;
 }
 
 /* ============================================================
@@ -302,15 +371,15 @@ main {
 }
 
 .error {
-  color:var(--rust);
+  color:#c0392b;
   padding:20px;
-  border:1px solid var(--rust);
+  border:1px solid #c0392b;
   border-radius:var(--radius);
   background:rgba(192,57,43,0.1);
 }
 
 /* ============================================================
-   レスポンシブ（スマートフォン）
+   レスポンシブ（モバイル）
    ============================================================ */
 @media (max-width:768px) {
   header {
@@ -331,7 +400,7 @@ main {
   }
 
   #map {
-    height:35vh;
+    height:50vh;
     min-height:200px;
   }
 
@@ -390,7 +459,7 @@ main {
      ============================================================ -->
 <main>
 
-  <!-- 地図 -->
+  <!-- 地図（改修：70vh） -->
   <div id="map"></div>
 
   <!-- コントロールバー -->
@@ -461,7 +530,7 @@ async function init() {
 }
 
 // ============================================================
-// 地図初期化
+// 地図初期化（改修：国土地理院タイル＋セピア化）
 // ============================================================
 function initializeMap() {
   // 中心座標（第1章の中点）
@@ -470,10 +539,11 @@ function initializeMap() {
 
   S.map = L.map('map').setView([centerLat, centerLng], 10);
 
-  // ベースレイヤー（地理院タイル）
+  // 国土地理院タイル（Alex Zhang 推奨）
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
     maxZoom: 18,
-    attribution: '© 国土地理院'
+    attribution: '© 国土地理院',
+    className: 'immersamap-tiles'
   }).addTo(S.map);
 
   // マーカーグループ
@@ -533,16 +603,28 @@ async function loadLocations() {
 }
 
 // ============================================================
-// マーカー表示
+// マーカー表示（改修：ポップアップ表示）
 // ============================================================
 function renderMarkers() {
   S.markerGroup.clearLayers();
   S.markers = [];
 
   for (let loc of S.locations) {
+    // ポップアップHTMLを構築
+    let popupHTML = `<div class="location-popup">
+      <h3>${loc.location_name}</h3>`;
+    
+    if (loc.has_verse && loc.verse) {
+      popupHTML += `<p class="verse">${loc.verse.verse_text}</p>`;
+    }
+    
+    popupHTML += `<p class="description">${loc.description}</p>
+    </div>`;
+
     const marker = L.marker([loc.latitude, loc.longitude], {
       title: loc.location_name
     })
+      .bindPopup(popupHTML)
       .on('click', () => scrollToLocation(loc.id))
       .addTo(S.markerGroup);
 
@@ -625,6 +707,12 @@ async function playSequence() {
   for (let loc of S.locations) {
     if (!S.isPlaying) break;
 
+    // マーカーをポップアップで開く
+    const marker = S.markers.find(m => m.id === loc.id);
+    if (marker && marker.marker) {
+      marker.marker.openPopup();
+    }
+
     // パネルをスクロール
     scrollToLocation(loc.id);
 
@@ -633,7 +721,7 @@ async function playSequence() {
       duration: 2
     });
 
-    // 2秒待つ
+    // 3秒待つ
     await new Promise(resolve => setTimeout(resolve, 3000));
   }
 
