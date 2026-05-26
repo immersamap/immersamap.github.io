@@ -8,17 +8,11 @@
 <meta property="og:title" content="おくのほそ道 第1章 — ImmersaMap">
 <title>おくのほそ道 第1章：江戸〜千住 — ImmersaMap</title>
 
-<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-
-<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- フォント -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
-/* グローバルスタイル */
 :root {
   --ink:#1a1008;
   --ink2:#221408;
@@ -32,9 +26,7 @@
   --radius:8px;
 }
 
-*, *::before, *::after {
-  margin:0; padding:0; box-sizing:border-box;
-}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 html, body {
   width:100%; height:100%;
@@ -44,7 +36,6 @@ html, body {
   overflow:hidden;
 }
 
-/* ヘッダー */
 header {
   position:fixed;
   top:0;
@@ -82,13 +73,9 @@ nav {
   transition:color 0.2s;
 }
 
-.nav-breadcrumb a:hover {
-  color:var(--gold);
-}
+.nav-breadcrumb a:hover { color:var(--gold); }
 
-.nav-spacer {
-  flex:1;
-}
+.nav-spacer { flex:1; }
 
 .nav-button {
   padding:8px 16px;
@@ -102,11 +89,8 @@ nav {
   letter-spacing:0.1em;
 }
 
-.nav-button:hover {
-  background:rgba(212,160,23,0.1);
-}
+.nav-button:hover { background:rgba(212,160,23,0.1); }
 
-/* メインレイアウト */
 main {
   position:fixed;
   top:60px;
@@ -116,7 +100,6 @@ main {
   flex-direction:column;
 }
 
-/* 地図領域 */
 #map {
   flex:0 0 auto;
   height:70vh;
@@ -125,12 +108,8 @@ main {
   background:var(--ink);
 }
 
-/* OpenStreetMap タイル */
-.leaflet-tile-container {
-  filter: sepia(0.1) contrast(1.05);
-}
+.leaflet-tile-container { filter: sepia(0.1) contrast(1.05); }
 
-/* ポップアップスタイル */
 .leaflet-popup-content-wrapper {
   background: rgba(26, 16, 8, 0.95) !important;
   border: 2px solid var(--gold) !important;
@@ -138,9 +117,7 @@ main {
   box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
 }
 
-.leaflet-popup-tip {
-  background: rgba(26, 16, 8, 0.95) !important;
-}
+.leaflet-popup-tip { background: rgba(26, 16, 8, 0.95) !important; }
 
 .location-popup {
   width: 280px;
@@ -162,12 +139,21 @@ main {
   overflow: hidden;
   border-radius: 4px;
   margin-bottom: 12px;
+  background: rgba(0,0,0,0.3);
 }
 
 .popup-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.image-caption {
+  font-size: 11px;
+  color: var(--sepia);
+  margin-top: 4px;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .location-popup .verse {
@@ -193,27 +179,15 @@ main {
   transition: opacity 0.2s;
 }
 
-.leaflet-popup-close-button:hover {
-  opacity: 1;
-}
+.leaflet-popup-close-button:hover { opacity: 1; }
 
-/* ポップアップアニメーション */
 @keyframes popupFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.leaflet-popup {
-  animation: popupFadeIn 0.3s ease-out;
-}
+.leaflet-popup { animation: popupFadeIn 0.3s ease-out; }
 
-/* コントロールバー */
 .controls {
   display:flex;
   align-items:center;
@@ -243,14 +217,8 @@ main {
   letter-spacing:0.1em;
 }
 
-.chapter-button:hover:not(:disabled) {
-  background:rgba(212,160,23,0.1);
-}
-
-.chapter-button:disabled {
-  opacity:0.5;
-  cursor:not-allowed;
-}
+.chapter-button:hover:not(:disabled) { background:rgba(212,160,23,0.1); }
+.chapter-button:disabled { opacity:0.5; cursor:not-allowed; }
 
 .chapter-info {
   font-size:13px;
@@ -271,17 +239,13 @@ main {
   font-weight:500;
 }
 
-.playback-button:hover {
-  background:rgba(212,160,23,0.2);
-}
-
+.playback-button:hover { background:rgba(212,160,23,0.2); }
 .playback-button.playing {
   background:rgba(192,57,43,0.2);
   border-color:#c0392b;
   color:#c0392b;
 }
 
-/* タイムライン */
 .timeline-container {
   flex:0 0 auto;
   height:auto;
@@ -330,7 +294,6 @@ main {
   color:var(--sepia);
 }
 
-/* 地点パネル */
 .location-panel {
   flex:1;
   overflow-y:auto;
@@ -364,6 +327,7 @@ main {
   overflow:hidden;
   border-radius:4px;
   margin-bottom:16px;
+  background:rgba(0,0,0,0.3);
 }
 
 .card-image img {
@@ -428,7 +392,6 @@ main {
   margin-right:12px;
 }
 
-/* ローディング・エラー */
 .loading {
   display:flex;
   align-items:center;
@@ -446,7 +409,6 @@ main {
   background:rgba(192,57,43,0.1);
 }
 
-/* レスポンシブ */
 @media (max-width:768px) {
   header { padding:10px 12px; }
   .nav-logo { font-size:14px; }
@@ -479,11 +441,8 @@ main {
 </header>
 
 <main>
-
-  <!-- 地図 -->
   <div id="map"></div>
 
-  <!-- コントロールバー -->
   <div class="controls">
     <div class="chapter-nav">
       <button id="prev-chapter" class="chapter-button" onclick="goToPrevChapter()" disabled>◀ 前の章</button>
@@ -493,22 +452,18 @@ main {
     <button id="playback-button" class="playback-button" onclick="togglePlayback()">▶ 再生</button>
   </div>
 
-  <!-- タイムライン -->
   <div class="timeline-container" id="timeline-container">
     <div class="timeline" id="timeline"></div>
   </div>
 
-  <!-- 地点パネル -->
   <div class="location-panel" id="location-panel">
     <div class="loading">データを読み込み中...</div>
   </div>
-
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <script>
-// グローバル状態
 const S = {
   map: null,
   currentChapter: 1,
@@ -524,7 +479,6 @@ const S = {
 const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
 
-// 初期化
 async function init() {
   try {
     S.db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -539,14 +493,12 @@ async function init() {
   }
 }
 
-// 地図初期化（OpenStreetMap）
 function initializeMap() {
   const centerLat = 35.9;
   const centerLng = 139.9;
 
   S.map = L.map('map').setView([centerLat, centerLng], 10);
 
-  // OpenStreetMap タイル
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19
@@ -555,7 +507,6 @@ function initializeMap() {
   S.markerGroup = L.featureGroup().addTo(S.map);
 }
 
-// データ読み込み
 async function loadLocations() {
   try {
     const { data: chapters } = await S.db
@@ -598,7 +549,6 @@ async function loadLocations() {
   }
 }
 
-// マーカー表示
 function renderMarkers() {
   S.markerGroup.clearLayers();
   S.markers = [];
@@ -631,7 +581,6 @@ function renderMarkers() {
   S.map.fitBounds(S.markerGroup.getBounds(), { padding: [50, 50] });
 }
 
-// パネルレンダリング
 function renderLocationPanel() {
   const panel = document.getElementById('location-panel');
   panel.innerHTML = '';
@@ -661,7 +610,6 @@ function renderLocationPanel() {
   }
 }
 
-// タイムライン表示
 function renderTimeline() {
   const timeline = document.getElementById('timeline');
   timeline.innerHTML = '';
@@ -681,19 +629,16 @@ function renderTimeline() {
   updateTimeline();
 }
 
-// タイムライン更新
 function updateTimeline() {
   document.querySelectorAll('.timeline-item').forEach((item, idx) => {
     item.classList.toggle('active', idx === S.currentLocationIndex);
   });
 }
 
-// スクロール
 function scrollToLocation(locationId) {
   const element = document.getElementById(`location-${locationId}`);
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // カードのハイライト
     document.querySelectorAll('.location-card').forEach(card => {
       card.classList.remove('active');
     });
@@ -701,7 +646,30 @@ function scrollToLocation(locationId) {
   }
 }
 
-// 再生機能（バードアイビュー方式）
+// 2地点間の距離を計算（Haversine の公式）
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // 地球の半径（km）
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// 2地点が見える最適なズームレベルを計算
+function calculateOptimalZoom(lat1, lng1, lat2, lng2) {
+  const distance = getDistance(lat1, lng1, lat2, lng2);
+  if (distance < 3) return 13;
+  if (distance < 5) return 12;
+  if (distance < 10) return 11;
+  if (distance < 20) return 10;
+  if (distance < 50) return 9;
+  return 8;
+}
+
 function togglePlayback() {
   const button = document.getElementById('playback-button');
 
@@ -718,31 +686,39 @@ function togglePlayback() {
 }
 
 async function playSequence() {
-  // 最初：全体俯瞰
-  S.map.flyTo([35.7, 139.8], 4, { duration: 2 });
-  await sleep(2000);
-
   for (let idx = 0; idx < S.locations.length; idx++) {
     if (!S.isPlaying) break;
 
     const loc = S.locations[idx];
+    const nextLoc = idx + 1 < S.locations.length ? S.locations[idx + 1] : null;
+
     S.currentLocationIndex = idx;
     updateTimeline();
 
-    // ズームアウト（俯瞰）
-    S.map.flyTo([loc.latitude, loc.longitude], 4, { duration: 1.5 });
+    // 現在地と次の地点が見える最適なズームレベルを計算
+    const optimalZoom = nextLoc ? 
+      calculateOptimalZoom(loc.latitude, loc.longitude, nextLoc.latitude, nextLoc.longitude) : 14;
+
+    // ステップ1：現在地でズームアウト
+    S.map.flyTo([loc.latitude, loc.longitude], optimalZoom, { duration: 1.5 });
     await sleep(1500);
 
-    // ズームイン（詳細）
-    S.map.flyTo([loc.latitude, loc.longitude], 14, { duration: 2 });
+    // ステップ2：次の地点へ移動（ズームレベルそのまま）
+    if (nextLoc) {
+      S.map.flyTo([nextLoc.latitude, nextLoc.longitude], optimalZoom, { duration: 2 });
+      await sleep(2000);
+    }
+
+    // ステップ3：目的地でズームイン
+    S.map.flyTo([loc.latitude, loc.longitude], 14, { duration: 1.5 });
     await sleep(500);
 
-    // ポップアップ・パネル表示
+    // ステップ4：ポップアップ・パネル表示
     const marker = S.markers.find(m => m.id === loc.id);
     if (marker?.marker) marker.marker.openPopup();
     scrollToLocation(loc.id);
 
-    // 表示
+    // ステップ5：表示
     await sleep(3000);
   }
 
@@ -756,12 +732,10 @@ async function playSequence() {
   }
 }
 
-// ユーティリティ
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ナビゲーション
 function goToPrevChapter() {
   if (S.currentChapter > 1) {
     location.href = `/okunohosomichi/chapter-${S.currentChapter - 1}.html`;
@@ -772,7 +746,6 @@ function goToNextChapter() {
   location.href = `/okunohosomichi/chapter-${S.currentChapter + 1}.html`;
 }
 
-// エラー表示
 function showError(message) {
   const panel = document.getElementById('location-panel');
   panel.innerHTML = `<div class="error">${message}</div>`;
