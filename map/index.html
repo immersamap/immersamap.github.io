@@ -619,6 +619,7 @@ input[type=range]::-webkit-slider-thumb {
       <button class="panel-cat" data-cat="terrain">⛰ 地形</button>
       <button class="panel-cat" data-cat="fictional">🐉 架空・創作</button>
       <button class="panel-cat" data-cat="themed">🌸 テーマ</button>
+      <button class="panel-cat" data-cat="old_map">🗾 古地図</button>
     </div>
     <div class="panel-list" id="panel-list">
       <div class="list-empty">読み込み中...</div>
@@ -647,6 +648,7 @@ input[type=range]::-webkit-slider-thumb {
     <button class="sb-cat" data-cat="terrain">⛰ 地形</button>
     <button class="sb-cat" data-cat="fictional">🐉 架空・創作</button>
     <button class="sb-cat" data-cat="themed">🌸 テーマ</button>
+    <button class="sb-cat" data-cat="old_map">🗾 古地図</button>
   </div>
   <div class="sb-list" id="sb-list">
     <div class="list-empty">読み込み中...</div>
@@ -820,6 +822,35 @@ function loadMap(def) {
       def.zoom_default || 15, {duration:1.2});
     showToast(name + ' を表示中');
     hideTileLoading();
+
+  } else if (def.category === 'old_map') {
+    // 古地図表示
+    showTileLoading('読み込み中...');
+    
+    // 古地図画像URL マッピング
+    const oldMapImages = {
+      'edo-1730-kyoho': 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Edo-Zu_by_Shuzan_Sawada.jpg',
+      'edo-1860-ansei': 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Ansei_Edo_Zushiki.jpg',
+      'edo-1870-meiji': 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Tokyo_1870.jpg'
+    };
+    
+    const imageUrl = oldMapImages[def.id];
+    if (imageUrl) {
+      const bounds = [[35.695, 139.767], [35.653, 139.832]];
+      S.overlayTile = L.imageOverlay(imageUrl, bounds, {
+        opacity: S.opacity,
+        zIndex: 2
+      }).addTo(S.map);
+      
+      S.map.flyTo([def.center_lat, def.center_lng], def.zoom_default || 13, {duration:1.2});
+      buildLayerPills([]);
+      updateZoomGuide();
+      showToast(name + ' を表示中');
+      hideTileLoading();
+    } else {
+      hideTileLoading();
+      showToast('古地図画像が見つかりません');
+    }
 
   } else if (def.tiles_url) {
     showTileLoading('読み込み中...');
@@ -1188,6 +1219,7 @@ function filterByCat(maps, cat) {
     terrain:      ['terrain'],
     fictional:    ['fiction','original','fictional'],
     themed:       ['themed','pilgrimage','ruins','local_culture','research'],
+    old_map:      ['old_map'],
   };
   const cats = catMap[cat] || [cat];
   return maps.filter(m => {
