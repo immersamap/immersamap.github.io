@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="『おくのほそ道』第1章 - 江戸から千住へ。松尾芭蕉の旅路を地図で追体験。">
+<meta property="og:title" content="おくのほそ道 第1章 — ImmersaMap">
+<title>おくのほそ道 第1章：江戸〜千住 — ImmersaMap</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- フォント -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   グローバルスタイル（既存のindex.htmlから継承）
+   ============================================================ */
+:root {
+  --ink:#1a1008;
+  --ink2:#221408;
+  --parchment:#f2e8d0;
+  --parchment2:#e8d8b0;
+  --sepia:#8b6914;
+  --gold:#d4a017;
+  --gold-l:#f0c040;
+  --surface:rgba(22,14,4,0.92);
+  --border:rgba(212,160,23,0.28);
+  --radius:8px;
+}
+
+*, *::before, *::after {
+  margin:0; padding:0; box-sizing:border-box;
+}
+
+html, body {
+  width:100%; height:100%;
+  font-family:'Noto Sans JP',sans-serif;
+  background:var(--ink);
+  color:var(--parchment);
+  overflow:hidden;
+}
+
+/* ============================================================
+   ヘッダー・ナビゲーション
+   ============================================================ */
+header {
+  position:fixed;
+  top:0;
+  width:100%;
+  z-index:100;
+  background:linear-gradient(180deg, rgba(26,16,8,0.95) 0%, rgba(26,16,8,0) 100%);
+  padding:12px 16px;
+}
+
+nav {
+  display:flex;
+  align-items:center;
+  gap:16px;
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.nav-logo {
+  font-family:'Cinzel',serif;
+  font-size:18px;
+  color:var(--gold-l);
+  text-decoration:none;
+  letter-spacing:0.1em;
+}
+
+.nav-breadcrumb {
+  font-size:12px;
+  color:var(--sepia);
+  letter-spacing:0.05em;
+}
+
+.nav-breadcrumb a {
+  color:var(--sepia);
+  text-decoration:none;
+  transition:color 0.2s;
+}
+
+.nav-breadcrumb a:hover {
+  color:var(--gold);
+}
+
+.nav-spacer {
+  flex:1;
+}
+
+.nav-button {
+  padding:8px 16px;
+  border:1px solid var(--gold);
+  background:transparent;
+  color:var(--gold);
+  font-size:11px;
+  cursor:pointer;
+  transition:all 0.2s;
+  text-decoration:none;
+  letter-spacing:0.1em;
+}
+
+.nav-button:hover {
+  background:rgba(212,160,23,0.1);
+}
+
+/* ============================================================
+   メインレイアウト（地図＋パネル）
+   ============================================================ */
+main {
+  position:fixed;
+  top:60px;
+  bottom:0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ============================================================
+   地図領域
+   ============================================================ */
+#map {
+  flex:0 0 auto;
+  height:40vh;
+  min-height:250px;
+  z-index:1;
+}
+
+/* Leaflet のポップアップ */
+.leaflet-popup-content {
+  color:var(--ink);
+  font-size:12px;
+}
+
+/* ============================================================
+   コントロールバー
+   ============================================================ */
+.controls {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:12px 16px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  z-index:50;
+}
+
+.chapter-nav {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.chapter-button {
+  padding:10px 16px;
+  border:1px solid var(--gold);
+  background:transparent;
+  color:var(--gold);
+  font-size:12px;
+  cursor:pointer;
+  transition:all 0.2s;
+  letter-spacing:0.1em;
+}
+
+.chapter-button:hover {
+  background:rgba(212,160,23,0.1);
+}
+
+.chapter-button:disabled {
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+.chapter-info {
+  font-size:13px;
+  color:var(--sepia);
+  margin:0 16px;
+  letter-spacing:0.05em;
+}
+
+.playback-button {
+  padding:10px 20px;
+  border:1.5px solid var(--gold-l);
+  background:rgba(212,160,23,0.1);
+  color:var(--gold-l);
+  font-size:12px;
+  cursor:pointer;
+  transition:all 0.2s;
+  letter-spacing:0.1em;
+  font-weight:500;
+}
+
+.playback-button:hover {
+  background:rgba(212,160,23,0.2);
+}
+
+.playback-button.playing {
+  background:rgba(192,57,43,0.2);
+  border-color:var(--rust);
+  color:var(--rust);
+}
+
+/* ============================================================
+   地点パネル（スクロール可能）
+   ============================================================ */
+.location-panel {
+  flex:1;
+  overflow-y:auto;
+  padding:20px;
+  background:rgba(34,20,8,0.8);
+}
+
+.location-card {
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px;
+  margin-bottom:16px;
+  background:rgba(26,16,8,0.6);
+  transition:all 0.3s;
+  scroll-margin-top:60px;
+}
+
+.location-card:hover {
+  border-color:var(--gold);
+  background:rgba(34,20,8,0.9);
+}
+
+.location-order {
+  font-size:11px;
+  color:var(--sepia);
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+.location-name {
+  font-family:'Noto Serif JP',serif;
+  font-size:22px;
+  font-weight:600;
+  color:var(--gold-l);
+  margin-bottom:12px;
+}
+
+.verse-section {
+  margin-bottom:20px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--border);
+}
+
+.verse-text {
+  font-family:'Noto Serif JP',serif;
+  font-size:16px;
+  font-weight:400;
+  color:var(--gold);
+  margin-bottom:8px;
+  line-height:1.8;
+}
+
+.verse-explanation {
+  font-size:13px;
+  color:var(--parchment2);
+  line-height:1.7;
+}
+
+.description {
+  font-size:13px;
+  color:var(--parchment2);
+  line-height:1.7;
+  margin-bottom:12px;
+}
+
+.location-meta {
+  font-size:11px;
+  color:var(--sepia);
+  margin-top:12px;
+  letter-spacing:0.05em;
+}
+
+.location-meta span {
+  display:inline-block;
+  margin-right:12px;
+}
+
+/* ============================================================
+   ローディング・エラー表示
+   ============================================================ */
+.loading {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  font-size:14px;
+  color:var(--sepia);
+}
+
+.error {
+  color:var(--rust);
+  padding:20px;
+  border:1px solid var(--rust);
+  border-radius:var(--radius);
+  background:rgba(192,57,43,0.1);
+}
+
+/* ============================================================
+   レスポンシブ（スマートフォン）
+   ============================================================ */
+@media (max-width:768px) {
+  header {
+    padding:10px 12px;
+  }
+
+  .nav-logo {
+    font-size:14px;
+  }
+
+  .nav-breadcrumb {
+    font-size:10px;
+  }
+
+  .nav-button {
+    padding:6px 12px;
+    font-size:10px;
+  }
+
+  #map {
+    height:35vh;
+    min-height:200px;
+  }
+
+  .controls {
+    padding:10px 12px;
+    gap:8px;
+  }
+
+  .chapter-button,
+  .playback-button {
+    padding:8px 12px;
+    font-size:11px;
+  }
+
+  .chapter-info {
+    font-size:11px;
+    margin:0 8px;
+  }
+
+  .location-panel {
+    padding:16px;
+  }
+
+  .location-card {
+    padding:20px;
+  }
+
+  .location-name {
+    font-size:18px;
+  }
+
+  .verse-text {
+    font-size:14px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ヘッダー・ナビゲーション
+     ============================================================ -->
+<header>
+  <nav>
+    <a href="/" class="nav-logo">ImmersaMap</a>
+    <div class="nav-breadcrumb">
+      <a href="/">ホーム</a> / <a href="/okunohosomichi/">おくのほそ道</a> / 第1章
+    </div>
+    <div class="nav-spacer"></div>
+    <a href="/map/" class="nav-button">地図探索モード</a>
+  </nav>
+</header>
+
+<!-- ============================================================
+     メインコンテンツ
+     ============================================================ -->
+<main>
+
+  <!-- 地図 -->
+  <div id="map"></div>
+
+  <!-- コントロールバー -->
+  <div class="controls">
+    <div class="chapter-nav">
+      <button id="prev-chapter" class="chapter-button" onclick="goToPrevChapter()">◀ 前の章</button>
+      <span class="chapter-info">第1章：江戸〜千住</span>
+      <button id="next-chapter" class="chapter-button" onclick="goToNextChapter()">次の章 ▶</button>
+    </div>
+    <button id="playback-button" class="playback-button" onclick="togglePlayback()">▶ 再生</button>
+  </div>
+
+  <!-- 地点パネル -->
+  <div class="location-panel" id="location-panel">
+    <div class="loading">データを読み込み中...</div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     スクリプト
+     ============================================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+// ============================================================
+// グローバル状態
+// ============================================================
+const S = {
+  map: null,
+  currentChapter: 1,
+  workId: 'okunohosomichi',
+  isPlaying: false,
+  locations: [],
+  markers: [],
+  markerGroup: null,
+  db: null
+};
+
+// Supabase初期化
+const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
+
+// ============================================================
+// 初期化
+// ============================================================
+async function init() {
+  try {
+    // Supabaseを初期化
+    S.db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 地図を初期化
+    initializeMap();
+
+    // データを読み込み
+    await loadLocations();
+
+    // マーカーを表示
+    renderMarkers();
+
+    // パネルを表示
+    renderLocationPanel();
+
+  } catch (error) {
+    console.error('初期化エラー:', error);
+    showError('データの読み込みに失敗しました。ページをリロードしてください。');
+  }
+}
+
+// ============================================================
+// 地図初期化
+// ============================================================
+function initializeMap() {
+  // 中心座標（第1章の中点）
+  const centerLat = 35.9;
+  const centerLng = 139.9;
+
+  S.map = L.map('map').setView([centerLat, centerLng], 10);
+
+  // ベースレイヤー（地理院タイル）
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© 国土地理院'
+  }).addTo(S.map);
+
+  // マーカーグループ
+  S.markerGroup = L.featureGroup().addTo(S.map);
+}
+
+// ============================================================
+// 地点データ読み込み
+// ============================================================
+async function loadLocations() {
+  try {
+    // chapterのIDを取得
+    const { data: chapters, error: chapterError } = await S.db
+      .from('chapters')
+      .select('id')
+      .eq('work_id', S.workId)
+      .eq('chapter_number', S.currentChapter);
+
+    if (chapterError || !chapters || chapters.length === 0) {
+      throw new Error('章データが見つかりません');
+    }
+
+    const chapterId = chapters[0].id;
+
+    // locationsを取得
+    const { data: locations, error: locError } = await S.db
+      .from('locations')
+      .select('id, location_name, latitude, longitude, order_in_chapter, description, has_verse')
+      .eq('chapter_id', chapterId)
+      .order('order_in_chapter');
+
+    if (locError) throw locError;
+
+    S.locations = locations || [];
+
+    // 各地点の俳句を取得
+    for (let loc of S.locations) {
+      if (loc.has_verse) {
+        const { data: verses, error: verseError } = await S.db
+          .from('verses')
+          .select('verse_text, explanation')
+          .eq('location_id', loc.id)
+          .limit(1);
+
+        if (verseError) {
+          console.warn(`地点「${loc.location_name}」の俳句読み込みエラー`, verseError);
+        } else if (verses && verses.length > 0) {
+          loc.verse = verses[0];
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('地点データ読み込みエラー:', error);
+    throw error;
+  }
+}
+
+// ============================================================
+// マーカー表示
+// ============================================================
+function renderMarkers() {
+  S.markerGroup.clearLayers();
+  S.markers = [];
+
+  for (let loc of S.locations) {
+    const marker = L.marker([loc.latitude, loc.longitude], {
+      title: loc.location_name
+    })
+      .on('click', () => scrollToLocation(loc.id))
+      .addTo(S.markerGroup);
+
+    S.markers.push({ id: loc.id, marker: marker });
+  }
+
+  // マーカーの範囲に地図をフィット
+  S.map.fitBounds(S.markerGroup.getBounds(), { padding: [50, 50] });
+}
+
+// ============================================================
+// 地点パネルレンダリング
+// ============================================================
+function renderLocationPanel() {
+  const panel = document.getElementById('location-panel');
+  panel.innerHTML = '';
+
+  for (let loc of S.locations) {
+    const card = document.createElement('div');
+    card.className = 'location-card';
+    card.id = `location-${loc.id}`;
+
+    let html = `
+      <div class="location-order">地点 ${loc.order_in_chapter}</div>
+      <h2 class="location-name">${loc.location_name}</h2>
+    `;
+
+    if (loc.has_verse && loc.verse) {
+      html += `
+        <div class="verse-section">
+          <div class="verse-text">${loc.verse.verse_text}</div>
+          <div class="verse-explanation">${loc.verse.explanation}</div>
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="description">${loc.description}</div>
+      <div class="location-meta">
+        <span>座標: ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}</span>
+      </div>
+    `;
+
+    card.innerHTML = html;
+    panel.appendChild(card);
+  }
+}
+
+// ============================================================
+// 地点へスクロール
+// ============================================================
+function scrollToLocation(locationId) {
+  const element = document.getElementById(`location-${locationId}`);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// ============================================================
+// 再生機能
+// ============================================================
+function togglePlayback() {
+  const button = document.getElementById('playback-button');
+
+  if (S.isPlaying) {
+    S.isPlaying = false;
+    button.textContent = '▶ 再生';
+    button.classList.remove('playing');
+  } else {
+    S.isPlaying = true;
+    button.textContent = '⏸ 一時停止';
+    button.classList.add('playing');
+    playSequence();
+  }
+}
+
+async function playSequence() {
+  const panel = document.getElementById('location-panel');
+
+  for (let loc of S.locations) {
+    if (!S.isPlaying) break;
+
+    // パネルをスクロール
+    scrollToLocation(loc.id);
+
+    // 地点にズーム
+    S.map.flyTo([loc.latitude, loc.longitude], 14, {
+      duration: 2
+    });
+
+    // 2秒待つ
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+
+  if (S.isPlaying) {
+    S.isPlaying = false;
+    const button = document.getElementById('playback-button');
+    button.textContent = '▶ 再生';
+    button.classList.remove('playing');
+  }
+}
+
+// ============================================================
+// 章の前後ナビゲーション
+// ============================================================
+function goToPrevChapter() {
+  if (S.currentChapter > 1) {
+    location.href = `/okunohosomichi/chapter-${S.currentChapter - 1}.html`;
+  }
+}
+
+function goToNextChapter() {
+  location.href = `/okunohosomichi/chapter-${S.currentChapter + 1}.html`;
+}
+
+// ============================================================
+// エラー表示
+// ============================================================
+function showError(message) {
+  const panel = document.getElementById('location-panel');
+  panel.innerHTML = `<div class="error">${message}</div>`;
+}
+
+// ============================================================
+// ページロード時に初期化
+// ============================================================
+window.addEventListener('load', init);
+</script>
+
+</body>
+</html>

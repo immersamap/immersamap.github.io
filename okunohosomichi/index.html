@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奥の細道 — ImmersaMap</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#1a1008;
+  --parchment:#f2e8d0;
+  --sepia:#8b6914;
+  --gold:#d4a017;
+  --gold-l:#f0c040;
+  --border:rgba(212,160,23,0.28);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; font-family:'Noto Sans JP',sans-serif; background:var(--ink); color:var(--parchment); }
+
+header { padding:20px 40px; border-bottom:1px solid var(--border); }
+.nav-logo { font-family:'Cinzel',serif; font-size:24px; color:var(--gold-l); text-decoration:none; letter-spacing:0.1em; }
+
+main { max-width:800px; margin:60px auto; padding:40px; }
+h1 { font-family:'Cinzel',serif; font-size:40px; color:var(--gold-l); margin-bottom:20px; letter-spacing:0.1em; }
+.subtitle { font-size:14px; color:var(--sepia); margin-bottom:30px; }
+p { font-size:14px; color:var(--parchment); margin-bottom:16px; line-height:1.8; }
+
+.chapter-list { margin-top:40px; }
+.chapter-item { border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:16px; transition:all 0.3s; background:rgba(34,20,8,0.6); }
+.chapter-item:hover { border-color:var(--gold); background:rgba(34,20,8,0.9); }
+.chapter-item a { color:var(--gold-l); text-decoration:none; }
+.chapter-item h3 { font-family:'Noto Serif JP',serif; font-size:20px; margin-bottom:8px; }
+.chapter-item p { font-size:13px; color:var(--sepia); margin:0; }
+
+.chapter-item.disabled { opacity:0.6; }
+
+footer { text-align:center; padding:40px; font-size:12px; color:var(--sepia); border-top:1px solid var(--border); margin-top:60px; }
+
+@media (max-width:768px) {
+  header { padding:16px 20px; }
+  main { padding:20px; }
+  h1 { font-size:28px; }
+  .chapter-item { padding:16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="nav-logo">ImmersaMap</a>
+</header>
+
+<main>
+  <h1>奥の細道</h1>
+  <p class="subtitle">松尾芭蕉 / 元禄2年（1689年）</p>
+  
+  <p>江戸から奥州・北陸への150日の旅。古い地名と現在の地名を行き来しながら、芭蕉が詠んだ俳句の舞台を時系列で追うことができます。</p>
+  
+  <div class="chapter-list">
+    <h2 style="font-size:20px; margin-bottom:20px; color:var(--gold-l); letter-spacing:0.1em;">公開中の章</h2>
+    
+    <div class="chapter-item">
+      <h3><a href="./chapter-1.html">第1章：江戸〜千住 旅立ち</a></h3>
+      <p>旅の出発地から千住宿まで。春が去りゆく季節に、故郷を離れる。</p>
+    </div>
+    
+    <div class="chapter-item disabled">
+      <h3>第2章：千住〜日光 杖をつく</h3>
+      <p>準備中</p>
+    </div>
+    
+    <div class="chapter-item disabled">
+      <h3>第3章：日光〜白河 奥州へ</h3>
+      <p>準備中</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>© 2024 ImmersaMap</p>
+</footer>
+
+</body>
+</html>
