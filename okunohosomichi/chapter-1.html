@@ -18,9 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
-/* ============================================================
-   グローバルスタイル（Color Palette）
-   ============================================================ */
+/* グローバルスタイル */
 :root {
   --ink:#1a1008;
   --ink2:#221408;
@@ -46,9 +44,7 @@ html, body {
   overflow:hidden;
 }
 
-/* ============================================================
-   ヘッダー・ナビゲーション
-   ============================================================ */
+/* ヘッダー */
 header {
   position:fixed;
   top:0;
@@ -110,9 +106,7 @@ nav {
   background:rgba(212,160,23,0.1);
 }
 
-/* ============================================================
-   メインレイアウト（地図＋パネル）
-   ============================================================ */
+/* メインレイアウト */
 main {
   position:fixed;
   top:60px;
@@ -122,9 +116,7 @@ main {
   flex-direction:column;
 }
 
-/* ============================================================
-   地図領域（改修：70vh に拡大）
-   ============================================================ */
+/* 地図領域 */
 #map {
   flex:0 0 auto;
   height:70vh;
@@ -133,12 +125,12 @@ main {
   background:var(--ink);
 }
 
-/* Leaflet タイルのセピア化（Alex Zhang 推奨） */
-.immersamap-tiles {
-  filter: sepia(0.15) contrast(1.05);
+/* OpenStreetMap タイル */
+.leaflet-tile-container {
+  filter: sepia(0.1) contrast(1.05);
 }
 
-/* Leaflet ポップアップのカスタムスタイル */
+/* ポップアップスタイル */
 .leaflet-popup-content-wrapper {
   background: rgba(26, 16, 8, 0.95) !important;
   border: 2px solid var(--gold) !important;
@@ -162,6 +154,20 @@ main {
   color: var(--gold-l);
   margin: 0 0 12px 0;
   letter-spacing: 0.1em;
+}
+
+.popup-image {
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.popup-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .location-popup .verse {
@@ -207,9 +213,7 @@ main {
   animation: popupFadeIn 0.3s ease-out;
 }
 
-/* ============================================================
-   コントロールバー
-   ============================================================ */
+/* コントロールバー */
 .controls {
   display:flex;
   align-items:center;
@@ -277,9 +281,56 @@ main {
   color:#c0392b;
 }
 
-/* ============================================================
-   地点パネル（スクロール可能）
-   ============================================================ */
+/* タイムライン */
+.timeline-container {
+  flex:0 0 auto;
+  height:auto;
+  max-height:150px;
+  overflow-y:auto;
+  padding:12px 16px;
+  background:rgba(34,20,8,0.6);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+.timeline {
+  display:flex;
+  gap:8px;
+  min-width:min-content;
+}
+
+.timeline-item {
+  flex:0 0 auto;
+  padding:8px 12px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  background:rgba(26,16,8,0.6);
+  font-size:11px;
+  color:var(--parchment2);
+  cursor:pointer;
+  transition:all 0.2s;
+  white-space:nowrap;
+}
+
+.timeline-item:hover {
+  border-color:var(--gold);
+  background:rgba(34,20,8,0.9);
+}
+
+.timeline-item.active {
+  border-color:var(--gold-l);
+  background:rgba(212,160,23,0.2);
+  color:var(--gold-l);
+  font-weight:600;
+}
+
+.timeline-item .number {
+  display:block;
+  font-size:10px;
+  color:var(--sepia);
+}
+
+/* 地点パネル */
 .location-panel {
   flex:1;
   overflow-y:auto;
@@ -294,12 +345,31 @@ main {
   margin-bottom:16px;
   background:rgba(26,16,8,0.6);
   transition:all 0.3s;
-  scroll-margin-top:60px;
+  scroll-margin-top:120px;
 }
 
 .location-card:hover {
   border-color:var(--gold);
   background:rgba(34,20,8,0.9);
+}
+
+.location-card.active {
+  border-color:var(--gold-l);
+  background:rgba(212,160,23,0.1);
+}
+
+.card-image {
+  width:100%;
+  height:200px;
+  overflow:hidden;
+  border-radius:4px;
+  margin-bottom:16px;
+}
+
+.card-image img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 
 .location-order {
@@ -358,9 +428,7 @@ main {
   margin-right:12px;
 }
 
-/* ============================================================
-   ローディング・エラー表示
-   ============================================================ */
+/* ローディング・エラー */
 .loading {
   display:flex;
   align-items:center;
@@ -378,71 +446,27 @@ main {
   background:rgba(192,57,43,0.1);
 }
 
-/* ============================================================
-   レスポンシブ（モバイル）
-   ============================================================ */
+/* レスポンシブ */
 @media (max-width:768px) {
-  header {
-    padding:10px 12px;
-  }
-
-  .nav-logo {
-    font-size:14px;
-  }
-
-  .nav-breadcrumb {
-    font-size:10px;
-  }
-
-  .nav-button {
-    padding:6px 12px;
-    font-size:10px;
-  }
-
-  #map {
-    height:50vh;
-    min-height:200px;
-  }
-
-  .controls {
-    padding:10px 12px;
-    gap:8px;
-  }
-
-  .chapter-button,
-  .playback-button {
-    padding:8px 12px;
-    font-size:11px;
-  }
-
-  .chapter-info {
-    font-size:11px;
-    margin:0 8px;
-  }
-
-  .location-panel {
-    padding:16px;
-  }
-
-  .location-card {
-    padding:20px;
-  }
-
-  .location-name {
-    font-size:18px;
-  }
-
-  .verse-text {
-    font-size:14px;
-  }
+  header { padding:10px 12px; }
+  .nav-logo { font-size:14px; }
+  .nav-breadcrumb { font-size:10px; }
+  .nav-button { padding:6px 12px; font-size:10px; }
+  #map { height:50vh; min-height:200px; }
+  .controls { padding:10px 12px; gap:8px; }
+  .chapter-button, .playback-button { padding:8px 12px; font-size:11px; }
+  .chapter-info { font-size:11px; margin:0 8px; }
+  .timeline-container { max-height:100px; }
+  .location-panel { padding:16px; }
+  .location-card { padding:20px; }
+  .location-name { font-size:18px; }
+  .verse-text { font-size:14px; }
+  .card-image { height:150px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ============================================================
-     ヘッダー・ナビゲーション
-     ============================================================ -->
 <header>
   <nav>
     <a href="/" class="nav-logo">ImmersaMap</a>
@@ -454,22 +478,24 @@ main {
   </nav>
 </header>
 
-<!-- ============================================================
-     メインコンテンツ
-     ============================================================ -->
 <main>
 
-  <!-- 地図（改修：70vh） -->
+  <!-- 地図 -->
   <div id="map"></div>
 
   <!-- コントロールバー -->
   <div class="controls">
     <div class="chapter-nav">
-      <button id="prev-chapter" class="chapter-button" onclick="goToPrevChapter()">◀ 前の章</button>
+      <button id="prev-chapter" class="chapter-button" onclick="goToPrevChapter()" disabled>◀ 前の章</button>
       <span class="chapter-info">第1章：江戸〜千住</span>
       <button id="next-chapter" class="chapter-button" onclick="goToNextChapter()">次の章 ▶</button>
     </div>
     <button id="playback-button" class="playback-button" onclick="togglePlayback()">▶ 再生</button>
+  </div>
+
+  <!-- タイムライン -->
+  <div class="timeline-container" id="timeline-container">
+    <div class="timeline" id="timeline"></div>
   </div>
 
   <!-- 地点パネル -->
@@ -479,15 +505,10 @@ main {
 
 </main>
 
-<!-- ============================================================
-     スクリプト
-     ============================================================ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <script>
-// ============================================================
 // グローバル状態
-// ============================================================
 const S = {
   map: null,
   currentChapter: 1,
@@ -496,79 +517,57 @@ const S = {
   locations: [],
   markers: [],
   markerGroup: null,
-  db: null
+  db: null,
+  currentLocationIndex: 0
 };
 
-// Supabase初期化
 const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
 
-// ============================================================
 // 初期化
-// ============================================================
 async function init() {
   try {
-    // Supabaseを初期化
     S.db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    // 地図を初期化
     initializeMap();
-
-    // データを読み込み
     await loadLocations();
-
-    // マーカーを表示
     renderMarkers();
-
-    // パネルを表示
     renderLocationPanel();
-
+    renderTimeline();
   } catch (error) {
     console.error('初期化エラー:', error);
     showError('データの読み込みに失敗しました。ページをリロードしてください。');
   }
 }
 
-// ============================================================
-// 地図初期化（改修：国土地理院タイル＋セピア化）
-// ============================================================
+// 地図初期化（OpenStreetMap）
 function initializeMap() {
-  // 中心座標（第1章の中点）
   const centerLat = 35.9;
   const centerLng = 139.9;
 
   S.map = L.map('map').setView([centerLat, centerLng], 10);
 
-  // 国土地理院タイル（Alex Zhang 推奨）
-  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    attribution: '© 国土地理院',
-    className: 'immersamap-tiles'
+  // OpenStreetMap タイル
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
   }).addTo(S.map);
 
-  // マーカーグループ
   S.markerGroup = L.featureGroup().addTo(S.map);
 }
 
-// ============================================================
-// 地点データ読み込み
-// ============================================================
+// データ読み込み
 async function loadLocations() {
   try {
-    // chapterのIDを取得
-    const { data: chapters, error: chapterError } = await S.db
+    const { data: chapters } = await S.db
       .from('chapters')
       .select('id')
       .eq('work_id', S.workId)
       .eq('chapter_number', S.currentChapter);
 
-    if (chapterError || !chapters || chapters.length === 0) {
-      throw new Error('章データが見つかりません');
-    }
+    if (!chapters || chapters.length === 0) throw new Error('章データが見つかりません');
 
     const chapterId = chapters[0].id;
 
-    // locationsを取得
     const { data: locations, error: locError } = await S.db
       .from('locations')
       .select('id, location_name, latitude, longitude, order_in_chapter, description, has_verse')
@@ -579,18 +578,15 @@ async function loadLocations() {
 
     S.locations = locations || [];
 
-    // 各地点の俳句を取得
     for (let loc of S.locations) {
       if (loc.has_verse) {
-        const { data: verses, error: verseError } = await S.db
+        const { data: verses } = await S.db
           .from('verses')
           .select('verse_text, explanation')
           .eq('location_id', loc.id)
           .limit(1);
 
-        if (verseError) {
-          console.warn(`地点「${loc.location_name}」の俳句読み込みエラー`, verseError);
-        } else if (verses && verses.length > 0) {
+        if (verses && verses.length > 0) {
           loc.verse = verses[0];
         }
       }
@@ -602,15 +598,12 @@ async function loadLocations() {
   }
 }
 
-// ============================================================
-// マーカー表示（改修：ポップアップ表示）
-// ============================================================
+// マーカー表示
 function renderMarkers() {
   S.markerGroup.clearLayers();
   S.markers = [];
 
   for (let loc of S.locations) {
-    // ポップアップHTMLを構築
     let popupHTML = `<div class="location-popup">
       <h3>${loc.location_name}</h3>`;
     
@@ -625,19 +618,20 @@ function renderMarkers() {
       title: loc.location_name
     })
       .bindPopup(popupHTML)
-      .on('click', () => scrollToLocation(loc.id))
+      .on('click', () => {
+        scrollToLocation(loc.id);
+        S.currentLocationIndex = loc.order_in_chapter - 1;
+        updateTimeline();
+      })
       .addTo(S.markerGroup);
 
     S.markers.push({ id: loc.id, marker: marker });
   }
 
-  // マーカーの範囲に地図をフィット
   S.map.fitBounds(S.markerGroup.getBounds(), { padding: [50, 50] });
 }
 
-// ============================================================
-// 地点パネルレンダリング
-// ============================================================
+// パネルレンダリング
 function renderLocationPanel() {
   const panel = document.getElementById('location-panel');
   panel.innerHTML = '';
@@ -647,45 +641,67 @@ function renderLocationPanel() {
     card.className = 'location-card';
     card.id = `location-${loc.id}`;
 
-    let html = `
-      <div class="location-order">地点 ${loc.order_in_chapter}</div>
-      <h2 class="location-name">${loc.location_name}</h2>
-    `;
+    let html = `<div class="location-order">地点 ${loc.order_in_chapter}</div>
+      <h2 class="location-name">${loc.location_name}</h2>`;
 
     if (loc.has_verse && loc.verse) {
-      html += `
-        <div class="verse-section">
-          <div class="verse-text">${loc.verse.verse_text}</div>
-          <div class="verse-explanation">${loc.verse.explanation}</div>
-        </div>
-      `;
+      html += `<div class="verse-section">
+        <div class="verse-text">${loc.verse.verse_text}</div>
+        <div class="verse-explanation">${loc.verse.explanation}</div>
+      </div>`;
     }
 
-    html += `
-      <div class="description">${loc.description}</div>
+    html += `<div class="description">${loc.description}</div>
       <div class="location-meta">
         <span>座標: ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}</span>
-      </div>
-    `;
+      </div>`;
 
     card.innerHTML = html;
     panel.appendChild(card);
   }
 }
 
-// ============================================================
-// 地点へスクロール
-// ============================================================
+// タイムライン表示
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  timeline.innerHTML = '';
+
+  for (let loc of S.locations) {
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `<div class="number">${loc.order_in_chapter}</div>${loc.location_name}`;
+    item.onclick = () => {
+      S.currentLocationIndex = loc.order_in_chapter - 1;
+      scrollToLocation(loc.id);
+      S.map.flyTo([loc.latitude, loc.longitude], 14, { duration: 1.5 });
+      updateTimeline();
+    };
+    timeline.appendChild(item);
+  }
+  updateTimeline();
+}
+
+// タイムライン更新
+function updateTimeline() {
+  document.querySelectorAll('.timeline-item').forEach((item, idx) => {
+    item.classList.toggle('active', idx === S.currentLocationIndex);
+  });
+}
+
+// スクロール
 function scrollToLocation(locationId) {
   const element = document.getElementById(`location-${locationId}`);
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // カードのハイライト
+    document.querySelectorAll('.location-card').forEach(card => {
+      card.classList.remove('active');
+    });
+    element.classList.add('active');
   }
 }
 
-// ============================================================
-// 再生機能
-// ============================================================
+// 再生機能（バードアイビュー方式）
 function togglePlayback() {
   const button = document.getElementById('playback-button');
 
@@ -702,27 +718,32 @@ function togglePlayback() {
 }
 
 async function playSequence() {
-  const panel = document.getElementById('location-panel');
+  // 最初：全体俯瞰
+  S.map.flyTo([35.7, 139.8], 4, { duration: 2 });
+  await sleep(2000);
 
-  for (let loc of S.locations) {
+  for (let idx = 0; idx < S.locations.length; idx++) {
     if (!S.isPlaying) break;
 
-    // マーカーをポップアップで開く
-    const marker = S.markers.find(m => m.id === loc.id);
-    if (marker && marker.marker) {
-      marker.marker.openPopup();
-    }
+    const loc = S.locations[idx];
+    S.currentLocationIndex = idx;
+    updateTimeline();
 
-    // パネルをスクロール
+    // ズームアウト（俯瞰）
+    S.map.flyTo([loc.latitude, loc.longitude], 4, { duration: 1.5 });
+    await sleep(1500);
+
+    // ズームイン（詳細）
+    S.map.flyTo([loc.latitude, loc.longitude], 14, { duration: 2 });
+    await sleep(500);
+
+    // ポップアップ・パネル表示
+    const marker = S.markers.find(m => m.id === loc.id);
+    if (marker?.marker) marker.marker.openPopup();
     scrollToLocation(loc.id);
 
-    // 地点にズーム
-    S.map.flyTo([loc.latitude, loc.longitude], 14, {
-      duration: 2
-    });
-
-    // 3秒待つ
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // 表示
+    await sleep(3000);
   }
 
   if (S.isPlaying) {
@@ -730,12 +751,17 @@ async function playSequence() {
     const button = document.getElementById('playback-button');
     button.textContent = '▶ 再生';
     button.classList.remove('playing');
+    S.currentLocationIndex = 0;
+    updateTimeline();
   }
 }
 
-// ============================================================
-// 章の前後ナビゲーション
-// ============================================================
+// ユーティリティ
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ナビゲーション
 function goToPrevChapter() {
   if (S.currentChapter > 1) {
     location.href = `/okunohosomichi/chapter-${S.currentChapter - 1}.html`;
@@ -746,17 +772,12 @@ function goToNextChapter() {
   location.href = `/okunohosomichi/chapter-${S.currentChapter + 1}.html`;
 }
 
-// ============================================================
 // エラー表示
-// ============================================================
 function showError(message) {
   const panel = document.getElementById('location-panel');
   panel.innerHTML = `<div class="error">${message}</div>`;
 }
 
-// ============================================================
-// ページロード時に初期化
-// ============================================================
 window.addEventListener('load', init);
 </script>
 
