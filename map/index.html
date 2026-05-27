@@ -6,158 +6,672 @@
   <title>ImmersaMap - 古い地図と現在の地図を重ね合わせる</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Noto Sans JP', 'Segoe UI', sans-serif; background: #f5f5f5; height: 100vh; overflow: hidden; }
-    .header { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .header-title { font-size: 18px; font-weight: bold; letter-spacing: 0.5px; }
-    .header-menu-btn { width: 40px; height: 40px; border: none; background: none; cursor: pointer; color: #fff; font-size: 24px; }
-    #map { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; width: 100%; height: calc(100% - 56px); }
-    .time-selector-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.98); border-top: 1px solid #ddd; z-index: 500; padding: 16px; max-height: 200px; overflow-y: auto; }
-    .time-selector-panel.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
-    .current-layer-display { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
-    .current-layer-name { display: block; font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 4px; }
-    .current-layer-subtitle { font-size: 12px; color: #888; }
-    .time-selector-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .time-btn { background: #3498db; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
-    .time-btn:hover:not(:disabled) { background: #2980b9; }
-    .time-btn:disabled { background: #bdc3c7; cursor: not-allowed; opacity: 0.6; }
-    .time-current { flex: 1; text-align: center; font-size: 14px; font-weight: 500; color: #2c3e50; }
-    .opacity-control { margin-bottom: 12px; }
-    .opacity-label { font-size: 12px; color: #666; margin-bottom: 4px; display: flex; justify-content: space-between; }
-    .opacity-slider { width: 100%; height: 4px; border-radius: 2px; background: #ddd; -webkit-appearance: none; appearance: none; }
-    .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3498db; cursor: pointer; }
-    .opacity-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #3498db; cursor: pointer; border: none; }
-    .layer-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    .layer-btn { flex: 1; min-width: 100px; padding: 10px 12px; border: 2px solid #ddd; background: #f9f9f9; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; color: #333; text-align: center; }
-    .layer-btn:hover { border-color: #3498db; background: #ecf0f1; }
-    .layer-btn.active { background: #3498db; color: #fff; border-color: #3498db; }
-    .current-location-btn { position: fixed; bottom: 220px; right: 16px; width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 1px solid #ddd; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 400; }
-    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .toast { position: fixed; bottom: 16px; left: 16px; background: #2c3e50; color: #fff; padding: 12px 16px; border-radius: 4px; font-size: 14px; z-index: 1500; opacity: 0; }
-    @media (min-width: 769px) { .time-selector-panel { position: fixed; bottom: 16px; right: 16px; left: auto; width: 320px; border-radius: 8px; border: 1px solid #ddd; max-height: 400px; } .current-location-btn { bottom: 340px; } }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ======================== */
+    /* ヘッダー */
+    /* ======================== */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .header-menu-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ======================== */
+    /* 地図 */
+    /* ======================== */
+    #map {
+      position: absolute;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: calc(100% - 56px);
+    }
+
+    .leaflet-control-attribution {
+      font-size: 11px;
+    }
+
+    /* ======================== */
+    /* 時代セレクター（下部パネル） */
+    /* ======================== */
+    .time-selector-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.98);
+      border-top: 1px solid #ddd;
+      z-index: 500;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .time-selector-panel.collapsed {
+      max-height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .panel-content {
+      padding: 16px;
+    }
+
+    /* 「今見ている時代」表示 */
+    .current-layer-display {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .current-layer-name {
+      display: block;
+      font-size: 16px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 4px;
+    }
+
+    .current-layer-subtitle {
+      font-size: 12px;
+      color: #888;
+    }
+
+    /* 時代選択ボタン */
+    .time-selector-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .time-btn {
+      background: #3498db;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .time-btn:hover:not(:disabled) {
+      background: #2980b9;
+      transform: scale(1.05);
+    }
+
+    .time-btn:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .time-current {
+      flex: 1;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    /* 透明度調整スライダー */
+    .opacity-control {
+      margin-bottom: 12px;
+    }
+
+    .opacity-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .opacity-slider {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: #ddd;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .opacity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3498db;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .opacity-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3498db;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* レイヤー選択 */
+    .layer-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .layer-btn {
+      flex: 1;
+      min-width: 100px;
+      padding: 10px 12px;
+      border: 2px solid #ddd;
+      background: #f9f9f9;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: #333;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .layer-btn:hover {
+      border-color: #3498db;
+      background: #ecf0f1;
+    }
+
+    .layer-btn.active {
+      background: #3498db;
+      color: #fff;
+      border-color: #3498db;
+    }
+
+    /* パネル開閉ハンドル */
+    .panel-handle {
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    /* ======================== */
+    /* 現在地ボタン */
+    /* ======================== */
+    .current-location-btn {
+      position: fixed;
+      bottom: 200px;
+      right: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 400;
+      transition: all 0.2s ease;
+    }
+
+    .current-location-btn:hover {
+      background: #f5f5f5;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* ======================== */
+    /* レスポンシブ */
+    /* ======================== */
+    @media (max-width: 768px) {
+      .header-title {
+        font-size: 16px;
+      }
+
+      .time-selector-panel {
+        max-height: 200px;
+      }
+
+      .panel-content {
+        padding: 12px;
+      }
+    }
+
+    @media (min-width: 769px) {
+      /* PC版：右下に固定パネル */
+      .time-selector-panel {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        left: auto;
+        width: 320px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        max-height: 400px;
+      }
+
+      .time-selector-panel.collapsed {
+        max-height: 50px;
+      }
+
+      .current-location-btn {
+        bottom: 340px;
+      }
+    }
+
+    /* ======================== */
+    /* ローディング */
+    /* ======================== */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ======================== */
+    /* トースト */
+    /* ======================== */
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      background: #2c3e50;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 1500;
+      opacity: 0;
+      animation: slideUp 0.3s ease forwards;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- ヘッダー -->
   <div class="header">
     <div class="header-title">🗺️ ImmersaMap</div>
     <button class="header-menu-btn" id="menu-btn">≡</button>
   </div>
+
+  <!-- 地図 -->
   <div id="map"></div>
-  <button class="current-location-btn" id="current-location-btn">📍</button>
+
+  <!-- 現在地ボタン -->
+  <button class="current-location-btn" id="current-location-btn" title="現在地に移動">
+    📍
+  </button>
+
+  <!-- 時代セレクター パネル -->
   <div class="time-selector-panel" id="time-selector-panel">
-    <div class="current-layer-display">
-      <span class="current-layer-name" id="current-layer-name">読み込み中...</span>
-      <span class="current-layer-subtitle" id="current-layer-subtitle">OpenStreetMap</span>
+    <div class="panel-handle" id="panel-handle"></div>
+    <div class="panel-content">
+      <!-- 現在表示中の時代情報 -->
+      <div class="current-layer-display">
+        <span class="current-layer-name" id="current-layer-name">現在の地図</span>
+        <span class="current-layer-subtitle" id="current-layer-subtitle">OpenStreetMap</span>
+      </div>
+
+      <!-- 時代選択ボタン -->
+      <div class="time-selector-controls">
+        <button class="time-btn" id="prev-time-btn">◀</button>
+        <div class="time-current" id="time-current">時代を選択</div>
+        <button class="time-btn" id="next-time-btn">▶</button>
+      </div>
+
+      <!-- 透明度調整 -->
+      <div class="opacity-control">
+        <div class="opacity-label">
+          <span>表示の濃さ</span>
+          <span id="opacity-value">70%</span>
+        </div>
+        <input type="range" id="opacity-slider" class="opacity-slider" min="0" max="100" value="70">
+      </div>
+
+      <!-- レイヤー選択 -->
+      <div class="layer-buttons">
+        <button class="layer-btn active" data-layer="aerial">
+          🛰️ 航空写真
+        </button>
+        <button class="layer-btn" data-layer="edo-map">
+          🗾 古地図
+        </button>
+        <button class="layer-btn" data-layer="elevation">
+          ⛰️ 標高図
+        </button>
+      </div>
     </div>
-    <div class="time-selector-controls">
-      <button class="time-btn" id="prev-time-btn">◀</button>
-      <div class="time-current" id="time-current">読み込み中...</div>
-      <button class="time-btn" id="next-time-btn">▶</button>
-    </div>
-    <div class="opacity-control">
-      <div class="opacity-label"><span>表示の濃さ</span><span id="opacity-value">70%</span></div>
-      <input type="range" id="opacity-slider" class="opacity-slider" min="0" max="100" value="70">
-    </div>
-    <div class="layer-buttons" id="layer-buttons"></div>
   </div>
-  <div class="loading-overlay" id="loading-overlay"><div class="spinner"></div></div>
+
+  <!-- ローディング -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- トースト -->
   <div class="toast" id="toast"></div>
+
+  <!-- Leaflet -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Main App -->
   <script>
+    // =====================================================
+    // 初期化
+    // =====================================================
     const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
-    class AppState {
-      constructor() { this.categories = []; this.maps = []; this.mapsByCategory = {}; this.currentCategory = null; this.currentTimeIndex = 0; this.currentOpacity = 70; this.overlayTile = null; }
-      async initialize() {
-        try {
-          const sc = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          const [c, m] = await Promise.all([sc.from('layer_categories').select('*').order('display_order'), sc.from('maps').select('*').order('display_order')]);
-          this.categories = c.data || [];
-          this.maps = m.data || [];
-          this.mapsByCategory = {};
-          this.maps.forEach(map => { if (!this.mapsByCategory[map.category]) this.mapsByCategory[map.category] = []; this.mapsByCategory[map.category].push(map); });
-          if (this.categories.length > 0) this.currentCategory = this.categories[0].category;
-          localStorage.setItem('immersamap_cache', JSON.stringify({ categories: this.categories, maps: this.maps }));
-        } catch (e) { this.loadFromCache(); }
+    const { createClient } = window.supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 地図初期化
+    const map = L.map('map', {
+      center: [36.5, 139.5],
+      zoom: 9,
+      zoomControl: true,
+      attributionControl: true
+    });
+
+    // ベース地図（OpenStreetMap）
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // =====================================================
+    // 状態管理
+    // =====================================================
+    const state = {
+      currentLayer: 'aerial',        // 現在のレイヤータイプ
+      currentTimeIndex: 0,            // 時代インデックス
+      currentOpacity: 70,             // 透明度
+      overlayTile: null,              // 表示中のオーバーレイ
+      layerData: {}                   // レイヤーデータ
+    };
+
+    // レイヤー定義
+    const layerDefinitions = {
+      aerial: {
+        name: '航空写真',
+        icon: '🛰️',
+        times: [
+          { name: '1960年代', id: 'standard-gsi-1960s' },
+          { name: '1970年代', id: 'standard-gsi-1970s' },
+          { name: '1980年代前半', id: 'standard-gsi-1980s-early' },
+          { name: '1980年代中盤', id: 'standard-gsi-1980s-mid' },
+          { name: '1980年代後半', id: 'standard-gsi-1980s' }
+        ]
+      },
+      'edo-map': {
+        name: '古地図',
+        icon: '🗾',
+        times: [
+          { name: '明治元年', id: 'kanto-1868' },
+          { name: '明治2年', id: 'kanto-1869' }
+        ]
+      },
+      elevation: {
+        name: '標高図',
+        icon: '⛰️',
+        times: [
+          { name: '日本の地形', id: 'elevation-japan' }
+        ]
       }
-      loadFromCache() {
-        try {
-          const cache = JSON.parse(localStorage.getItem('immersamap_cache') || '{}');
-          this.categories = cache.categories || [];
-          this.maps = cache.maps || [];
-          this.mapsByCategory = {};
-          this.maps.forEach(map => { if (!this.mapsByCategory[map.category]) this.mapsByCategory[map.category] = []; this.mapsByCategory[map.category].push(map); });
-          if (this.categories.length > 0) this.currentCategory = this.categories[0].category;
-        } catch (e) { console.log('Cache load failed'); }
-      }
+    };
+
+    // =====================================================
+    // UI 更新関数
+    // =====================================================
+    function updateLayerDisplay() {
+      const layerDef = layerDefinitions[state.currentLayer];
+      const timeDef = layerDef.times[state.currentTimeIndex];
+
+      document.getElementById('current-layer-name').textContent = `${layerDef.icon} ${timeDef.name}`;
+      document.getElementById('current-layer-subtitle').textContent = layerDef.name;
+      document.getElementById('time-current').textContent = timeDef.name;
+
+      // レイヤーボタンのアクティブ状態を更新
+      document.querySelectorAll('.layer-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.layer === state.currentLayer) {
+          btn.classList.add('active');
+        }
+      });
+
+      // オーバーレイタイルを読み込み
+      loadOverlayTile(timeDef.id);
     }
-    const appState = new AppState();
-    let map = null;
-    async function initializeApp() {
+
+    // オーバーレイタイル読み込み
+    async function loadOverlayTile(tileId) {
+      // ローディング表示
       document.getElementById('loading-overlay').style.display = 'flex';
+
       try {
-        await appState.initialize();
-        if (map) map.remove();
-        map = L.map('map', { center: [36.5, 139.5], zoom: 9 });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-        const container = document.getElementById('layer-buttons');
-        container.innerHTML = '';
-        appState.categories.forEach((cat, i) => {
-          const btn = document.createElement('button');
-          btn.className = 'layer-btn' + (i === 0 ? ' active' : '');
-          btn.dataset.category = cat.category;
-          btn.innerHTML = `${cat.emoji} ${cat.display_name}`;
-          btn.addEventListener('click', () => selectCategory(cat.category));
-          container.appendChild(btn);
-        });
-        if (appState.currentCategory) selectCategory(appState.currentCategory);
-      } catch (e) { showToast('初期化失敗'); console.error(e); } finally {
+        // Supabase から maps テーブルを取得
+        const { data, error } = await supabase
+          .from('maps')
+          .select('*')
+          .eq('id', tileId)
+          .single();
+
+        if (error) {
+          console.error('Map not found:', tileId);
+          showToast('地図データが見つかりません');
+          document.getElementById('loading-overlay').style.display = 'none';
+          return;
+        }
+
+        // 既存のオーバーレイを削除
+        if (state.overlayTile) {
+          map.removeLayer(state.overlayTile);
+        }
+
+        // 新しいタイルレイヤーを追加
+        state.overlayTile = L.tileLayer(data.tiles_url, {
+          maxZoom: data.zoom_max || 19,
+          opacity: state.currentOpacity / 100
+        }).addTo(map);
+
+        // データ有無の表示
+        updateDataAvailability(data);
+
+        showToast(`${data.name} を表示中`);
+      } catch (err) {
+        console.error('Error loading tile:', err);
+        showToast('地図の読み込みに失敗しました');
+      } finally {
         document.getElementById('loading-overlay').style.display = 'none';
       }
     }
-    function selectCategory(cat) {
-      appState.currentCategory = cat;
-      appState.currentTimeIndex = 0;
-      document.querySelectorAll('.layer-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.category === cat));
-      updateLayerDisplay();
+
+    function updateDataAvailability(mapData) {
+      // TODO: カバレッジポリゴンを確認して、このエリアにデータがあるかチェック
+      // 現在は常に「あり」と表示
+      const subtitle = document.getElementById('current-layer-subtitle');
+      subtitle.textContent = `${layerDefinitions[state.currentLayer].name}（このエリアのデータあり）`;
     }
-    function updateLayerDisplay() {
-      const maps = appState.mapsByCategory[appState.currentCategory] || [];
-      if (maps.length === 0) return;
-      const m = maps[appState.currentTimeIndex];
-      const cat = appState.categories.find(c => c.category === appState.currentCategory);
-      document.getElementById('current-layer-name').textContent = `${cat.emoji} ${m.name}`;
-      document.getElementById('current-layer-subtitle').textContent = `${cat.display_name}`;
-      document.getElementById('time-current').textContent = m.name;
-      document.getElementById('prev-time-btn').disabled = appState.currentTimeIndex === 0;
-      document.getElementById('next-time-btn').disabled = appState.currentTimeIndex === maps.length - 1;
-      if (appState.overlayTile) map.removeLayer(appState.overlayTile);
-      if (m.tiles_url) appState.overlayTile = L.tileLayer(m.tiles_url, { opacity: appState.currentOpacity / 100, maxZoom: m.zoom_max || 19 }).addTo(map);
-    }
+
+    // =====================================================
+    // イベントリスナー
+    // =====================================================
+
+    // 時代選択ボタン
     document.getElementById('prev-time-btn').addEventListener('click', () => {
-      const maps = appState.mapsByCategory[appState.currentCategory] || [];
-      if (appState.currentTimeIndex > 0) { appState.currentTimeIndex--; updateLayerDisplay(); }
+      const layerDef = layerDefinitions[state.currentLayer];
+      if (state.currentTimeIndex > 0) {
+        state.currentTimeIndex--;
+        updateLayerDisplay();
+      }
     });
+
     document.getElementById('next-time-btn').addEventListener('click', () => {
-      const maps = appState.mapsByCategory[appState.currentCategory] || [];
-      if (appState.currentTimeIndex < maps.length - 1) { appState.currentTimeIndex++; updateLayerDisplay(); }
+      const layerDef = layerDefinitions[state.currentLayer];
+      if (state.currentTimeIndex < layerDef.times.length - 1) {
+        state.currentTimeIndex++;
+        updateLayerDisplay();
+      }
     });
+
+    // 透明度スライダー
     document.getElementById('opacity-slider').addEventListener('input', (e) => {
-      appState.currentOpacity = parseInt(e.target.value);
-      document.getElementById('opacity-value').textContent = appState.currentOpacity + '%';
-      if (appState.overlayTile) appState.overlayTile.setOpacity(appState.currentOpacity / 100);
+      state.currentOpacity = parseInt(e.target.value);
+      document.getElementById('opacity-value').textContent = state.currentOpacity + '%';
+
+      if (state.overlayTile) {
+        state.overlayTile.setOpacity(state.currentOpacity / 100);
+      }
     });
+
+    // レイヤー選択ボタン
+    document.querySelectorAll('.layer-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.currentLayer = btn.dataset.layer;
+        state.currentTimeIndex = 0;
+        updateLayerDisplay();
+      });
+    });
+
+    // 現在地ボタン
     document.getElementById('current-location-btn').addEventListener('click', () => {
-      navigator.geolocation.getCurrentPosition(p => { map.flyTo([p.coords.latitude, p.coords.longitude], 13); showToast('現在地に移動'); });
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const { latitude, longitude } = position.coords;
+          map.flyTo([latitude, longitude], 13, { duration: 1 });
+          showToast('現在地に移動しました');
+        }, error => {
+          showToast('位置情報を取得できませんでした');
+        });
+      }
     });
+
+    // パネル開閉
+    document.getElementById('panel-handle').addEventListener('click', () => {
+      document.getElementById('time-selector-panel').classList.toggle('collapsed');
+    });
+
+    // ハンバーガーメニュー
     document.getElementById('menu-btn').addEventListener('click', () => {
       document.getElementById('time-selector-panel').classList.toggle('collapsed');
     });
-    function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 3000); }
-    window.addEventListener('load', initializeApp);
+
+    // =====================================================
+    // ユーティリティ
+    // =====================================================
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.opacity = '1';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+      }, 3000);
+    }
+
+    // =====================================================
+    // 初期表示
+    // =====================================================
+    document.getElementById('loading-overlay').style.display = 'none';
+    updateLayerDisplay();
   </script>
 </body>
 </html>
