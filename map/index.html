@@ -55,9 +55,60 @@
     .header-right { display: flex; align-items: center; gap: 12px; }
     .header-link { color: var(--text-muted); text-decoration: none; font-size: 13px; padding: 6px 8px; border-radius: 6px; }
     .header-link:hover { background: #f0f0f0; color: var(--text); }
+
+    /* ============ 検索ボックス（ヘッダー中央） ============ */
+    .search-wrap {
+      position: relative; flex: 1; max-width: 360px; margin: 0 20px;
+    }
+    .search-box {
+      display: flex; align-items: center; gap: 6px;
+      background: #f5f5f5; border: 1px solid transparent; border-radius: 8px;
+      padding: 0 12px; height: 36px; transition: border-color .15s, background .15s;
+    }
+    .search-box:focus-within { background: #fff; border-color: var(--border-strong); }
+    .search-box i { font-size: 14px; color: var(--text-faint); flex-shrink: 0; }
+    .search-input {
+      flex: 1; border: none; background: transparent; outline: none;
+      font-size: 13px; color: var(--text); font-family: inherit; min-width: 0;
+    }
+    .search-input::placeholder { color: #aaa; }
+    .search-clear {
+      width: 20px; height: 20px; border: none; background: transparent;
+      border-radius: 50%; color: var(--text-faint); display: none;
+      align-items: center; justify-content: center; padding: 0;
+    }
+    .search-clear:hover { background: #e5e5e5; color: var(--text); }
+    .search-clear i { font-size: 14px; }
+    .search-wrap.has-value .search-clear { display: flex; }
+
+    .search-results {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: var(--shadow-strong); max-height: 320px; overflow-y: auto;
+      z-index: 1100; display: none;
+    }
+    .search-results.show { display: block; }
+    .search-result {
+      padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
+      font-size: 13px; color: var(--text); display: flex; align-items: flex-start; gap: 8px;
+    }
+    .search-result:last-child { border-bottom: none; }
+    .search-result:hover, .search-result.highlighted { background: #f5f5f5; }
+    .search-result i { font-size: 14px; color: var(--text-faint); margin-top: 2px; flex-shrink: 0; }
+    .search-result-text { flex: 1; line-height: 1.4; min-width: 0; }
+    .search-result-name { font-weight: 500; color: var(--text); }
+    .search-result-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+    .search-result-source { font-size: 10px; color: var(--text-faint); flex-shrink: 0; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; }
+    .search-empty, .search-error, .search-loading {
+      padding: 14px; text-align: center; font-size: 13px; color: var(--text-faint);
+    }
+    .search-error { color: var(--red-fg); }
+
     @media (max-width: 768px) {
       .header-link { display: none; }
       .header-title { font-size: 15px; }
+      .header-title span { display: none; } /* モバイルではアイコンのみ */
+      .search-wrap { margin: 0 10px; max-width: none; }
     }
 
     /* ============ サイドバー（PC） ============ */
@@ -277,6 +328,17 @@
     <div class="header-left">
       <button class="header-toggle" id="sidebar-toggle" aria-label="サイドバー切替"><i class="ti ti-menu-2"></i></button>
       <div class="header-title"><i class="ti ti-map-2"></i><span>ImmersaMap</span></div>
+    </div>
+    <div class="search-wrap" id="search-wrap">
+      <div class="search-box">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="search" id="search-input" class="search-input"
+          placeholder="地名や住所を検索（例：大阪城、東京タワー）"
+          autocomplete="off" spellcheck="false" enterkeyhint="search"
+          aria-label="地名検索" aria-controls="search-results" aria-autocomplete="list">
+        <button class="search-clear" id="search-clear" aria-label="クリア" type="button"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="search-results" id="search-results" role="listbox"></div>
     </div>
     <div class="header-right">
       <a class="header-link" href="/okunohosomichi/">物語モード</a>
@@ -587,12 +649,213 @@
       } catch (e) { console.warn('historical maps load skipped:', e); }
     }
 
+    // ============ 住所・地名検索 ============
+    // 国土地理院を優先、見つからなければNominatim。
+    // - AbortControllerで前のリクエストをキャンセル
+    // - 300ms debounce
+    // - キーボード操作対応（↑↓Enter Esc）
+    const search = {
+      input: null, results: null, wrap: null, clear: null,
+      timer: null, ctrl: null,
+      items: [], highlighted: -1,
+    };
+
+    function initSearch() {
+      search.input = $('search-input');
+      search.results = $('search-results');
+      search.wrap = $('search-wrap');
+      search.clear = $('search-clear');
+      if (!search.input) return;
+
+      search.input.addEventListener('input', onSearchInput);
+      search.input.addEventListener('focus', () => {
+        if (search.items.length > 0) search.results.classList.add('show');
+      });
+      search.input.addEventListener('keydown', onSearchKeydown);
+      search.clear.addEventListener('click', clearSearch);
+
+      // 外側クリックで閉じる
+      document.addEventListener('mousedown', (e) => {
+        if (!search.wrap.contains(e.target)) hideResults();
+      });
+    }
+
+    function onSearchInput() {
+      const q = search.input.value.trim();
+      search.wrap.classList.toggle('has-value', q.length > 0);
+      clearTimeout(search.timer);
+      if (q.length === 0) { hideResults(); return; }
+      if (q.length < 2) return; // 1文字では検索しない
+      search.timer = setTimeout(() => runSearch(q), 300);
+    }
+
+    function onSearchKeydown(e) {
+      if (e.key === 'Escape') { hideResults(); search.input.blur(); return; }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (search.highlighted >= 0 && search.items[search.highlighted]) {
+          selectSearchResult(search.items[search.highlighted]);
+        } else if (search.items.length > 0) {
+          selectSearchResult(search.items[0]);
+        } else if (search.input.value.trim().length >= 2) {
+          // まだ未検索ならすぐ検索
+          clearTimeout(search.timer);
+          runSearch(search.input.value.trim());
+        }
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (search.items.length === 0) return;
+        search.highlighted = Math.min(search.highlighted + 1, search.items.length - 1);
+        updateHighlight();
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (search.items.length === 0) return;
+        search.highlighted = Math.max(search.highlighted - 1, 0);
+        updateHighlight();
+      }
+    }
+
+    function updateHighlight() {
+      document.querySelectorAll('.search-result').forEach((el, i) => {
+        el.classList.toggle('highlighted', i === search.highlighted);
+      });
+    }
+
+    function clearSearch() {
+      search.input.value = '';
+      search.wrap.classList.remove('has-value');
+      hideResults();
+      search.input.focus();
+    }
+
+    function hideResults() {
+      search.results.classList.remove('show');
+      search.highlighted = -1;
+    }
+
+    function showLoading() {
+      search.results.innerHTML = '<div class="search-loading">検索中…</div>';
+      search.results.classList.add('show');
+    }
+
+    async function runSearch(q) {
+      // 前のリクエストをキャンセル
+      if (search.ctrl) search.ctrl.abort();
+      search.ctrl = new AbortController();
+      const signal = search.ctrl.signal;
+
+      showLoading();
+
+      let results = [];
+      let errorMsg = null;
+
+      // 1. 国土地理院（日本国内・住所と主要地物に強い）
+      try {
+        const url = 'https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q);
+        const res = await fetch(url, { signal });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            results = data.slice(0, 6).map(d => ({
+              name: d.properties?.title || q,
+              meta: '',
+              lat: d.geometry?.coordinates?.[1],
+              lng: d.geometry?.coordinates?.[0],
+              source: '国土地理院',
+            })).filter(r => r.lat != null && r.lng != null);
+          }
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.warn('GSI search error:', e);
+      }
+
+      // 2. Nominatim にフォールバック（国外・古い地名・施設名など）
+      if (results.length === 0) {
+        try {
+          const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ja&q=' + encodeURIComponent(q);
+          const res = await fetch(url, { signal });
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+              results = data.map(d => {
+                const parts = (d.display_name || '').split(',').map(s => s.trim());
+                return {
+                  name: parts[0] || d.display_name || q,
+                  meta: parts.slice(1, 3).join(', '),
+                  lat: parseFloat(d.lat),
+                  lng: parseFloat(d.lon),
+                  source: 'OSM',
+                };
+              }).filter(r => !isNaN(r.lat) && !isNaN(r.lng));
+            }
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+          console.warn('Nominatim search error:', e);
+          errorMsg = '検索サーバーに接続できませんでした';
+        }
+      }
+
+      renderSearchResults(results, errorMsg);
+    }
+
+    function renderSearchResults(items, errorMsg) {
+      search.items = items;
+      search.highlighted = -1;
+      const el = search.results;
+
+      if (errorMsg) {
+        el.innerHTML = `<div class="search-error">${escapeHtml(errorMsg)}</div>`;
+        el.classList.add('show');
+        return;
+      }
+      if (items.length === 0) {
+        el.innerHTML = '<div class="search-empty">該当する場所が見つかりませんでした</div>';
+        el.classList.add('show');
+        return;
+      }
+
+      el.innerHTML = items.map((r) => `
+        <div class="search-result" role="option">
+          <i class="ti ti-map-pin"></i>
+          <div class="search-result-text">
+            <div class="search-result-name">${escapeHtml(r.name)}</div>
+            ${r.meta ? `<div class="search-result-meta">${escapeHtml(r.meta)}</div>` : ''}
+          </div>
+          <span class="search-result-source">${escapeHtml(r.source)}</span>
+        </div>
+      `).join('');
+
+      // 行ごとにイベントを付与
+      el.querySelectorAll('.search-result').forEach((row, i) => {
+        row.addEventListener('mousedown', (e) => { e.preventDefault(); /* blurを防ぐ */ });
+        row.addEventListener('click', () => selectSearchResult(items[i]));
+      });
+      el.classList.add('show');
+    }
+
+    function selectSearchResult(r) {
+      if (!r || r.lat == null || r.lng == null) return;
+      hideResults();
+      search.input.value = r.name;
+      search.wrap.classList.remove('has-value');
+      // ズームは現在のズームを尊重しつつ最低14に
+      const targetZoom = Math.max(map.getZoom(), 14);
+      map.flyTo([r.lat, r.lng], targetZoom, { duration: 1.2 });
+      toast(r.name + ' に移動');
+    }
+
     // ============ 起動 ============
     window.addEventListener('load', () => {
       initMap();
       applySidebarState();
       selectCategory('aerial');
       loadHistoricalMaps();
+      initSearch();
     });
 
     // リサイズで地図を再計算
