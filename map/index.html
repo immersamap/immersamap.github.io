@@ -137,20 +137,24 @@
     /* ============ 透明度スライダー（縦） ============ */
     .opacity-control {
       position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-      background: rgba(255,255,255,0.96); border-radius: 26px; padding: 14px 8px;
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.96); border-radius: 20px; padding: 12px 4px;
+      width: 40px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
       box-shadow: var(--shadow-strong); z-index: 400;
     }
     .opacity-control i { font-size: 14px; color: var(--text-muted); }
-    .opacity-slider-vertical {
-      -webkit-appearance: slider-vertical; appearance: slider-vertical;
-      width: 24px; height: 160px; writing-mode: bt-lr;
+    /* 回転トリック：スライダーは横向きで作って90度回す。
+       親に固定 width を持たせ、スライダーの長さは height 経由で確保する。
+       回転前後で box が同じ正方形になるよう height=width にする。 */
+    .opacity-slider-wrap {
+      width: 24px; height: 160px; display: flex;
+      align-items: center; justify-content: center;
     }
-    /* Fallback for browsers without vertical slider: use rotation */
     .opacity-slider-fallback {
       -webkit-appearance: none; appearance: none;
       width: 160px; height: 4px; background: #e0e0e0; border-radius: 2px;
-      transform: rotate(-90deg); margin: 78px 0;
+      transform: rotate(-90deg); transform-origin: center;
+      flex-shrink: 0;
     }
     .opacity-slider-fallback::-webkit-slider-thumb {
       -webkit-appearance: none; width: 18px; height: 18px;
@@ -161,7 +165,7 @@
       width: 18px; height: 18px; border-radius: 50%; background: var(--accent);
       cursor: pointer; border: 2px solid #fff;
     }
-    .opacity-value { font-size: 11px; color: var(--text-muted); font-weight: 500; min-width: 28px; text-align: center; }
+    .opacity-value { font-size: 10px; color: var(--text-muted); font-weight: 500; min-width: 28px; text-align: center; }
 
     /* ============ ズーム・現在地ボタン ============ */
     .map-actions {
@@ -241,8 +245,9 @@
       .now-card { top: 12px; left: 12px; padding: 10px 12px; max-width: 220px; }
       .now-card-name { font-size: 14px; }
       .now-card-meta { font-size: 11px; }
-      .opacity-control { right: 8px; padding: 10px 6px; border-radius: 22px; }
-      .opacity-slider-fallback { width: 110px; margin: 53px 0; }
+      .opacity-control { right: 8px; padding: 10px 4px; border-radius: 18px; width: 36px; gap: 4px; }
+      .opacity-slider-wrap { width: 22px; height: 110px; }
+      .opacity-slider-fallback { width: 110px; }
       .opacity-value { font-size: 10px; }
       .map-actions { right: 8px; bottom: 12px; }
       .map-action-btn { width: 36px; height: 36px; }
@@ -301,7 +306,9 @@
 
     <div class="opacity-control" title="表示の濃さ">
       <i class="ti ti-eye" aria-hidden="true"></i>
-      <input type="range" id="opacity-slider" class="opacity-slider-fallback" min="0" max="100" value="70" step="1" aria-label="透明度">
+      <div class="opacity-slider-wrap">
+        <input type="range" id="opacity-slider" class="opacity-slider-fallback" min="0" max="100" value="70" step="1" aria-label="透明度">
+      </div>
       <span class="opacity-value" id="opacity-value">70%</span>
     </div>
 
