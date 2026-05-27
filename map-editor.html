@@ -25,7 +25,8 @@
     --shadow: 0 2px 8px rgba(0,0,0,0.12);
     --shadow-strong: 0 4px 12px rgba(0,0,0,0.18);
     --header-h: 52px;
-    --sidebar-w: 360px;
+    --sidebar-w: 280px;
+    --guide-h: 36px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; font-family: 'Noto Sans JP', system-ui, sans-serif; color: var(--text); }
@@ -40,7 +41,7 @@
   .header-left { display: flex; align-items: center; gap: 10px; }
   .header-title { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
   .header-title i { font-size: 20px; }
-  .header-link { color: var(--text-muted); text-decoration: none; font-size: 13px; padding: 6px 10px; border-radius: 6px; }
+  .header-link { color: var(--text-muted); text-decoration: none; font-size: 13px; padding: 6px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
   .header-link:hover { background: #f0f0f0; color: var(--text); }
 
   .sidebar {
@@ -48,51 +49,87 @@
     background: var(--bg-alt); border-right: 1px solid var(--border);
     overflow-y: auto; z-index: 500;
   }
-  .map-area {
+  .stage {
     position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0; bottom: 0;
+    display: flex; flex-direction: column;
   }
-  #map { width: 100%; height: 100%; }
+  .panes { flex: 1; display: flex; min-height: 0; }
+  .pane { flex: 1; position: relative; min-width: 0; }
+  .pane + .pane { border-left: 1px solid var(--border); }
+  .pane-map { width: 100%; height: 100%; background: #f0ece0; }
+  .pane-label {
+    position: absolute; top: 8px; left: 8px; z-index: 600;
+    background: rgba(255,255,255,0.94);
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 500; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: var(--shadow);
+  }
+  .pane-label i { font-size: 14px; }
+  .pane-label.pending { background: var(--amber); color: #fff; }
+
+  .pane-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; color: var(--text-faint); font-size: 13px;
+    background: repeating-linear-gradient(45deg, #fafafa 0 8px, #f0f0f0 8px 16px);
+    z-index: 5;
+  }
+  .pane-empty i { font-size: 32px; display: block; margin-bottom: 8px; color: var(--text-faint); }
+
+  .guide-bar {
+    height: var(--guide-h); background: var(--blue); color: #fff;
+    font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 0 12px;
+    transition: background .2s;
+  }
+  .guide-bar.idle { background: #e5e5e5; color: var(--text-muted); }
+  .guide-bar.success { background: var(--green); }
+  .guide-bar i { font-size: 14px; }
 
   .step {
     border-bottom: 1px solid var(--border);
-    padding: 16px 18px;
+    padding: 14px 16px;
   }
   .step-head {
     display: flex; align-items: center; gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .step-num {
-    width: 24px; height: 24px; border-radius: 50%;
+    width: 22px; height: 22px; border-radius: 50%;
     background: #e5e5e5; color: var(--text-muted);
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 500; flex-shrink: 0;
+    font-size: 11px; font-weight: 500; flex-shrink: 0;
   }
   .step.active .step-num { background: var(--accent); color: #fff; }
   .step.done .step-num { background: var(--green); color: #fff; }
-  .step-title { font-size: 14px; font-weight: 500; }
-  .step-hint { font-size: 12px; color: var(--text-faint); margin-bottom: 10px; line-height: 1.5; }
-  .step-body { padding-left: 34px; }
+  .step.done .step-num::before { content: '\2713'; }
+  .step.done .step-num span { display: none; }
+  .step-title { font-size: 13px; font-weight: 500; }
+  .step-hint { font-size: 11px; color: var(--text-faint); margin-bottom: 8px; line-height: 1.5; }
+  .step-body { padding-left: 32px; }
 
   .form-row { margin-bottom: 10px; }
-  .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .form-label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
   .form-input, .form-select, .form-textarea {
-    width: 100%; padding: 8px 10px; font-size: 13px;
+    width: 100%; padding: 7px 9px; font-size: 12px;
     border: 1px solid var(--border); border-radius: 6px;
     background: #fff; outline: none;
   }
   .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
-  .form-textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+  .form-textarea { resize: vertical; min-height: 50px; font-family: inherit; }
+
   .file-drop {
-    border: 2px dashed var(--border-strong); border-radius: 8px;
-    padding: 24px 12px; text-align: center; cursor: pointer;
+    border: 2px dashed var(--border-strong); border-radius: 6px;
+    padding: 18px 10px; text-align: center; cursor: pointer;
     background: #fff; transition: border-color .15s, background .15s;
   }
   .file-drop:hover, .file-drop.dragover { border-color: var(--accent); background: #fafafa; }
-  .file-drop i { font-size: 24px; color: var(--text-faint); display: block; margin-bottom: 6px; }
-  .file-drop-text { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .file-drop i { font-size: 20px; color: var(--text-faint); display: block; margin-bottom: 4px; }
+  .file-drop-text { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
 
   .btn {
-    padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
     border: 1px solid var(--border-strong); background: #fff; color: var(--text);
     cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
   }
@@ -105,144 +142,130 @@
   .btn-danger { color: var(--red); border-color: var(--red); background: #fff; }
   .btn-danger:hover:not(:disabled) { background: #fbeaea; }
   .btn-block { display: flex; width: 100%; justify-content: center; }
-  .btn-row { display: flex; gap: 8px; }
+  .btn-row { display: flex; gap: 6px; }
   .btn-row .btn { flex: 1; justify-content: center; }
 
-  /* GCP リスト */
-  .gcp-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+  .gcp-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
   .gcp-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px; background: #fff; border: 1px solid var(--border); border-radius: 6px;
-    font-size: 12px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; background: #fff; border: 1px solid var(--border); border-radius: 5px;
+    font-size: 11px;
   }
-  .gcp-num { width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: #fff;
-    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
-  .gcp-item.pending .gcp-num { background: var(--amber); }
-  .gcp-info { flex: 1; min-width: 0; font-size: 11px; color: var(--text-muted); line-height: 1.3; }
-  .gcp-del { background: transparent; border: none; color: var(--text-faint); cursor: pointer; padding: 2px 4px; font-size: 14px; }
-  .gcp-del:hover { color: var(--red); }
-  .gcp-stats { font-size: 11px; color: var(--text-faint); margin-top: 6px; padding: 6px 10px; background: #fff; border-radius: 6px; border: 1px solid var(--border); }
-  .gcp-stats .ok { color: var(--green); }
-  .gcp-stats .warn { color: var(--amber); }
-
-  /* 微調整スライダー */
-  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .slider-row label { font-size: 11px; color: var(--text-muted); width: 60px; flex-shrink: 0; }
-  .slider-row input[type=range] { flex: 1; }
-  .slider-row .val { font-size: 11px; color: var(--text); width: 50px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-
-  /* GCP指定モード時のヒント */
-  #gcp-hint {
-    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  .gcp-item.pending { background: #fff7e6; border-color: var(--amber); }
+  .gcp-num {
+    width: 18px; height: 18px; border-radius: 50%;
     background: var(--blue); color: #fff;
-    padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
-    box-shadow: var(--shadow-strong); z-index: 1100; display: none;
-  }
-  #gcp-hint.show { display: block; }
-  #gcp-hint .step-arrow { margin: 0 8px; opacity: 0.7; }
-
-  /* 古地図小窓 */
-  #img-window {
-    position: absolute; top: 80px; right: 16px; width: 360px;
-    background: #1a1a1a; border-radius: 8px; box-shadow: var(--shadow-strong);
-    overflow: hidden; z-index: 700; display: none;
-  }
-  #img-window.show { display: block; }
-  #img-window-head {
-    background: #2a2a2a; color: #fff; padding: 8px 12px;
-    font-size: 12px; display: flex; justify-content: space-between; align-items: center;
-    cursor: move; user-select: none;
-  }
-  #img-window-head .head-title { display: flex; align-items: center; gap: 6px; }
-  #img-window-close { background: transparent; border: none; color: #fff; cursor: pointer; font-size: 16px; }
-  #img-window-body { position: relative; overflow: hidden; max-height: 380px; }
-  #img-window-body img { display: block; width: 100%; cursor: crosshair; -webkit-user-drag: none; user-select: none; }
-  .img-marker {
-    position: absolute; width: 22px; height: 22px;
-    background: var(--blue); color: #fff;
-    border: 2px solid #fff; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 600;
-    transform: translate(-50%, -50%); pointer-events: none;
-    box-shadow: 0 0 4px rgba(0,0,0,0.6);
+    font-size: 10px; font-weight: 500; flex-shrink: 0;
   }
+  .gcp-item.pending .gcp-num { background: var(--amber); }
+  .gcp-info { flex: 1; min-width: 0; color: var(--text-muted); line-height: 1.3; font-size: 10px; }
+  .gcp-info-line { display: flex; align-items: center; gap: 3px; }
+  .gcp-info-line i { font-size: 10px; }
+  .gcp-info-line.muted { color: var(--text-faint); }
+  .gcp-del { background: transparent; border: none; color: var(--text-faint); cursor: pointer; padding: 2px 4px; font-size: 13px; flex-shrink: 0; }
+  .gcp-del:hover { color: var(--red); }
 
-  /* マップ上のGCPピン */
-  .map-pin {
+  .gcp-stats { font-size: 11px; color: var(--text-faint); margin-top: 8px; padding: 6px 8px; background: #fff; border-radius: 5px; border: 1px solid var(--border); }
+  .gcp-stats .ok { color: var(--green); font-weight: 500; }
+  .gcp-stats .warn { color: var(--amber); font-weight: 500; }
+
+  .slider-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .slider-row label { font-size: 11px; color: var(--text-muted); width: 48px; flex-shrink: 0; }
+  .slider-row input[type=range] { flex: 1; }
+  .slider-row .val { font-size: 11px; color: var(--text); width: 42px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+  details { margin-top: 8px; }
+  details summary { font-size: 11px; color: var(--text-muted); cursor: pointer; padding: 4px 0; }
+  details summary:hover { color: var(--text); }
+
+  /* GCPピンのスタイル（divIcon用） */
+  .gcp-pin {
     background: var(--blue); color: #fff;
     width: 26px; height: 26px; border-radius: 50%;
     border: 2px solid #fff;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600;
     box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    cursor: pointer;
   }
+  .gcp-pin.pending { background: var(--amber); }
 
-  /* Status */
-  .status-bar {
-    position: absolute; bottom: 16px; left: 16px;
-    background: rgba(26,26,26,0.92); color: #fff;
-    padding: 8px 14px; border-radius: 6px; font-size: 12px;
-    z-index: 600; max-width: 60%; opacity: 0; transition: opacity .3s;
-  }
-  .status-bar.show { opacity: 1; }
-
-  /* Toast */
   .toast {
     position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
     background: rgba(26,26,26,0.92); color: #fff;
     padding: 10px 18px; border-radius: 6px; font-size: 13px;
     z-index: 2000; opacity: 0; transition: opacity .3s; pointer-events: none;
+    max-width: 80%; text-align: center;
   }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--red); }
 
-  /* レスポンシブ：モバイル時は2画面切替で */
-  @media (max-width: 768px) {
-    .sidebar { width: 100%; bottom: 50vh; }
-    .map-area { left: 0; top: calc(var(--header-h) + 50vh); }
-    #img-window { top: calc(var(--header-h) + 50vh + 16px); right: 16px; width: 240px; }
+  /* モバイル: 左右並びは厳しいので上下＋タブ切替 */
+  @media (max-width: 900px) {
+    :root { --sidebar-w: 0px; }
+    .sidebar {
+      width: 100%; left: 0; right: 0;
+      top: var(--header-h); bottom: auto; height: 40vh; z-index: 500;
+      transform: translateY(-100%); transition: transform .25s;
+    }
+    body.sidebar-open .sidebar { transform: translateY(0); }
+    .stage { left: 0; }
+    .panes { flex-direction: column; }
+    .pane + .pane { border-left: none; border-top: 1px solid var(--border); }
+    .header-toggle { display: inline-flex !important; }
   }
+  .header-toggle {
+    display: none; width: 32px; height: 32px;
+    border: none; background: transparent; border-radius: 6px;
+    align-items: center; justify-content: center; color: var(--text);
+  }
+  .header-toggle i { font-size: 18px; }
+  .header-toggle:hover { background: #f0f0f0; }
 </style>
 </head>
 <body>
 
 <header class="header">
   <div class="header-left">
-    <a href="/" class="header-link" title="トップへ"><i class="ti ti-arrow-left"></i></a>
+    <button class="header-toggle" id="sidebar-toggle" aria-label="メニュー"><i class="ti ti-menu-2"></i></button>
+    <a href="/" class="header-link" title="トップへ" style="padding-left:0;"><i class="ti ti-arrow-left"></i></a>
     <div class="header-title"><i class="ti ti-map"></i><span>古地図エディタ</span></div>
   </div>
   <div>
-    <a href="/map/" class="header-link"><i class="ti ti-external-link"></i> /map/ で見る</a>
+    <a href="/map/" class="header-link" target="_blank"><i class="ti ti-external-link"></i> /map/</a>
   </div>
 </header>
 
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
 
-  <!-- ステップ 1: 画像をアップロード -->
   <section class="step active" id="step-1">
     <div class="step-head">
-      <div class="step-num">1</div>
+      <div class="step-num"><span>1</span></div>
       <div class="step-title">古地図画像をアップロード</div>
     </div>
     <div class="step-body">
-      <div class="step-hint">JPG / PNG 推奨。最大10MB程度まで。</div>
+      <div class="step-hint">JPG / PNG。15MBまで。</div>
       <div class="file-drop" id="file-drop">
         <i class="ti ti-cloud-upload"></i>
-        <div class="file-drop-text">クリックまたはドラッグ&amp;ドロップ<br>で画像を選択</div>
+        <div class="file-drop-text">クリック or ドラッグ&amp;ドロップ</div>
         <input type="file" id="file-input" accept="image/*" style="display:none;">
       </div>
-      <div id="file-info" style="font-size: 11px; color: var(--green); margin-top: 8px; display: none;"></div>
+      <div id="file-info" style="font-size: 10px; color: var(--green); margin-top: 6px; display: none;"></div>
     </div>
   </section>
 
-  <!-- ステップ 2: 位置合わせ -->
   <section class="step" id="step-2">
     <div class="step-head">
-      <div class="step-num">2</div>
-      <div class="step-title">位置合わせ</div>
+      <div class="step-num"><span>2</span></div>
+      <div class="step-title">基準点を指定（3点以上）</div>
     </div>
     <div class="step-body">
-      <div class="step-hint">古地図と現代地図の同じ場所を <strong>3点以上</strong> 指定します。城跡、神社、川の交差点など特定しやすい点を選びましょう。</div>
+      <div class="step-hint">
+        ① 左の <strong>古地図</strong> で目印をクリック<br>
+        ② 右の <strong>現代地図</strong> で同じ場所をクリック<br>
+        ③ 3点以上で位置合わせ可能
+      </div>
 
       <button class="btn btn-primary btn-block" id="btn-add-gcp" disabled>
         <i class="ti ti-pin"></i> 基準点を追加
@@ -255,17 +278,17 @@
         <button class="btn btn-green" id="btn-apply" disabled>
           <i class="ti ti-check"></i> 位置合わせを適用
         </button>
-        <button class="btn btn-danger" id="btn-clear-gcps" disabled title="基準点をすべて削除">
+        <button class="btn btn-danger" id="btn-clear-gcps" disabled title="すべて削除">
           <i class="ti ti-trash"></i>
         </button>
       </div>
 
-      <details style="margin-top: 14px;">
-        <summary style="font-size: 12px; color: var(--text-muted); cursor: pointer;">手動で微調整</summary>
-        <div style="margin-top: 10px;">
+      <details>
+        <summary>手動で微調整（任意）</summary>
+        <div style="margin-top: 8px;">
           <div class="slider-row">
             <label>透明度</label>
-            <input type="range" id="opa-slider" min="10" max="100" value="70">
+            <input type="range" id="opa-slider" min="10" max="100" value="70" step="1">
             <span class="val" id="opa-val">70%</span>
           </div>
           <div class="slider-row">
@@ -273,16 +296,14 @@
             <input type="range" id="rot-slider" min="-180" max="180" value="0" step="0.5">
             <span class="val" id="rot-val">0°</span>
           </div>
-          <div class="step-hint" style="margin-top: 6px;">画像を地図上で <strong>ドラッグ</strong> して移動、<strong>角の点</strong> でリサイズできます。</div>
         </div>
       </details>
     </div>
   </section>
 
-  <!-- ステップ 3: メタ情報 -->
   <section class="step" id="step-3">
     <div class="step-head">
-      <div class="step-num">3</div>
+      <div class="step-num"><span>3</span></div>
       <div class="step-title">情報を入力</div>
     </div>
     <div class="step-body">
@@ -296,44 +317,51 @@
       </div>
       <div class="form-row">
         <label class="form-label">説明</label>
-        <textarea class="form-textarea" id="meta-desc" placeholder="この地図の特徴や見どころなど"></textarea>
+        <textarea class="form-textarea" id="meta-desc" placeholder="特徴・見どころなど"></textarea>
       </div>
       <div class="form-row">
         <label class="form-label">出典</label>
-        <input type="text" class="form-input" id="meta-source" placeholder="例：国立国会図書館デジタルコレクション">
+        <input type="text" class="form-input" id="meta-source" placeholder="例：国立国会図書館">
       </div>
     </div>
   </section>
 
-  <!-- ステップ 4: 公開 -->
   <section class="step" id="step-4">
     <div class="step-head">
-      <div class="step-num">4</div>
+      <div class="step-num"><span>4</span></div>
       <div class="step-title">公開</div>
     </div>
     <div class="step-body">
       <button class="btn btn-primary btn-block" id="btn-publish" disabled>
         <i class="ti ti-upload"></i> 公開する
       </button>
-      <div class="step-hint" style="margin-top: 8px;">公開すると <a href="/map/" target="_blank">/map/</a> の「古地図」タブから誰でも見られるようになります。</div>
+      <div class="step-hint" style="margin-top: 6px;">/map/ の古地図タブで誰でも見られるようになります。</div>
     </div>
   </section>
 
 </aside>
 
-<main class="map-area">
-  <div id="map"></div>
-  <div id="gcp-hint"></div>
-  <div id="img-window">
-    <div id="img-window-head">
-      <div class="head-title"><i class="ti ti-map"></i> <span>古地図</span></div>
-      <button id="img-window-close" aria-label="閉じる">✕</button>
+<main class="stage">
+  <div class="panes">
+    <div class="pane" id="pane-old">
+      <div class="pane-label" id="label-old"><i class="ti ti-map"></i><span>古地図</span></div>
+      <div class="pane-empty" id="empty-old">
+        <div>
+          <i class="ti ti-photo-up"></i>
+          画像をアップロードすると<br>ここに表示されます
+        </div>
+      </div>
+      <div id="map-old" class="pane-map"></div>
     </div>
-    <div id="img-window-body">
-      <img id="gcp-img" src="" alt="">
+    <div class="pane" id="pane-new">
+      <div class="pane-label" id="label-new"><i class="ti ti-map-2"></i><span>現代地図</span></div>
+      <div id="map-new" class="pane-map"></div>
     </div>
   </div>
-  <div class="status-bar" id="status-bar"></div>
+  <div class="guide-bar idle" id="guide-bar">
+    <i class="ti ti-info-circle"></i>
+    <span id="guide-text">まず画像をアップロードしてください</span>
+  </div>
 </main>
 
 <div class="toast" id="toast" role="status"></div>
@@ -345,41 +373,59 @@
 (function() {
   'use strict';
 
-  // ============ 設定 ============
   const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
   const BUCKET = 'historical-maps';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ============ 状態 ============
+  const $ = id => document.getElementById(id);
+
   const state = {
-    file: null,            // File object
-    imageUrl: null,        // ローカル ObjectURL（プレビュー用）
-    uploadedUrl: null,     // Supabase上の公開URL
-    imageEl: null,         // HTMLImageElement（GCP小窓内）
-    naturalSize: null,     // {w,h}
-    gcps: [],              // [{imgX:0-1, imgY:0-1, mapLat, mapLng}, ...]
-    pendingImg: null,      // GCP入力中：画像クリック済み、地図待ち
-    bounds: null,          // [[s,w],[n,e]]
+    file: null,
+    imageUrl: null,
+    naturalSize: null,         // {w, h}
+    gcps: [],                  // [{imgX, imgY, mapLat, mapLng}] — imgXY: Leaflet CRS.Simple 内のy,x座標
+    pendingOldXY: null,        // [y, x] 古地図上のクリック待ち
+    pendingMapLatLng: null,    // [lat, lng] 現代地図上のクリック待ち
+    addingGcp: false,
     rotationDeg: 0,
     opacity: 0.7,
-    overlay: null,         // L.imageOverlay
-    rotationLayer: null,
-    addingGcp: false,
+    bounds: null,              // 適用後の地理 bounds
+    overlay: null,             // 現代地図側の imageOverlay (プレビュー)
   };
 
-  const $ = id => document.getElementById(id);
-  let map;
-  let mapPins = []; // L.marker[]
+  let mapOld = null;           // 古地図 (CRS.Simple)
+  let mapNew = null;           // 現代地図 (EPSG:3857)
+  let imageOverlayOld = null;  // 古地図側に表示する画像
+  let pinsOld = [];            // 古地図側のGCPピン
+  let pinsNew = [];            // 現代地図側のGCPピン
 
-  // ============ 地図初期化 ============
-  function initMap() {
-    map = L.map('map', { center: [35.6812, 139.7671], zoom: 12 });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    map.on('click', onMapClick);
+  function initMapNew() {
+    mapNew = L.map('map-new', { center: [35.6812, 139.7671], zoom: 12 });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OSM'
+    }).addTo(mapNew);
+    mapNew.on('click', onMapNewClick);
   }
 
-  // ============ 1. ファイル選択 ============
+  function initMapOld(naturalW, naturalH) {
+    if (mapOld) { mapOld.remove(); mapOld = null; }
+    $('empty-old').style.display = 'none';
+
+    mapOld = L.map('map-old', {
+      crs: L.CRS.Simple,
+      minZoom: -4, maxZoom: 4,
+      zoomSnap: 0.25, zoomDelta: 0.5,
+      attributionControl: false,
+      zoomControl: true,
+    });
+    const bounds = [[0, 0], [naturalH, naturalW]];
+    imageOverlayOld = L.imageOverlay(state.imageUrl, bounds).addTo(mapOld);
+    mapOld.fitBounds(bounds);
+    mapOld.setMaxBounds([[-naturalH * 0.5, -naturalW * 0.5], [naturalH * 1.5, naturalW * 1.5]]);
+    mapOld.on('click', onMapOldClick);
+  }
+
   $('file-drop').addEventListener('click', () => $('file-input').click());
   $('file-drop').addEventListener('dragover', e => { e.preventDefault(); $('file-drop').classList.add('dragover'); });
   $('file-drop').addEventListener('dragleave', () => $('file-drop').classList.remove('dragover'));
@@ -397,66 +443,148 @@
     state.file = file;
     state.imageUrl = URL.createObjectURL(file);
 
-    // 自然サイズ取得
     const img = new Image();
     img.onload = () => {
       state.naturalSize = { w: img.naturalWidth, h: img.naturalHeight };
       $('file-info').textContent = `✓ ${file.name} (${img.naturalWidth}×${img.naturalHeight}px, ${(file.size/1024/1024).toFixed(1)}MB)`;
       $('file-info').style.display = 'block';
+      initMapOld(img.naturalWidth, img.naturalHeight);
       $('btn-add-gcp').disabled = false;
       markStepDone(1);
       activateStep(2);
-
-      // 画像小窓を表示
-      $('gcp-img').src = state.imageUrl;
-      $('img-window').classList.add('show');
+      setGuide('idle', '「基準点を追加」を押して、両方の地図で同じ場所をクリックしてください');
     };
     img.src = state.imageUrl;
   }
 
-  // ============ ステップ表示制御 ============
   function markStepDone(n) { $('step-' + n).classList.add('done'); $('step-' + n).classList.remove('active'); }
   function activateStep(n) { $('step-' + n).classList.add('active'); }
 
-  // ============ 2. GCP追加フロー ============
+  function setGuide(type, text) {
+    const bar = $('guide-bar');
+    bar.className = 'guide-bar ' + type;
+    $('guide-text').textContent = text;
+  }
+  function setPaneLabel(which, pending) {
+    const el = which === 'old' ? $('label-old') : $('label-new');
+    el.classList.toggle('pending', !!pending);
+  }
+
   $('btn-add-gcp').addEventListener('click', () => {
     if (!state.file) return;
     state.addingGcp = true;
-    state.pendingImg = null;
-    showHint(`基準点 #${state.gcps.length + 1}：まず左の<strong>古地図画像</strong>をクリックしてください`);
-    $('img-window').classList.add('show');
-  });
-
-  // 古地図画像クリック → 画像座標を取得
-  $('gcp-img').addEventListener('click', (e) => {
-    if (!state.addingGcp) return;
-    const rect = e.target.getBoundingClientRect();
-    const imgX = (e.clientX - rect.left) / rect.width;
-    const imgY = (e.clientY - rect.top) / rect.height;
-    state.pendingImg = { imgX, imgY };
-    showHint(`基準点 #${state.gcps.length + 1}：次に<strong>現代地図</strong>の同じ場所をクリックしてください`);
-    redrawImgMarkers();
-  });
-
-  // 現代地図クリック → 地理座標を取得
-  function onMapClick(e) {
-    if (!state.addingGcp || !state.pendingImg) return;
-    state.gcps.push({
-      imgX: state.pendingImg.imgX,
-      imgY: state.pendingImg.imgY,
-      mapLat: e.latlng.lat,
-      mapLng: e.latlng.lng,
-    });
-    state.pendingImg = null;
-    state.addingGcp = false;
-    hideHint();
+    state.pendingOldXY = null;
+    state.pendingMapLatLng = null;
     refreshGcpUI();
-    drawMapPins();
-    redrawImgMarkers();
-    toast(`基準点 ${state.gcps.length} 点目を追加しました`);
+    setPaneLabel('old', true);
+    setPaneLabel('new', false);
+    setGuide('', `基準点 #${state.gcps.length + 1}：左の【古地図】で目印の場所をクリックしてください`);
+  });
+
+  function onMapOldClick(e) {
+    if (!state.addingGcp) return;
+    state.pendingOldXY = { y: e.latlng.lat, x: e.latlng.lng };
+    setPaneLabel('old', false);
+    setPaneLabel('new', true);
+    drawPinsOld();
+    if (state.pendingMapLatLng) {
+      finalizeGcp();
+    } else {
+      setGuide('', `基準点 #${state.gcps.length + 1}：次に右の【現代地図】で同じ場所をクリックしてください`);
+    }
+  }
+  function onMapNewClick(e) {
+    if (!state.addingGcp) return;
+    state.pendingMapLatLng = { lat: e.latlng.lat, lng: e.latlng.lng };
+    setPaneLabel('new', false);
+    setPaneLabel('old', true);
+    drawPinsNew();
+    if (state.pendingOldXY) {
+      finalizeGcp();
+    } else {
+      setGuide('', `基準点 #${state.gcps.length + 1}：次に左の【古地図】で同じ場所をクリックしてください`);
+    }
   }
 
-  // GCP UI 再描画
+  function finalizeGcp() {
+    const { x, y } = state.pendingOldXY;
+    const { lat, lng } = state.pendingMapLatLng;
+    const w = state.naturalSize.w, h = state.naturalSize.h;
+    state.gcps.push({
+      imgX: x / w,       // 0-1 正規化（既存ロジック互換）
+      imgY: y / h,       // 注意: CRS.Simple は y=0 が下なので、画像座標としての y は (h - y)/h
+      _rawX: x, _rawY: y,
+      mapLat: lat, mapLng: lng,
+    });
+    state.pendingOldXY = null;
+    state.pendingMapLatLng = null;
+    state.addingGcp = false;
+    setPaneLabel('old', false); setPaneLabel('new', false);
+    refreshGcpUI();
+    drawPinsOld(); drawPinsNew();
+    const n = state.gcps.length;
+    if (n < 3) {
+      setGuide('idle', `${n} 点登録済み。あと ${3 - n} 点で位置合わせできます。続けて「基準点を追加」をどうぞ`);
+    } else {
+      setGuide('success', `${n} 点登録済み。「位置合わせを適用」できます。さらに点を増やすと精度が上がります`);
+    }
+  }
+
+  function makePin(num, pending, draggable) {
+    return L.divIcon({
+      className: '',
+      html: `<div class="gcp-pin${pending ? ' pending' : ''}">${num}</div>`,
+      iconSize: [26, 26], iconAnchor: [13, 13],
+    });
+  }
+
+  function drawPinsOld() {
+    if (!mapOld) return;
+    pinsOld.forEach(p => mapOld.removeLayer(p));
+    pinsOld = [];
+    const w = state.naturalSize.w, h = state.naturalSize.h;
+    state.gcps.forEach((g, i) => {
+      const m = L.marker([g._rawY != null ? g._rawY : g.imgY * h, g._rawX != null ? g._rawX : g.imgX * w], {
+        icon: makePin(i + 1, false, true),
+        draggable: true,
+      });
+      m.on('dragend', (ev) => {
+        const ll = ev.target.getLatLng();
+        g._rawY = ll.lat; g._rawX = ll.lng;
+        g.imgX = ll.lng / w; g.imgY = ll.lat / h;
+        refreshGcpUI();
+      });
+      m.addTo(mapOld);
+      pinsOld.push(m);
+    });
+    if (state.addingGcp && state.pendingOldXY) {
+      const num = state.gcps.length + 1;
+      const m = L.marker([state.pendingOldXY.y, state.pendingOldXY.x], { icon: makePin(num, true, false) }).addTo(mapOld);
+      pinsOld.push(m);
+    }
+  }
+
+  function drawPinsNew() {
+    if (!mapNew) return;
+    pinsNew.forEach(p => mapNew.removeLayer(p));
+    pinsNew = [];
+    state.gcps.forEach((g, i) => {
+      const m = L.marker([g.mapLat, g.mapLng], { icon: makePin(i + 1, false, true), draggable: true });
+      m.on('dragend', (ev) => {
+        const ll = ev.target.getLatLng();
+        g.mapLat = ll.lat; g.mapLng = ll.lng;
+        refreshGcpUI();
+      });
+      m.addTo(mapNew);
+      pinsNew.push(m);
+    });
+    if (state.addingGcp && state.pendingMapLatLng) {
+      const num = state.gcps.length + 1;
+      const m = L.marker([state.pendingMapLatLng.lat, state.pendingMapLatLng.lng], { icon: makePin(num, true, false) }).addTo(mapNew);
+      pinsNew.push(m);
+    }
+  }
+
   function refreshGcpUI() {
     const list = $('gcp-list');
     list.innerHTML = '';
@@ -465,15 +593,33 @@
       row.className = 'gcp-item';
       row.innerHTML = `
         <div class="gcp-num">${i + 1}</div>
-        <div class="gcp-info">画像 (${(g.imgX * 100).toFixed(0)}%, ${(g.imgY * 100).toFixed(0)}%)<br>緯度経度 (${g.mapLat.toFixed(5)}, ${g.mapLng.toFixed(5)})</div>
+        <div class="gcp-info">
+          <div class="gcp-info-line"><i class="ti ti-map"></i>${(g.imgX*100).toFixed(1)}%, ${(g.imgY*100).toFixed(1)}%</div>
+          <div class="gcp-info-line muted"><i class="ti ti-map-2"></i>${g.mapLat.toFixed(5)}, ${g.mapLng.toFixed(5)}</div>
+        </div>
         <button class="gcp-del" data-i="${i}" aria-label="削除"><i class="ti ti-x"></i></button>
       `;
       row.querySelector('.gcp-del').addEventListener('click', () => {
         state.gcps.splice(i, 1);
-        refreshGcpUI(); drawMapPins(); redrawImgMarkers();
+        refreshGcpUI(); drawPinsOld(); drawPinsNew();
       });
       list.appendChild(row);
     });
+
+    if (state.addingGcp) {
+      const row = document.createElement('div');
+      row.className = 'gcp-item pending';
+      const num = state.gcps.length + 1;
+      const oldOk = !!state.pendingOldXY, newOk = !!state.pendingMapLatLng;
+      row.innerHTML = `
+        <div class="gcp-num">${num}</div>
+        <div class="gcp-info">
+          <div class="gcp-info-line"><i class="ti ti-map"></i>${oldOk ? '✓ 古地図 OK' : '… 古地図クリック待ち'}</div>
+          <div class="gcp-info-line muted"><i class="ti ti-map-2"></i>${newOk ? '✓ 現代地図 OK' : '… 現代地図クリック待ち'}</div>
+        </div>
+      `;
+      list.appendChild(row);
+    }
 
     $('btn-apply').disabled = state.gcps.length < 3;
     $('btn-clear-gcps').disabled = state.gcps.length === 0;
@@ -483,61 +629,24 @@
       stats.style.display = 'none';
     } else if (state.gcps.length < 3) {
       stats.style.display = 'block';
-      stats.innerHTML = `<span class="warn">あと ${3 - state.gcps.length} 点必要です（最低3点）</span>`;
+      stats.innerHTML = `<span class="warn">あと ${3 - state.gcps.length} 点必要</span>`;
     } else {
       stats.style.display = 'block';
-      stats.innerHTML = `<span class="ok">${state.gcps.length} 点 — 「位置合わせを適用」できます</span>`;
+      stats.innerHTML = `<span class="ok">${state.gcps.length} 点 — 位置合わせ可能</span>`;
     }
   }
 
-  // 画像小窓のGCPマーカー再描画
-  function redrawImgMarkers() {
-    const body = $('img-window-body');
-    body.querySelectorAll('.img-marker').forEach(el => el.remove());
-    const img = $('gcp-img');
-    const w = img.clientWidth, h = img.clientHeight;
-    state.gcps.forEach((g, i) => {
-      const el = document.createElement('div');
-      el.className = 'img-marker';
-      el.textContent = i + 1;
-      el.style.left = (g.imgX * w) + 'px';
-      el.style.top = (g.imgY * h) + 'px';
-      body.appendChild(el);
-    });
-    if (state.pendingImg) {
-      const el = document.createElement('div');
-      el.className = 'img-marker';
-      el.style.background = 'var(--amber)';
-      el.textContent = state.gcps.length + 1;
-      el.style.left = (state.pendingImg.imgX * w) + 'px';
-      el.style.top = (state.pendingImg.imgY * h) + 'px';
-      body.appendChild(el);
-    }
-  }
-
-  // 地図上のピン描画
-  function drawMapPins() {
-    mapPins.forEach(m => map.removeLayer(m));
-    mapPins = [];
-    state.gcps.forEach((g, i) => {
-      const icon = L.divIcon({
-        className: '', html: `<div class="map-pin">${i + 1}</div>`,
-        iconSize: [26, 26], iconAnchor: [13, 13],
-      });
-      const m = L.marker([g.mapLat, g.mapLng], { icon }).addTo(map);
-      mapPins.push(m);
-    });
-  }
-
-  // 全クリア
   $('btn-clear-gcps').addEventListener('click', () => {
     if (state.gcps.length === 0) return;
     if (!confirm('すべての基準点を削除しますか？')) return;
     state.gcps = [];
-    refreshGcpUI(); drawMapPins(); redrawImgMarkers();
+    state.addingGcp = false;
+    state.pendingOldXY = state.pendingMapLatLng = null;
+    refreshGcpUI(); drawPinsOld(); drawPinsNew();
+    setPaneLabel('old', false); setPaneLabel('new', false);
+    setGuide('idle', '基準点をすべて削除しました');
   });
 
-  // ============ 位置合わせ（アフィン変換） ============
   $('btn-apply').addEventListener('click', () => {
     if (state.gcps.length < 3) return;
     const A = state.gcps.map(g => [g.imgX, g.imgY, 1]);
@@ -545,7 +654,7 @@
     const Blat = state.gcps.map(g => g.mapLat);
     const [a, b, c] = lsq3(A, Blng);
     const [d, e, f] = lsq3(A, Blat);
-    const imgToGeo = (x, y) => [d * x + e * y + f, a * x + b * y + c]; // [lat, lng]
+    const imgToGeo = (x, y) => [d * x + e * y + f, a * x + b * y + c];
     const tl = imgToGeo(0, 0), tr = imgToGeo(1, 0), bl = imgToGeo(0, 1), br = imgToGeo(1, 1);
     const lats = [tl[0], tr[0], bl[0], br[0]];
     const lngs = [tl[1], tr[1], bl[1], br[1]];
@@ -555,12 +664,8 @@
     $('rot-slider').value = state.rotationDeg.toFixed(1);
     $('rot-val').textContent = state.rotationDeg.toFixed(0) + '°';
 
-    drawOverlay();
-    markStepDone(2);
-    activateStep(3);
-    $('btn-publish').disabled = false;
+    drawOverlayOnNew();
 
-    // 残差
     let maxResid = 0;
     state.gcps.forEach(g => {
       const [pLat, pLng] = imgToGeo(g.imgX, g.imgY);
@@ -568,8 +673,11 @@
       const dlng = (pLng - g.mapLng) * 91000;
       maxResid = Math.max(maxResid, Math.hypot(dlat, dlng));
     });
-    status(`位置合わせ完了（最大残差 ${maxResid.toFixed(0)}m）`);
-    map.fitBounds(state.bounds, { padding: [40, 40] });
+    markStepDone(2);
+    activateStep(3);
+    $('btn-publish').disabled = false;
+    setGuide('success', `位置合わせ完了（最大残差 ${maxResid.toFixed(0)}m）。情報を入力して公開できます`);
+    mapNew.fitBounds(state.bounds, { padding: [40, 40] });
   });
 
   function lsq3(A, b) {
@@ -598,64 +706,34 @@
     return x;
   }
 
-  // ============ オーバーレイ描画 ============
-  function drawOverlay() {
-    if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
+  function drawOverlayOnNew() {
+    if (state.overlay) { mapNew.removeLayer(state.overlay); state.overlay = null; }
     if (!state.bounds || !state.imageUrl) return;
     state.overlay = L.imageOverlay(state.imageUrl, state.bounds, {
-      opacity: state.opacity,
-      interactive: false,
-    }).addTo(map);
-
-    // 回転CSSは imageOverlay の DOM に直接適用
-    setTimeout(() => {
-      const img = state.overlay.getElement();
-      if (img) {
-        img.style.transform = (img.style.transform || '') + ` rotate(${state.rotationDeg}deg)`;
-        img.style.transformOrigin = 'center';
-      }
-    }, 0);
+      opacity: state.opacity, interactive: false,
+    }).addTo(mapNew);
+    applyRotation();
+  }
+  function applyRotation() {
+    if (!state.overlay) return;
+    const el = state.overlay.getElement();
+    if (el) {
+      el.style.transform = `rotate(${state.rotationDeg}deg)`;
+      el.style.transformOrigin = 'center';
+    }
   }
 
-  // 透明度
   $('opa-slider').addEventListener('input', (e) => {
     state.opacity = parseInt(e.target.value, 10) / 100;
     $('opa-val').textContent = e.target.value + '%';
     if (state.overlay) state.overlay.setOpacity(state.opacity);
   });
-
-  // 回転
   $('rot-slider').addEventListener('input', (e) => {
     state.rotationDeg = parseFloat(e.target.value);
     $('rot-val').textContent = state.rotationDeg.toFixed(0) + '°';
-    if (state.overlay) {
-      const img = state.overlay.getElement();
-      if (img) img.style.transform = `rotate(${state.rotationDeg}deg)`;
-    }
+    applyRotation();
   });
 
-  // ============ 画像小窓のヘッダードラッグ ============
-  (function() {
-    const win = $('img-window');
-    const head = $('img-window-head');
-    let drag = null;
-    head.addEventListener('mousedown', e => {
-      if (e.target.id === 'img-window-close') return;
-      drag = { x: e.clientX, y: e.clientY, left: win.offsetLeft, top: win.offsetTop };
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', e => {
-      if (!drag) return;
-      win.style.left = (drag.left + e.clientX - drag.x) + 'px';
-      win.style.top  = (drag.top  + e.clientY - drag.y) + 'px';
-      win.style.right = 'auto';
-    });
-    document.addEventListener('mouseup', () => { drag = null; });
-  })();
-
-  $('img-window-close').addEventListener('click', () => $('img-window').classList.remove('show'));
-
-  // ============ 4. 公開 ============
   $('btn-publish').addEventListener('click', publish);
 
   async function publish() {
@@ -673,7 +751,6 @@
     btn.innerHTML = '<i class="ti ti-loader"></i> アップロード中…';
 
     try {
-      // 1. 画像をStorageへアップロード
       const ext = (state.file.name.match(/\.(\w+)$/) || ['', 'jpg'])[1].toLowerCase();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await sb.storage.from(BUCKET).upload(path, state.file, {
@@ -684,9 +761,7 @@
 
       const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
       const publicUrl = pub.publicUrl;
-      state.uploadedUrl = publicUrl;
 
-      // 2. maps テーブルへ
       const id = 'hist-' + Date.now();
       const centerLat = (state.bounds[0][0] + state.bounds[1][0]) / 2;
       const centerLng = (state.bounds[0][1] + state.bounds[1][1]) / 2;
@@ -702,22 +777,22 @@
         image_bounds: state.bounds,
         image_rotation: state.rotationDeg,
         image_opacity: state.opacity,
-        gcps: state.gcps,
+        gcps: state.gcps.map(g => ({imgX: g.imgX, imgY: g.imgY, mapLat: g.mapLat, mapLng: g.mapLng})),
         center_lat: Math.round(centerLat * 100000) / 100000,
         center_lng: Math.round(centerLng * 100000) / 100000,
-        zoom_default: map.getZoom(),
+        zoom_default: mapNew.getZoom(),
         sort_order: 100,
       });
       if (insErr) throw new Error('DB登録失敗: ' + insErr.message);
 
-      markStepDone(3);
-      markStepDone(4);
+      markStepDone(3); markStepDone(4);
       btn.innerHTML = '<i class="ti ti-check"></i> 公開完了！';
       btn.style.background = 'var(--green)';
-      toast('公開しました！/map/ の古地図タブで確認できます');
+      toast('公開しました！');
+      setGuide('success', '公開完了 — /map/ の古地図タブから誰でも見られます');
       setTimeout(() => {
         if (confirm('公開完了。/map/ で確認しますか？')) window.location.href = '/map/';
-      }, 1000);
+      }, 1200);
     } catch (e) {
       console.error(e);
       toast(e.message, true);
@@ -726,17 +801,6 @@
     }
   }
 
-  // ============ ユーティリティ ============
-  function showHint(html) { const el = $('gcp-hint'); el.innerHTML = html; el.classList.add('show'); }
-  function hideHint() { $('gcp-hint').classList.remove('show'); }
-  let statusTimer;
-  function status(msg) {
-    const el = $('status-bar');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(statusTimer);
-    statusTimer = setTimeout(() => el.classList.remove('show'), 4000);
-  }
   let toastTimer;
   function toast(msg, isError) {
     const el = $('toast');
@@ -747,13 +811,18 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
   }
 
-  // ============ 起動 ============
-  window.addEventListener('load', initMap);
+  $('sidebar-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('sidebar-open');
+    setTimeout(() => {
+      if (mapOld) mapOld.invalidateSize();
+      if (mapNew) mapNew.invalidateSize();
+    }, 260);
+  });
 
-  // 画像のリサイズに合わせてマーカー再配置
+  window.addEventListener('load', initMapNew);
   window.addEventListener('resize', () => {
-    redrawImgMarkers();
-    if (map) map.invalidateSize();
+    if (mapOld) mapOld.invalidateSize();
+    if (mapNew) mapNew.invalidateSize();
   });
 })();
 </script>
