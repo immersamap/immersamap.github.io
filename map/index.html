@@ -457,12 +457,13 @@
   <!-- Main App -->
   <script>
     // =====================================================
-    // 初期化
+    // Supabase 初期化
     // =====================================================
     const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
-    const { createClient } = window.supabase;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Supabase クライアントを初期化
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // 地図初期化
     const map = L.map('map', {
@@ -549,7 +550,7 @@
 
       try {
         // Supabase から maps テーブルを取得
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('maps')
           .select('*')
           .eq('id', tileId)
