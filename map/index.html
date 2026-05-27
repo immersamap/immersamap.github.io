@@ -562,9 +562,26 @@
       document.querySelectorAll('.layer-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
       document.querySelectorAll('.mobile-layer-card').forEach(el => el.classList.toggle('active', el.dataset.id === id));
 
-      // タイル切替
+      // タイル or 画像オーバーレイ切替
       clearOverlay();
-      if (item.tile) {
+      if (item.imageUrl && item.imageBounds) {
+        // 古地図：画像オーバーレイ
+        state.overlay = L.imageOverlay(item.imageUrl, item.imageBounds, {
+          opacity: state.opacity / 100,
+          interactive: false,
+        }).addTo(map);
+        // 回転を適用
+        if (item.imageRotation) {
+          setTimeout(() => {
+            const el = state.overlay && state.overlay.getElement();
+            if (el) {
+              el.style.transform = (el.style.transform || '') + ` rotate(${item.imageRotation}deg)`;
+              el.style.transformOrigin = 'center';
+            }
+          }, 0);
+        }
+      } else if (item.tile) {
+        // 通常：XYZタイル
         state.overlay = L.tileLayer(item.tile, {
           maxZoom: item.maxZoom || 18,
           opacity: state.opacity / 100,
@@ -579,9 +596,13 @@
       const icon = item.coverage === 'full' ? 'ti-circle-check' : 'ti-alert-circle';
       cov.innerHTML = `<i class="ti ${icon}"></i>カバー範囲：${escapeHtml(item.coverageLabel)}`;
 
-      // 古地図で中心座標があれば移動
-      if (state.category === 'historical' && item.centerLat && item.centerLng) {
-        map.flyTo([item.centerLat, item.centerLng], item.zoom || 15, { duration: 1 });
+      // 古地図で中心座標 or boundsがあれば移動
+      if (state.category === 'historical') {
+        if (item.imageBounds) {
+          map.flyToBounds(item.imageBounds, { duration: 1, padding: [40, 40] });
+        } else if (item.centerLat && item.centerLng) {
+          map.flyTo([item.centerLat, item.centerLng], item.zoom || 15, { duration: 1 });
+        }
       }
     }
 
@@ -618,29 +639,42 @@
     async function loadHistoricalMaps() {
       if (!sb) return;
       try {
+        // tiles_url 形式と image_url 形式の両方を取得
         const { data, error } = await sb
           .from('maps')
-          .select('id,name,era,description,tiles_url,zoom_max,center_lat,center_lng,zoom_default')
+          .select('id,name,era,description,source,tiles_url,zoom_max,center_lat,center_lng,zoom_default,image_url,image_bounds,image_rotation')
           .eq('category', 'historical')
           .eq('is_public', true)
-          .not('tiles_url', 'is', null)
           .order('sort_order', { ascending: true });
         if (error) { console.warn('historical maps query failed:', error); return; }
         if (!data || data.length === 0) return;
 
-        LAYERS.historical.items = data.map(m => ({
-          id: m.id,
-          name: m.name || '古地図',
-          era: m.era || '',
-          tile: m.tiles_url,
-          maxZoom: m.zoom_max || 18,
-          coverage: 'limited',
-          coverageLabel: m.era || '部分',
-          desc: m.description || '',
-          centerLat: m.center_lat,
-          centerLng: m.center_lng,
-          zoom: m.zoom_default,
-        }));
+        LAYERS.historical.items = data
+          .filter(m => m.tiles_url || m.image_url)
+          .map(m => {
+            // image_bounds は jsonb で [[s,w],[n,e]]
+            let bounds = null;
+            if (m.image_bounds) {
+              try { bounds = typeof m.image_bounds === 'string' ? JSON.parse(m.image_bounds) : m.image_bounds; }
+              catch { bounds = null; }
+            }
+            return {
+              id: m.id,
+              name: m.name || '古地図',
+              era: m.era || '',
+              tile: m.tiles_url || null,
+              imageUrl: m.image_url || null,
+              imageBounds: bounds,
+              imageRotation: m.image_rotation || 0,
+              maxZoom: m.zoom_max || 18,
+              coverage: 'limited',
+              coverageLabel: m.era || '部分',
+              desc: m.description || (m.source ? `出典：${m.source}` : ''),
+              centerLat: m.center_lat,
+              centerLng: m.center_lng,
+              zoom: m.zoom_default,
+            };
+          });
 
         if (state.category === 'historical') {
           renderLayerList();
