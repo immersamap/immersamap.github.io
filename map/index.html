@@ -71,8 +71,7 @@
   <script>
     const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
-    const { createClient } = window.supabase;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let map = null;
     const state = {
@@ -87,30 +86,27 @@
     async function initializeApp() {
       document.getElementById('loading-overlay').style.display = 'flex';
       try {
-        // Supabase から layer_categories と maps を取得
-        const { data: categories } = await supabase.from('layer_categories').select('*').order('display_order');
-        const { data: maps } = await supabase.from('maps').select('*').eq('is_visible', true);
+        const { data: categories } = await sb.from('layer_categories').select('*').order('display_order');
+        const { data: maps } = await sb.from('maps').select('*').eq('is_visible', true);
 
         state.categories = categories || [];
         state.mapsByCategory = {};
         
-        (maps || []).forEach(map => {
-          if (!state.mapsByCategory[map.category]) {
-            state.mapsByCategory[map.category] = [];
+        (maps || []).forEach(m => {
+          if (!state.mapsByCategory[m.category]) {
+            state.mapsByCategory[m.category] = [];
           }
-          state.mapsByCategory[map.category].push(map);
+          state.mapsByCategory[m.category].push(m);
         });
 
         if (state.categories.length > 0) {
           state.currentCategory = state.categories[0].category;
         }
 
-        // 地図初期化
         if (map) map.remove();
         map = L.map('map', { center: [36.5, 139.5], zoom: 9 });
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-        // UI 構築
         buildUI();
         updateLayerDisplay();
 
