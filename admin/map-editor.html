@@ -84,6 +84,10 @@ input[type=range]{width:100%;accent-color:var(--gold);}
 .overlay-handle.h-ne{top:-7px;right:-7px;cursor:nesw-resize;}
 .overlay-handle.h-sw{bottom:-7px;left:-7px;cursor:nesw-resize;}
 .overlay-handle.h-se{bottom:-7px;right:-7px;cursor:nwse-resize;}
+.overlay-handle.h-n{top:-7px;left:50%;margin-left:-7px;cursor:ns-resize;}
+.overlay-handle.h-s{bottom:-7px;left:50%;margin-left:-7px;cursor:ns-resize;}
+.overlay-handle.h-e{top:50%;right:-7px;margin-top:-7px;cursor:ew-resize;}
+.overlay-handle.h-w{top:50%;left:-7px;margin-top:-7px;cursor:ew-resize;}
 .overlay-handle.h-rot{top:-30px;left:50%;margin-left:-7px;cursor:grab;background:var(--blue);}
 .overlay-handle.h-rot::before{content:"";position:absolute;left:50%;top:14px;width:1px;height:16px;background:var(--blue);transform:translateX(-50%);}
 
@@ -586,6 +590,10 @@ function createOverlay(src) {
     <div class="overlay-handle h-ne"></div>
     <div class="overlay-handle h-sw"></div>
     <div class="overlay-handle h-se"></div>
+    <div class="overlay-handle h-n"></div>
+    <div class="overlay-handle h-s"></div>
+    <div class="overlay-handle h-e"></div>
+    <div class="overlay-handle h-w"></div>
     <div class="overlay-handle h-rot"></div>
   `;
   map.getPanes().overlayPane.appendChild(wrap);
@@ -654,7 +662,7 @@ function attachOverlayInteractions() {
     document.body.style.cursor = 'move';
   });
 
-  // 四隅ハンドルでリサイズ
+  // 四隅ハンドルでリサイズ（アスペクト比維持）
   ['nw','ne','sw','se'].forEach(corner => {
     const handle = wrap.querySelector('.h-'+corner);
     handle.addEventListener('mousedown', e => {
@@ -663,8 +671,23 @@ function attachOverlayInteractions() {
       map.dragging.disable();
       dragStart = {x:e.clientX, y:e.clientY,
                    bounds:JSON.parse(JSON.stringify(overlayState.bounds)),
-                   corner};
+                   corner, maintainAspect: true};
     });
+  });
+
+  // 辺ハンドル（上下左右）でリサイズ（アスペクト比変更可）
+  ['n','s','e','w'].forEach(side => {
+    const handle = wrap.querySelector('.h-'+side);
+    if (handle) {
+      handle.addEventListener('mousedown', e => {
+        if (currentMode !== 'B') return;
+        e.preventDefault(); e.stopPropagation();
+        map.dragging.disable();
+        dragStart = {x:e.clientX, y:e.clientY,
+                     bounds:JSON.parse(JSON.stringify(overlayState.bounds)),
+                     side, maintainAspect: false};
+      });
+    }
   });
 
   // 回転ハンドル
@@ -698,12 +721,40 @@ function attachOverlayInteractions() {
     const pSW = map.latLngToContainerPoint([sw[0], sw[1]]);
     const pNE = map.latLngToContainerPoint([ne[0], ne[1]]);
     if (dragStart.corner) {
-      // リサイズ
+      // 四隅ハンドル：アスペクト比維持
       let nL = pSW.x, nR = pNE.x, nT = pNE.y, nB = pSW.y;
+      const origW = Math.abs(pNE.x - pSW.x);
+      const origH = Math.abs(pNE.y - pSW.y);
+      const aspectRatio = origW / origH;
+      
       if (dragStart.corner.includes('w')) nL = pSW.x + dx;
       if (dragStart.corner.includes('e')) nR = pNE.x + dx;
       if (dragStart.corner.includes('n')) nT = pNE.y + dy;
       if (dragStart.corner.includes('s')) nB = pSW.y + dy;
+      
+      const newW = Math.abs(nR - nL);
+      const newH = Math.abs(nB - nT);
+      
+      // アスペクト比を維持（高さに合わせて幅を調整）
+      if (dragStart.maintainAspect) {
+        const correctedW = newH * aspectRatio;
+        const diff = correctedW - newW;
+        if (dragStart.corner.includes('w')) nL -= diff / 2;
+        if (dragStart.corner.includes('e')) nR += diff / 2;
+      }
+      
+      // ピクセル→地理
+      const newSW = map.containerPointToLatLng([Math.min(nL,nR), Math.max(nT,nB)]);
+      const newNE = map.containerPointToLatLng([Math.max(nL,nR), Math.min(nT,nB)]);
+      overlayState.bounds = [[newSW.lat, newSW.lng], [newNE.lat, newNE.lng]];
+    } else if (dragStart.side) {
+      // 辺ハンドル：アスペクト比変更可
+      let nL = pSW.x, nR = pNE.x, nT = pNE.y, nB = pSW.y;
+      if (dragStart.side === 'w') nL = pSW.x + dx;
+      if (dragStart.side === 'e') nR = pNE.x + dx;
+      if (dragStart.side === 'n') nT = pNE.y + dy;
+      if (dragStart.side === 's') nB = pSW.y + dy;
+      
       // ピクセル→地理
       const newSW = map.containerPointToLatLng([Math.min(nL,nR), Math.max(nT,nB)]);
       const newNE = map.containerPointToLatLng([Math.max(nL,nR), Math.min(nT,nB)]);
