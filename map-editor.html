@@ -376,7 +376,8 @@
 
   const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
-  const BUCKET = 'historical-maps';
+  const BUCKET = 'map-tiles';
+  const BUCKET_PREFIX = 'historical/';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const $ = id => document.getElementById(id);
@@ -753,7 +754,7 @@
 
     try {
       const ext = (state.file.name.match(/\.(\w+)$/) || ['', 'jpg'])[1].toLowerCase();
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const path = BUCKET_PREFIX + `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await sb.storage.from(BUCKET).upload(path, state.file, {
         contentType: state.file.type,
         upsert: false,
