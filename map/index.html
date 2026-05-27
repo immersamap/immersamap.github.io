@@ -12,8 +12,8 @@
     .header-title { font-size: 18px; font-weight: bold; }
     .header-menu-btn { width: 40px; height: 40px; border: none; background: none; cursor: pointer; color: #fff; font-size: 24px; }
     #map { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; width: 100%; height: calc(100% - 56px); }
-    .time-selector-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.98); border-top: 1px solid #ddd; z-index: 500; padding: 16px; max-height: 200px; overflow-y: auto; transition: max-height 0.3s; }
-    .time-selector-panel.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
+    .time-selector-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.98); border-top: 1px solid #ddd; z-index: 500; padding: 16px; max-height: 260px; overflow-y: auto; transition: max-height 0.3s; }
+    .time-selector-panel.collapsed { max-height: 0; padding: 0; opacity: 0; pointer-events: none; }
     .current-layer-display { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
     .current-layer-name { display: block; font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 4px; }
     .current-layer-subtitle { font-size: 12px; color: #888; }
@@ -31,12 +31,16 @@
     .layer-btn { flex: 1; min-width: 100px; padding: 10px 12px; border: 2px solid #ddd; background: #f9f9f9; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; color: #333; text-align: center; }
     .layer-btn:hover { border-color: #3498db; background: #ecf0f1; }
     .layer-btn.active { background: #3498db; color: #fff; border-color: #3498db; }
-    .current-location-btn { position: fixed; bottom: 220px; right: 16px; width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 1px solid #ddd; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 400; }
+    .coverage-warning { font-size: 11px; color: #c0392b; margin-top: 4px; font-weight: 500; }
+    .current-location-btn { position: fixed; bottom: 280px; right: 16px; width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 1px solid #ddd; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 400; }
     .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
     .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .toast { position: fixed; bottom: 16px; left: 16px; background: #2c3e50; color: #fff; padding: 12px 16px; border-radius: 4px; font-size: 14px; z-index: 1500; opacity: 0; }
-    @media (min-width: 769px) { .time-selector-panel { position: fixed; bottom: 16px; right: 16px; left: auto; width: 320px; border-radius: 8px; border: 1px solid #ddd; max-height: 400px; } .current-location-btn { bottom: 340px; } }
+    .toast { position: fixed; bottom: 16px; left: 16px; background: #2c3e50; color: #fff; padding: 12px 16px; border-radius: 4px; font-size: 14px; z-index: 1500; opacity: 0; transition: opacity .3s; }
+    @media (min-width: 769px) {
+      .time-selector-panel { position: fixed; bottom: 16px; right: 16px; left: auto; width: 340px; border-radius: 8px; border: 1px solid #ddd; max-height: 460px; }
+      .current-location-btn { bottom: 500px; }
+    }
   </style>
 </head>
 <body>
@@ -45,16 +49,17 @@
     <button class="header-menu-btn" id="menu-btn">≡</button>
   </div>
   <div id="map"></div>
-  <button class="current-location-btn" id="current-location-btn">📍</button>
+  <button class="current-location-btn" id="current-location-btn" title="現在地">📍</button>
   <div class="time-selector-panel" id="time-selector-panel">
     <div class="current-layer-display">
-      <span class="current-layer-name" id="current-layer-name">読み込み中...</span>
+      <span class="current-layer-name" id="current-layer-name">準備中...</span>
       <span class="current-layer-subtitle" id="current-layer-subtitle">OpenStreetMap</span>
+      <div class="coverage-warning" id="coverage-warning" style="display:none;"></div>
     </div>
     <div class="time-selector-controls">
-      <button class="time-btn" id="prev-time-btn">◀</button>
-      <div class="time-current" id="time-current">読み込み中...</div>
-      <button class="time-btn" id="next-time-btn">▶</button>
+      <button class="time-btn" id="prev-time-btn" title="前の年代">◀</button>
+      <div class="time-current" id="time-current">—</div>
+      <button class="time-btn" id="next-time-btn" title="次の年代">▶</button>
     </div>
     <div class="opacity-control">
       <div class="opacity-label"><span>表示の濃さ</span><span id="opacity-value">70%</span></div>
@@ -62,133 +67,226 @@
     </div>
     <div class="layer-buttons" id="layer-buttons"></div>
   </div>
-  <div class="loading-overlay" id="loading-overlay"><div class="spinner"></div></div>
+  <div class="loading-overlay" id="loading-overlay" style="display:none;"><div class="spinner"></div></div>
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
+    // =====================================================
+    // 設定
+    // =====================================================
     const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-    let map = null;
-    const state = {
-      currentCategory: null,
-      currentTimeIndex: 0,
-      currentOpacity: 70,
-      overlayTile: null,
-      categories: [],
-      mapsByCategory: {}
+    // =====================================================
+    // レイヤー定義（ハンドオフ文書の確定版に基づく）
+    // DB非依存。常に表示できることを保証する。
+    // =====================================================
+    const LAYERS = {
+      aerial: {
+        name: '空中写真',
+        icon: '✈️',
+        times: [
+          { name: '最新',           era: '2004年〜',    tile: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxZoom: 18, coverage: '全国' },
+          { name: '1980年代後半',   era: '1987〜1990年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo4/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '大都市圏' },
+          { name: '1980年代中頃',   era: '1984〜1986年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '大都市圏' },
+          { name: '1980年代前半',   era: '1979〜1983年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '大都市圏' },
+          { name: '1970年代',       era: '1974〜1978年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '全国' },
+          { name: '1960年代',       era: '1961〜1969年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom: 17, coverage: '全国' },
+          { name: '1940年代',       era: '1945〜1950年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom: 17, coverage: '主要都市' },
+          { name: '1930年代',       era: '1936〜1942年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom: 17, coverage: '東京・大阪のみ' },
+          { name: '1928年頃',       era: '1928年',       tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom: 18, coverage: '大阪市域のみ' },
+        ]
+      },
+      terrain: {
+        name: '地形・標高',
+        icon: '⛰',
+        times: [
+          { name: '色別標高図',  era: '現代', tile: 'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',        maxZoom: 15, coverage: '全国' },
+          { name: '陰影起伏図',  era: '現代', tile: 'https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',  maxZoom: 16, coverage: '全国' },
+        ]
+      },
+      historical: {
+        name: '古地図',
+        icon: '🗾',
+        times: [] // Supabaseから動的にロード
+      },
     };
 
-    async function initializeApp() {
-      document.getElementById('loading-overlay').style.display = 'flex';
+    // =====================================================
+    // 状態管理
+    // =====================================================
+    let map = null;
+    let overlayTile = null;
+    const state = {
+      currentLayer: 'aerial',
+      currentTimeIndex: 0,
+      currentOpacity: 70,
+    };
+
+    // =====================================================
+    // 初期化
+    // =====================================================
+    async function init() {
+      // 地図初期化
+      map = L.map('map', { center: [35.6812, 139.7671], zoom: 12, zoomControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      // 古地図（DB）を非同期でロード（失敗してもアプリは動く）
+      loadHistoricalMapsFromDB().catch(e => console.warn('Historical maps load skipped:', e));
+
+      // UI構築
+      buildLayerButtons();
+      updateLayerDisplay();
+    }
+
+    async function loadHistoricalMapsFromDB() {
+      if (!sb) return;
       try {
-        const { data: categories } = await sb.from('layer_categories').select('*').order('display_order');
-        const { data: maps } = await sb.from('maps').select('*').eq('is_visible', true);
+        const { data, error } = await sb
+          .from('maps')
+          .select('id,name,era,description,tiles_url,zoom_max,center_lat,center_lng')
+          .eq('category', 'historical')
+          .eq('is_public', true)
+          .not('tiles_url', 'is', null)
+          .order('sort_order', { ascending: true });
+        if (error) { console.warn('DB query error (historical):', error); return; }
+        if (!data || data.length === 0) return;
 
-        state.categories = categories || [];
-        state.mapsByCategory = {};
-        
-        (maps || []).forEach(m => {
-          if (!state.mapsByCategory[m.category]) {
-            state.mapsByCategory[m.category] = [];
-          }
-          state.mapsByCategory[m.category].push(m);
-        });
+        LAYERS.historical.times = data.map(m => ({
+          name: m.name || '古地図',
+          era: m.era || '',
+          tile: m.tiles_url,
+          maxZoom: m.zoom_max || 18,
+          coverage: m.description || '',
+          centerLat: m.center_lat,
+          centerLng: m.center_lng,
+        }));
 
-        if (state.categories.length > 0) {
-          state.currentCategory = state.categories[0].category;
-        }
-
-        if (map) map.remove();
-        map = L.map('map', { center: [36.5, 139.5], zoom: 9 });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-
-        buildUI();
-        updateLayerDisplay();
-
+        // すでに「古地図」表示中なら更新
+        if (state.currentLayer === 'historical') updateLayerDisplay();
+        // ボタンの説明テキストを更新
+        buildLayerButtons();
       } catch (e) {
-        console.error('Init error:', e);
-        showToast('初期化失敗');
-      } finally {
-        document.getElementById('loading-overlay').style.display = 'none';
+        console.warn('Historical maps fetch failed:', e);
       }
     }
 
-    function buildUI() {
+    // =====================================================
+    // UI
+    // =====================================================
+    function buildLayerButtons() {
       const container = document.getElementById('layer-buttons');
       container.innerHTML = '';
-      
-      state.categories.forEach((cat, i) => {
+      Object.entries(LAYERS).forEach(([key, layer]) => {
         const btn = document.createElement('button');
-        btn.className = 'layer-btn' + (i === 0 ? ' active' : '');
-        btn.dataset.category = cat.category;
-        btn.innerHTML = `${cat.emoji} ${cat.display_name}`;
-        btn.addEventListener('click', () => selectCategory(cat.category));
+        btn.className = 'layer-btn' + (key === state.currentLayer ? ' active' : '');
+        btn.dataset.layer = key;
+        const count = layer.times.length;
+        btn.innerHTML = `${layer.icon} ${layer.name}` + (count > 0 ? `<br><small>(${count}件)</small>` : '<br><small>(準備中)</small>');
+        btn.addEventListener('click', () => selectLayer(key));
         container.appendChild(btn);
       });
     }
 
-    function selectCategory(category) {
-      state.currentCategory = category;
+    function selectLayer(key) {
+      if (!LAYERS[key]) return;
+      if (LAYERS[key].times.length === 0) {
+        showToast(`${LAYERS[key].name}はまだ準備中です`);
+        return;
+      }
+      state.currentLayer = key;
       state.currentTimeIndex = 0;
-      document.querySelectorAll('.layer-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.category === category);
+      document.querySelectorAll('.layer-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.layer === key);
       });
       updateLayerDisplay();
     }
 
     function updateLayerDisplay() {
-      const maps = state.mapsByCategory[state.currentCategory] || [];
-      if (maps.length === 0) return;
+      const layer = LAYERS[state.currentLayer];
+      if (!layer || layer.times.length === 0) {
+        document.getElementById('current-layer-name').textContent = '準備中';
+        document.getElementById('time-current').textContent = '—';
+        document.getElementById('prev-time-btn').disabled = true;
+        document.getElementById('next-time-btn').disabled = true;
+        if (overlayTile) { map.removeLayer(overlayTile); overlayTile = null; }
+        return;
+      }
 
-      const m = maps[state.currentTimeIndex];
-      const cat = state.categories.find(c => c.category === state.currentCategory);
+      // 範囲外なら戻す
+      if (state.currentTimeIndex >= layer.times.length) state.currentTimeIndex = layer.times.length - 1;
+      if (state.currentTimeIndex < 0) state.currentTimeIndex = 0;
 
-      document.getElementById('current-layer-name').textContent = `${cat.emoji} ${m.name}`;
-      document.getElementById('current-layer-subtitle').textContent = `${cat.display_name}`;
-      document.getElementById('time-current').textContent = m.name;
+      const t = layer.times[state.currentTimeIndex];
+      document.getElementById('current-layer-name').textContent = `${layer.icon} ${t.name}`;
+      document.getElementById('current-layer-subtitle').textContent = `${layer.name} / ${t.era || ''}`;
+      document.getElementById('time-current').textContent = t.era || t.name;
       document.getElementById('prev-time-btn').disabled = state.currentTimeIndex === 0;
-      document.getElementById('next-time-btn').disabled = state.currentTimeIndex === maps.length - 1;
+      document.getElementById('next-time-btn').disabled = state.currentTimeIndex === layer.times.length - 1;
 
-      if (state.overlayTile) map.removeLayer(state.overlayTile);
-      if (m.tiles_url) {
-        state.overlayTile = L.tileLayer(m.tiles_url, { opacity: state.currentOpacity / 100, maxZoom: m.zoom_max || 19 }).addTo(map);
+      // カバレッジ警告
+      const warn = document.getElementById('coverage-warning');
+      if (t.coverage && (t.coverage.includes('のみ') || t.coverage.includes('主要都市') || t.coverage.includes('大都市圏'))) {
+        warn.textContent = `⚠ カバー範囲：${t.coverage}`;
+        warn.style.display = 'block';
+      } else if (t.coverage) {
+        warn.textContent = `カバー範囲：${t.coverage}`;
+        warn.style.display = 'block';
+        warn.style.color = '#27ae60';
+      } else {
+        warn.style.display = 'none';
+      }
+      // 元の色に戻す
+      if (t.coverage && !(t.coverage.includes('のみ') || t.coverage.includes('主要都市') || t.coverage.includes('大都市圏'))) {
+        warn.style.color = '#27ae60';
+      } else {
+        warn.style.color = '#c0392b';
+      }
+
+      // タイル更新
+      if (overlayTile) { map.removeLayer(overlayTile); overlayTile = null; }
+      if (t.tile) {
+        overlayTile = L.tileLayer(t.tile, {
+          maxZoom: t.maxZoom || 18,
+          opacity: state.currentOpacity / 100,
+          attribution: '国土地理院'
+        }).addTo(map);
+      }
+
+      // 古地図で中心座標があれば移動
+      if (state.currentLayer === 'historical' && t.centerLat && t.centerLng) {
+        map.flyTo([t.centerLat, t.centerLng], 15, { duration: 1 });
       }
     }
 
+    // =====================================================
+    // イベント
+    // =====================================================
     document.getElementById('prev-time-btn').addEventListener('click', () => {
-      const maps = state.mapsByCategory[state.currentCategory] || [];
-      if (state.currentTimeIndex > 0) {
-        state.currentTimeIndex--;
-        updateLayerDisplay();
-      }
+      if (state.currentTimeIndex > 0) { state.currentTimeIndex--; updateLayerDisplay(); }
     });
-
     document.getElementById('next-time-btn').addEventListener('click', () => {
-      const maps = state.mapsByCategory[state.currentCategory] || [];
-      if (state.currentTimeIndex < maps.length - 1) {
-        state.currentTimeIndex++;
-        updateLayerDisplay();
-      }
+      const layer = LAYERS[state.currentLayer];
+      if (state.currentTimeIndex < layer.times.length - 1) { state.currentTimeIndex++; updateLayerDisplay(); }
     });
-
     document.getElementById('opacity-slider').addEventListener('input', (e) => {
-      state.currentOpacity = parseInt(e.target.value);
+      state.currentOpacity = parseInt(e.target.value, 10);
       document.getElementById('opacity-value').textContent = state.currentOpacity + '%';
-      if (state.overlayTile) state.overlayTile.setOpacity(state.currentOpacity / 100);
+      if (overlayTile) overlayTile.setOpacity(state.currentOpacity / 100);
     });
-
     document.getElementById('current-location-btn').addEventListener('click', () => {
-      navigator.geolocation.getCurrentPosition(p => {
-        map.flyTo([p.coords.latitude, p.coords.longitude], 13);
-        showToast('現在地に移動');
-      });
+      if (!navigator.geolocation) { showToast('位置情報が使えません'); return; }
+      navigator.geolocation.getCurrentPosition(
+        p => { map.flyTo([p.coords.latitude, p.coords.longitude], 14); showToast('現在地に移動'); },
+        () => showToast('現在地を取得できませんでした')
+      );
     });
-
     document.getElementById('menu-btn').addEventListener('click', () => {
       document.getElementById('time-selector-panel').classList.toggle('collapsed');
     });
@@ -197,10 +295,14 @@
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.style.opacity = '1';
-      setTimeout(() => t.style.opacity = '0', 3000);
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
     }
 
-    window.addEventListener('load', initializeApp);
+    // =====================================================
+    // 起動
+    // =====================================================
+    window.addEventListener('load', init);
   </script>
 </body>
 </html>
