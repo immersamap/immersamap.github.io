@@ -3,306 +3,594 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImmersaMap - 古い地図と現在の地図を重ね合わせる</title>
+  <meta name="description" content="古い空中写真・古地図・地形図を現代地図と重ね合わせて、時を遡る地図体験">
+  <title>ImmersaMap — 時を遡る地図体験</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Noto Sans JP', 'Segoe UI', sans-serif; background: #f5f5f5; height: 100vh; overflow: hidden; }
-    .header { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .header-title { font-size: 18px; font-weight: bold; }
-    .header-menu-btn { width: 40px; height: 40px; border: none; background: none; cursor: pointer; color: #fff; font-size: 24px; }
-    #map { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; width: 100%; height: calc(100% - 56px); }
-    .time-selector-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.98); border-top: 1px solid #ddd; z-index: 500; padding: 16px; max-height: 260px; overflow-y: auto; transition: max-height 0.3s; }
-    .time-selector-panel.collapsed { max-height: 0; padding: 0; opacity: 0; pointer-events: none; }
-    .current-layer-display { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
-    .current-layer-name { display: block; font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 4px; }
-    .current-layer-subtitle { font-size: 12px; color: #888; }
-    .time-selector-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .time-btn { background: #3498db; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
-    .time-btn:hover:not(:disabled) { background: #2980b9; }
-    .time-btn:disabled { background: #bdc3c7; cursor: not-allowed; opacity: 0.6; }
-    .time-current { flex: 1; text-align: center; font-size: 14px; font-weight: 500; color: #2c3e50; }
-    .opacity-control { margin-bottom: 12px; }
-    .opacity-label { font-size: 12px; color: #666; margin-bottom: 4px; display: flex; justify-content: space-between; }
-    .opacity-slider { width: 100%; height: 4px; border-radius: 2px; background: #ddd; -webkit-appearance: none; appearance: none; }
-    .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3498db; cursor: pointer; }
-    .opacity-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #3498db; cursor: pointer; border: none; }
-    .layer-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    .layer-btn { flex: 1; min-width: 100px; padding: 10px 12px; border: 2px solid #ddd; background: #f9f9f9; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; color: #333; text-align: center; }
-    .layer-btn:hover { border-color: #3498db; background: #ecf0f1; }
-    .layer-btn.active { background: #3498db; color: #fff; border-color: #3498db; }
-    .coverage-warning { font-size: 11px; color: #c0392b; margin-top: 4px; font-weight: 500; }
-    .current-location-btn { position: fixed; bottom: 280px; right: 16px; width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 1px solid #ddd; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 400; }
-    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .toast { position: fixed; bottom: 16px; left: 16px; background: #2c3e50; color: #fff; padding: 12px 16px; border-radius: 4px; font-size: 14px; z-index: 1500; opacity: 0; transition: opacity .3s; }
-    @media (min-width: 769px) {
-      .time-selector-panel { position: fixed; bottom: 16px; right: 16px; left: auto; width: 340px; border-radius: 8px; border: 1px solid #ddd; max-height: 460px; }
-      .current-location-btn { bottom: 500px; }
+    :root {
+      --bg: #ffffff;
+      --bg-alt: #fafafa;
+      --border: #e5e5e5;
+      --border-strong: #d0d0d0;
+      --text: #1a1a1a;
+      --text-muted: #555;
+      --text-faint: #888;
+      --accent: #1a1a1a;
+      --accent-on: #ffffff;
+      --green-bg: #e8f5ee;
+      --green-fg: #2d8659;
+      --amber-bg: #faecd9;
+      --amber-fg: #b8651e;
+      --red-bg: #f5dedd;
+      --red-fg: #a32d2d;
+      --shadow: 0 2px 8px rgba(0,0,0,0.15);
+      --shadow-strong: 0 4px 12px rgba(0,0,0,0.15);
+      --header-h: 52px;
+      --sidebar-w: 240px;
+      --mobile-tabs-h: 60px;
+      --mobile-list-h: 168px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'Noto Sans JP', 'Segoe UI', system-ui, sans-serif; color: var(--text); background: var(--bg); }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* ============ ヘッダー ============ */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+      background: #fff; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; z-index: 1000;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-toggle {
+      width: 36px; height: 36px; border: none; background: transparent; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text); font-size: 20px;
+    }
+    .header-toggle:hover { background: #f0f0f0; }
+    .header-title { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .header-title i { font-size: 20px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-link { color: var(--text-muted); text-decoration: none; font-size: 13px; padding: 6px 8px; border-radius: 6px; }
+    .header-link:hover { background: #f0f0f0; color: var(--text); }
+    @media (max-width: 768px) {
+      .header-link { display: none; }
+      .header-title { font-size: 15px; }
+    }
+
+    /* ============ サイドバー（PC） ============ */
+    .sidebar {
+      position: fixed; top: var(--header-h); left: 0; bottom: 0; width: var(--sidebar-w);
+      background: var(--bg-alt); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; z-index: 500;
+      transition: transform .25s ease;
+    }
+    body.sidebar-collapsed .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+    .tabs {
+      display: flex; padding: 8px 8px 0; gap: 4px;
+      border-bottom: 1px solid var(--border); background: var(--bg-alt);
+    }
+    .tab {
+      flex: 1; padding: 10px 4px; border: none; background: transparent;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      font-size: 11px; color: var(--text-faint);
+      border-radius: 6px 6px 0 0; border-bottom: 2px solid transparent;
+    }
+    .tab i { font-size: 18px; }
+    .tab:hover { background: #f0f0f0; color: var(--text); }
+    .tab.active {
+      background: #fff; color: var(--text); font-weight: 500;
+      border: 1px solid var(--border); border-bottom: 1px solid #fff;
+      margin-bottom: -1px;
+    }
+    .tab.active i { color: var(--text); }
+
+    .sidebar-header { padding: 14px 14px 6px; font-size: 11px; color: var(--text-faint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .sidebar-list { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
+    .layer-item {
+      width: 100%; text-align: left; padding: 10px; background: transparent;
+      border: none; border-radius: 8px; display: flex; justify-content: space-between;
+      align-items: center; gap: 8px; margin-bottom: 2px; color: var(--text);
+    }
+    .layer-item:hover { background: #f0f0f0; }
+    .layer-item.active { background: var(--accent); color: var(--accent-on); }
+    .layer-item.active .layer-name { color: var(--accent-on); font-weight: 500; }
+    .layer-item.active .layer-era { color: #bbb; }
+    .layer-name { font-size: 13px; color: var(--text); }
+    .layer-era { font-size: 10px; color: var(--text-faint); margin-top: 1px; }
+    .coverage-badge {
+      font-size: 9px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+    }
+    .coverage-badge.full { background: var(--green-bg); color: var(--green-fg); }
+    .coverage-badge.partial { background: var(--amber-bg); color: var(--amber-fg); }
+    .coverage-badge.limited { background: var(--red-bg); color: var(--red-fg); }
+    .layer-item.active .coverage-badge.full { background: #b8e2c8; color: #0a4a2c; }
+    .layer-item.active .coverage-badge.partial { background: #f0c898; color: #5a3010; }
+    .layer-item.active .coverage-badge.limited { background: #f0a8a8; color: #5a0a0a; }
+    .empty-msg { padding: 20px 14px; font-size: 12px; color: var(--text-faint); text-align: center; line-height: 1.5; }
+
+    /* ============ 地図エリア ============ */
+    .map-area {
+      position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0; bottom: 0;
+      transition: left .25s ease;
+    }
+    body.sidebar-collapsed .map-area { left: 0; }
+    #map { width: 100%; height: 100%; background: #e8e4d8; }
+
+    /* ============ 「いま見ているもの」カード ============ */
+    .now-card {
+      position: absolute; top: 16px; left: 16px;
+      background: rgba(255,255,255,0.96); border-radius: 10px; padding: 12px 16px;
+      box-shadow: var(--shadow-strong); max-width: 280px; z-index: 400;
+    }
+    .now-card-label { font-size: 10px; color: var(--text-faint); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .now-card-name { font-size: 16px; font-weight: 500; color: var(--text); line-height: 1.3; margin-bottom: 4px; }
+    .now-card-meta { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+    .now-card-coverage { font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .now-card-coverage.ok { color: var(--green-fg); }
+    .now-card-coverage.warn { color: var(--amber-fg); }
+    .now-card-coverage.limit { color: var(--red-fg); }
+
+    /* ============ 透明度スライダー（縦） ============ */
+    .opacity-control {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.96); border-radius: 26px; padding: 14px 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      box-shadow: var(--shadow-strong); z-index: 400;
+    }
+    .opacity-control i { font-size: 14px; color: var(--text-muted); }
+    .opacity-slider-vertical {
+      -webkit-appearance: slider-vertical; appearance: slider-vertical;
+      width: 24px; height: 160px; writing-mode: bt-lr;
+    }
+    /* Fallback for browsers without vertical slider: use rotation */
+    .opacity-slider-fallback {
+      -webkit-appearance: none; appearance: none;
+      width: 160px; height: 4px; background: #e0e0e0; border-radius: 2px;
+      transform: rotate(-90deg); margin: 78px 0;
+    }
+    .opacity-slider-fallback::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .opacity-slider-fallback::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%; background: var(--accent);
+      cursor: pointer; border: 2px solid #fff;
+    }
+    .opacity-value { font-size: 11px; color: var(--text-muted); font-weight: 500; min-width: 28px; text-align: center; }
+
+    /* ============ ズーム・現在地ボタン ============ */
+    .map-actions {
+      position: absolute; right: 16px; bottom: 16px;
+      display: flex; flex-direction: column; gap: 6px; z-index: 400;
+    }
+    .map-action-btn {
+      width: 38px; height: 38px; border-radius: 8px; background: #fff; border: none;
+      box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+      color: var(--text);
+    }
+    .map-action-btn:hover { background: #f8f8f8; }
+    .map-action-btn i { font-size: 16px; }
+
+    .attribution {
+      position: absolute; left: 16px; bottom: 8px; font-size: 10px;
+      color: rgba(255,255,255,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      pointer-events: none; z-index: 300;
+    }
+    .attribution a { color: inherit; pointer-events: auto; }
+
+    /* ============ モバイル：下端タブ＋年代リスト ============ */
+    .mobile-tabs { display: none; }
+    .mobile-list-panel { display: none; }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .map-area { left: 0; bottom: calc(var(--mobile-tabs-h) + var(--mobile-list-h)); }
+      .header-toggle { display: none; }
+
+      .mobile-list-panel {
+        display: block;
+        position: fixed; left: 0; right: 0;
+        bottom: var(--mobile-tabs-h); height: var(--mobile-list-h);
+        background: #fff; border-top: 1px solid var(--border);
+        z-index: 500; overflow: hidden;
+      }
+      .mobile-list-header {
+        padding: 10px 14px 6px; font-size: 11px;
+        color: var(--text-faint); font-weight: 500;
+        text-transform: uppercase; letter-spacing: 0.5px;
+      }
+      .mobile-list-scroll {
+        overflow-x: auto; padding: 0 14px 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .mobile-list-row { display: inline-flex; gap: 8px; padding: 2px 0; }
+      .mobile-layer-card {
+        min-width: 96px; padding: 8px 10px; background: #f5f5f5;
+        border-radius: 10px; border: 2px solid transparent;
+        text-align: center; flex-shrink: 0;
+        display: flex; flex-direction: column; gap: 3px; align-items: center;
+      }
+      .mobile-layer-card.active { background: var(--accent); border-color: var(--accent); }
+      .mobile-layer-card.active .mobile-layer-name { color: #fff; font-weight: 500; }
+      .mobile-layer-card.active .mobile-layer-era { color: #bbb; }
+      .mobile-layer-name { font-size: 11px; color: var(--text); font-weight: 500; }
+      .mobile-layer-era { font-size: 9px; color: var(--text-faint); }
+      .mobile-layer-card .coverage-badge { font-size: 8px; padding: 1px 4px; }
+
+      .mobile-tabs {
+        display: flex; position: fixed; left: 0; right: 0; bottom: 0;
+        height: var(--mobile-tabs-h); background: #fff;
+        border-top: 1px solid var(--border); z-index: 600;
+        padding: 4px 4px env(safe-area-inset-bottom, 4px);
+      }
+      .mobile-tab {
+        flex: 1; background: transparent; border: none; padding: 6px 0;
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
+        color: var(--text-faint);
+      }
+      .mobile-tab i { font-size: 20px; }
+      .mobile-tab span { font-size: 10px; }
+      .mobile-tab.active { color: var(--text); }
+      .mobile-tab.active span { font-weight: 500; }
+
+      .now-card { top: 12px; left: 12px; padding: 10px 12px; max-width: 220px; }
+      .now-card-name { font-size: 14px; }
+      .now-card-meta { font-size: 11px; }
+      .opacity-control { right: 8px; padding: 10px 6px; border-radius: 22px; }
+      .opacity-slider-fallback { width: 110px; margin: 53px 0; }
+      .opacity-value { font-size: 10px; }
+      .map-actions { right: 8px; bottom: 12px; }
+      .map-action-btn { width: 36px; height: 36px; }
+    }
+
+    /* ============ Leaflet 上書き ============ */
+    .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
+
+    /* ============ Toast ============ */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(26,26,26,0.92); color: #fff; padding: 10px 18px;
+      border-radius: 20px; font-size: 13px; z-index: 2000;
+      opacity: 0; transition: opacity .3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    @media (max-width: 768px) { .toast { bottom: calc(var(--mobile-tabs-h) + var(--mobile-list-h) + 16px); } }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="header-title">🗺️ ImmersaMap</div>
-    <button class="header-menu-btn" id="menu-btn">≡</button>
+  <header class="header">
+    <div class="header-left">
+      <button class="header-toggle" id="sidebar-toggle" aria-label="サイドバー切替"><i class="ti ti-menu-2"></i></button>
+      <div class="header-title"><i class="ti ti-map-2"></i><span>ImmersaMap</span></div>
+    </div>
+    <div class="header-right">
+      <a class="header-link" href="/okunohosomichi/">物語モード</a>
+      <a class="header-link" href="/">使い方</a>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar" aria-label="レイヤー選択">
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" data-cat="aerial" aria-selected="true"><i class="ti ti-plane"></i><span>空中写真</span></button>
+      <button class="tab" role="tab" data-cat="historical" aria-selected="false"><i class="ti ti-map"></i><span>古地図</span></button>
+      <button class="tab" role="tab" data-cat="terrain" aria-selected="false"><i class="ti ti-mountain"></i><span>地形</span></button>
+    </div>
+    <div class="sidebar-header" id="sidebar-header">年代を選ぶ</div>
+    <div class="sidebar-list" id="layer-list"></div>
+  </aside>
+
+  <main class="map-area">
+    <div id="map" role="application" aria-label="地図"></div>
+
+    <div class="now-card" id="now-card">
+      <div class="now-card-label" id="now-label">いま見ているもの</div>
+      <div class="now-card-name" id="now-name">読み込み中…</div>
+      <div class="now-card-meta" id="now-meta"></div>
+      <div class="now-card-coverage" id="now-coverage"></div>
+    </div>
+
+    <div class="opacity-control" title="表示の濃さ">
+      <i class="ti ti-eye" aria-hidden="true"></i>
+      <input type="range" id="opacity-slider" class="opacity-slider-fallback" min="0" max="100" value="70" step="1" aria-label="透明度">
+      <span class="opacity-value" id="opacity-value">70%</span>
+    </div>
+
+    <div class="map-actions">
+      <button class="map-action-btn" id="zoom-in" aria-label="拡大"><i class="ti ti-plus"></i></button>
+      <button class="map-action-btn" id="zoom-out" aria-label="縮小"><i class="ti ti-minus"></i></button>
+      <button class="map-action-btn" id="locate" aria-label="現在地"><i class="ti ti-current-location"></i></button>
+    </div>
+
+    <div class="attribution">
+      © <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>
+    </div>
+  </main>
+
+  <div class="mobile-list-panel">
+    <div class="mobile-list-header" id="mobile-list-header">年代を選ぶ</div>
+    <div class="mobile-list-scroll"><div class="mobile-list-row" id="mobile-list-row"></div></div>
   </div>
-  <div id="map"></div>
-  <button class="current-location-btn" id="current-location-btn" title="現在地">📍</button>
-  <div class="time-selector-panel" id="time-selector-panel">
-    <div class="current-layer-display">
-      <span class="current-layer-name" id="current-layer-name">準備中...</span>
-      <span class="current-layer-subtitle" id="current-layer-subtitle">OpenStreetMap</span>
-      <div class="coverage-warning" id="coverage-warning" style="display:none;"></div>
-    </div>
-    <div class="time-selector-controls">
-      <button class="time-btn" id="prev-time-btn" title="前の年代">◀</button>
-      <div class="time-current" id="time-current">—</div>
-      <button class="time-btn" id="next-time-btn" title="次の年代">▶</button>
-    </div>
-    <div class="opacity-control">
-      <div class="opacity-label"><span>表示の濃さ</span><span id="opacity-value">70%</span></div>
-      <input type="range" id="opacity-slider" class="opacity-slider" min="0" max="100" value="70">
-    </div>
-    <div class="layer-buttons" id="layer-buttons"></div>
-  </div>
-  <div class="loading-overlay" id="loading-overlay" style="display:none;"><div class="spinner"></div></div>
-  <div class="toast" id="toast"></div>
+
+  <nav class="mobile-tabs" aria-label="カテゴリ">
+    <button class="mobile-tab active" data-cat="aerial"><i class="ti ti-plane"></i><span>空中写真</span></button>
+    <button class="mobile-tab" data-cat="historical"><i class="ti ti-map"></i><span>古地図</span></button>
+    <button class="mobile-tab" data-cat="terrain"><i class="ti ti-mountain"></i><span>地形</span></button>
+  </nav>
+
+  <div class="toast" id="toast" role="status"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    // =====================================================
-    // 設定
-    // =====================================================
+  (function() {
+    'use strict';
+
+    // ============ 設定 ============
     const SUPABASE_URL = 'https://kgafuinoddiapaaljkkw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_0zOqrbsnXgdurLgfGp3fsQ_wBsCjFs3';
     const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-    // =====================================================
-    // レイヤー定義（ハンドオフ文書の確定版に基づく）
-    // DB非依存。常に表示できることを保証する。
-    // =====================================================
+    // ============ レイヤー定義 ============
+    // 各 item: { id, name, era, tile, maxZoom, coverage('full'|'partial'|'limited'), coverageLabel, desc, centerLat?, centerLng? }
     const LAYERS = {
       aerial: {
-        name: '空中写真',
-        icon: '✈️',
-        times: [
-          { name: '最新',           era: '2004年〜',    tile: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxZoom: 18, coverage: '全国' },
-          { name: '1980年代後半',   era: '1987〜1990年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo4/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '大都市圏' },
-          { name: '1980年代中頃',   era: '1984〜1986年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '大都市圏' },
-          { name: '1980年代前半',   era: '1979〜1983年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '大都市圏' },
-          { name: '1970年代',       era: '1974〜1978年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxZoom: 17, coverage: '全国' },
-          { name: '1960年代',       era: '1961〜1969年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom: 17, coverage: '全国' },
-          { name: '1940年代',       era: '1945〜1950年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom: 17, coverage: '主要都市' },
-          { name: '1930年代',       era: '1936〜1942年', tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom: 17, coverage: '東京・大阪のみ' },
-          { name: '1928年頃',       era: '1928年',       tile: 'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom: 18, coverage: '大阪市域のみ' },
-        ]
-      },
-      terrain: {
-        name: '地形・標高',
-        icon: '⛰',
-        times: [
-          { name: '色別標高図',  era: '現代', tile: 'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',        maxZoom: 15, coverage: '全国' },
-          { name: '陰影起伏図',  era: '現代', tile: 'https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',  maxZoom: 16, coverage: '全国' },
+        label: '空中写真', icon: 'ti-plane', listHeader: '年代を選ぶ',
+        items: [
+          { id:'seamless', name:'最新',         era:'2004年〜現在',  tile:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxZoom:18, coverage:'full',    coverageLabel:'全国',     desc:'国土地理院シームレス空中写真' },
+          { id:'gazo4',    name:'1980年代後半', era:'1987〜1990年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo4/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第4回撮影' },
+          { id:'gazo3',    name:'1980年代中頃', era:'1984〜1986年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第3回撮影' },
+          { id:'gazo2',    name:'1980年代前半', era:'1979〜1983年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第2回撮影' },
+          { id:'gazo1',    name:'1970年代',     era:'1974〜1978年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'国土画像情報 第1回撮影' },
+          { id:'ort_old10',name:'1960年代',     era:'1961〜1969年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'高度経済成長期の空中写真' },
+          { id:'ort_USA10',name:'1940年代',     era:'1945〜1950年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'partial', coverageLabel:'主要都市', desc:'米軍撮影の戦後空中写真' },
+          { id:'ort_riku10',name:'1930年代',    era:'1936〜1942年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom:17, coverage:'limited', coverageLabel:'東京・大阪', desc:'陸軍撮影の戦前空中写真' },
+          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom:18, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真' },
         ]
       },
       historical: {
-        name: '古地図',
-        icon: '🗾',
-        times: [] // Supabaseから動的にロード
+        label: '古地図', icon: 'ti-map', listHeader: '古地図を選ぶ',
+        items: [] // Supabaseから動的ロード
       },
+      terrain: {
+        label: '地形', icon: 'ti-mountain', listHeader: '表示方法を選ぶ',
+        items: [
+          { id:'relief',      name:'色別標高図', era:'現代', tile:'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',       maxZoom:15, coverage:'full', coverageLabel:'全国', desc:'標高を色で表現した地形図' },
+          { id:'hillshade',   name:'陰影起伏図', era:'現代', tile:'https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png', maxZoom:16, coverage:'full', coverageLabel:'全国', desc:'立体感のある起伏表現' },
+        ]
+      }
     };
 
-    // =====================================================
-    // 状態管理
-    // =====================================================
-    let map = null;
-    let overlayTile = null;
+    // ============ 状態 ============
     const state = {
-      currentLayer: 'aerial',
-      currentTimeIndex: 0,
-      currentOpacity: 70,
+      category: 'aerial',
+      activeId: 'seamless',
+      opacity: 70,
+      overlay: null,
     };
 
-    // =====================================================
-    // 初期化
-    // =====================================================
-    async function init() {
-      // 地図初期化
-      map = L.map('map', { center: [35.6812, 139.7671], zoom: 12, zoomControl: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+    // ============ DOM ============
+    const $ = (id) => document.getElementById(id);
+    let map = null;
 
-      // 古地図（DB）を非同期でロード（失敗してもアプリは動く）
-      loadHistoricalMapsFromDB().catch(e => console.warn('Historical maps load skipped:', e));
+    // ============ サイドバー折りたたみ（localStorage） ============
+    function applySidebarState() {
+      const collapsed = localStorage.getItem('immersamap.sidebar') === 'collapsed';
+      document.body.classList.toggle('sidebar-collapsed', collapsed);
+      if (map) setTimeout(() => map.invalidateSize(), 260);
+    }
+    $('sidebar-toggle').addEventListener('click', () => {
+      const collapsed = !document.body.classList.contains('sidebar-collapsed');
+      localStorage.setItem('immersamap.sidebar', collapsed ? 'collapsed' : 'open');
+      applySidebarState();
+    });
 
-      // UI構築
-      buildLayerButtons();
-      updateLayerDisplay();
+    // ============ 地図初期化 ============
+    function initMap() {
+      map = L.map('map', { center: [35.6812, 139.7671], zoom: 12, zoomControl: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+      $('zoom-in').addEventListener('click', () => map.zoomIn());
+      $('zoom-out').addEventListener('click', () => map.zoomOut());
+      $('locate').addEventListener('click', () => {
+        if (!navigator.geolocation) return toast('位置情報が使えません');
+        navigator.geolocation.getCurrentPosition(
+          p => { map.flyTo([p.coords.latitude, p.coords.longitude], 14); toast('現在地に移動'); },
+          () => toast('現在地を取得できませんでした')
+        );
+      });
     }
 
-    async function loadHistoricalMapsFromDB() {
+    // ============ カテゴリ切替 ============
+    function selectCategory(cat) {
+      if (!LAYERS[cat]) return;
+      state.category = cat;
+
+      document.querySelectorAll('.tab').forEach(t => {
+        const on = t.dataset.cat === cat;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      document.querySelectorAll('.mobile-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.cat === cat);
+      });
+
+      const layer = LAYERS[cat];
+      $('sidebar-header').textContent = layer.listHeader;
+      $('mobile-list-header').textContent = layer.listHeader;
+
+      renderLayerList();
+
+      if (layer.items.length > 0) {
+        selectItem(layer.items[0].id);
+      } else {
+        clearOverlay();
+        $('now-name').textContent = '準備中';
+        $('now-meta').textContent = cat === 'historical' ? '古地図はまだ登録されていません' : '';
+        $('now-coverage').textContent = '';
+      }
+    }
+
+    // ============ レイヤー一覧描画 ============
+    function renderLayerList() {
+      const layer = LAYERS[state.category];
+      const list = $('layer-list');
+      const mobileRow = $('mobile-list-row');
+      list.innerHTML = '';
+      mobileRow.innerHTML = '';
+
+      if (layer.items.length === 0) {
+        list.innerHTML = '<div class="empty-msg">' + (state.category === 'historical' ? '古地図はまだ登録されていません。<br>準備中です。' : '項目がありません。') + '</div>';
+        return;
+      }
+
+      layer.items.forEach(item => {
+        // PC: 縦リスト
+        const btn = document.createElement('button');
+        btn.className = 'layer-item' + (item.id === state.activeId ? ' active' : '');
+        btn.dataset.id = item.id;
+        btn.innerHTML = `
+          <div>
+            <div class="layer-name">${escapeHtml(item.name)}</div>
+            <div class="layer-era">${escapeHtml(item.era)}</div>
+          </div>
+          <span class="coverage-badge ${item.coverage}">${escapeHtml(item.coverageLabel)}</span>
+        `;
+        btn.addEventListener('click', () => selectItem(item.id));
+        list.appendChild(btn);
+
+        // モバイル: 横カード
+        const card = document.createElement('button');
+        card.className = 'mobile-layer-card' + (item.id === state.activeId ? ' active' : '');
+        card.dataset.id = item.id;
+        card.innerHTML = `
+          <div class="mobile-layer-name">${escapeHtml(item.name)}</div>
+          <div class="mobile-layer-era">${escapeHtml(item.era)}</div>
+          <span class="coverage-badge ${item.coverage}">${escapeHtml(item.coverageLabel)}</span>
+        `;
+        card.addEventListener('click', () => selectItem(item.id));
+        mobileRow.appendChild(card);
+      });
+    }
+
+    // ============ アイテム選択 ============
+    function selectItem(id) {
+      const layer = LAYERS[state.category];
+      const item = layer.items.find(i => i.id === id);
+      if (!item) return;
+
+      state.activeId = id;
+      document.querySelectorAll('.layer-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+      document.querySelectorAll('.mobile-layer-card').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+
+      // タイル切替
+      clearOverlay();
+      if (item.tile) {
+        state.overlay = L.tileLayer(item.tile, {
+          maxZoom: item.maxZoom || 18,
+          opacity: state.opacity / 100,
+        }).addTo(map);
+      }
+
+      // 「いま見ているもの」更新
+      $('now-name').textContent = `${item.era === '現代' || !item.era ? item.name : item.name + 'の' + layer.label}`;
+      $('now-meta').textContent = item.desc || '';
+      const cov = $('now-coverage');
+      cov.className = 'now-card-coverage ' + (item.coverage === 'full' ? 'ok' : item.coverage === 'partial' ? 'warn' : 'limit');
+      const icon = item.coverage === 'full' ? 'ti-circle-check' : 'ti-alert-circle';
+      cov.innerHTML = `<i class="ti ${icon}"></i>カバー範囲：${escapeHtml(item.coverageLabel)}`;
+
+      // 古地図で中心座標があれば移動
+      if (state.category === 'historical' && item.centerLat && item.centerLng) {
+        map.flyTo([item.centerLat, item.centerLng], item.zoom || 15, { duration: 1 });
+      }
+    }
+
+    function clearOverlay() {
+      if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
+    }
+
+    // ============ 透明度 ============
+    $('opacity-slider').addEventListener('input', (e) => {
+      state.opacity = parseInt(e.target.value, 10);
+      $('opacity-value').textContent = state.opacity + '%';
+      if (state.overlay) state.overlay.setOpacity(state.opacity / 100);
+    });
+
+    // ============ タブ操作 ============
+    document.querySelectorAll('.tab, .mobile-tab').forEach(t => {
+      t.addEventListener('click', () => selectCategory(t.dataset.cat));
+    });
+
+    // ============ ユーティリティ ============
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+    let toastTimer;
+    function toast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ============ 古地図をSupabaseから ============
+    async function loadHistoricalMaps() {
       if (!sb) return;
       try {
         const { data, error } = await sb
           .from('maps')
-          .select('id,name,era,description,tiles_url,zoom_max,center_lat,center_lng')
+          .select('id,name,era,description,tiles_url,zoom_max,center_lat,center_lng,zoom_default')
           .eq('category', 'historical')
           .eq('is_public', true)
           .not('tiles_url', 'is', null)
           .order('sort_order', { ascending: true });
-        if (error) { console.warn('DB query error (historical):', error); return; }
+        if (error) { console.warn('historical maps query failed:', error); return; }
         if (!data || data.length === 0) return;
 
-        LAYERS.historical.times = data.map(m => ({
+        LAYERS.historical.items = data.map(m => ({
+          id: m.id,
           name: m.name || '古地図',
           era: m.era || '',
           tile: m.tiles_url,
           maxZoom: m.zoom_max || 18,
-          coverage: m.description || '',
+          coverage: 'limited',
+          coverageLabel: m.era || '部分',
+          desc: m.description || '',
           centerLat: m.center_lat,
           centerLng: m.center_lng,
+          zoom: m.zoom_default,
         }));
 
-        // すでに「古地図」表示中なら更新
-        if (state.currentLayer === 'historical') updateLayerDisplay();
-        // ボタンの説明テキストを更新
-        buildLayerButtons();
-      } catch (e) {
-        console.warn('Historical maps fetch failed:', e);
-      }
+        if (state.category === 'historical') {
+          renderLayerList();
+          if (LAYERS.historical.items.length > 0) selectItem(LAYERS.historical.items[0].id);
+        }
+      } catch (e) { console.warn('historical maps load skipped:', e); }
     }
 
-    // =====================================================
-    // UI
-    // =====================================================
-    function buildLayerButtons() {
-      const container = document.getElementById('layer-buttons');
-      container.innerHTML = '';
-      Object.entries(LAYERS).forEach(([key, layer]) => {
-        const btn = document.createElement('button');
-        btn.className = 'layer-btn' + (key === state.currentLayer ? ' active' : '');
-        btn.dataset.layer = key;
-        const count = layer.times.length;
-        btn.innerHTML = `${layer.icon} ${layer.name}` + (count > 0 ? `<br><small>(${count}件)</small>` : '<br><small>(準備中)</small>');
-        btn.addEventListener('click', () => selectLayer(key));
-        container.appendChild(btn);
-      });
-    }
-
-    function selectLayer(key) {
-      if (!LAYERS[key]) return;
-      if (LAYERS[key].times.length === 0) {
-        showToast(`${LAYERS[key].name}はまだ準備中です`);
-        return;
-      }
-      state.currentLayer = key;
-      state.currentTimeIndex = 0;
-      document.querySelectorAll('.layer-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.layer === key);
-      });
-      updateLayerDisplay();
-    }
-
-    function updateLayerDisplay() {
-      const layer = LAYERS[state.currentLayer];
-      if (!layer || layer.times.length === 0) {
-        document.getElementById('current-layer-name').textContent = '準備中';
-        document.getElementById('time-current').textContent = '—';
-        document.getElementById('prev-time-btn').disabled = true;
-        document.getElementById('next-time-btn').disabled = true;
-        if (overlayTile) { map.removeLayer(overlayTile); overlayTile = null; }
-        return;
-      }
-
-      // 範囲外なら戻す
-      if (state.currentTimeIndex >= layer.times.length) state.currentTimeIndex = layer.times.length - 1;
-      if (state.currentTimeIndex < 0) state.currentTimeIndex = 0;
-
-      const t = layer.times[state.currentTimeIndex];
-      document.getElementById('current-layer-name').textContent = `${layer.icon} ${t.name}`;
-      document.getElementById('current-layer-subtitle').textContent = `${layer.name} / ${t.era || ''}`;
-      document.getElementById('time-current').textContent = t.era || t.name;
-      document.getElementById('prev-time-btn').disabled = state.currentTimeIndex === 0;
-      document.getElementById('next-time-btn').disabled = state.currentTimeIndex === layer.times.length - 1;
-
-      // カバレッジ警告
-      const warn = document.getElementById('coverage-warning');
-      if (t.coverage && (t.coverage.includes('のみ') || t.coverage.includes('主要都市') || t.coverage.includes('大都市圏'))) {
-        warn.textContent = `⚠ カバー範囲：${t.coverage}`;
-        warn.style.display = 'block';
-      } else if (t.coverage) {
-        warn.textContent = `カバー範囲：${t.coverage}`;
-        warn.style.display = 'block';
-        warn.style.color = '#27ae60';
-      } else {
-        warn.style.display = 'none';
-      }
-      // 元の色に戻す
-      if (t.coverage && !(t.coverage.includes('のみ') || t.coverage.includes('主要都市') || t.coverage.includes('大都市圏'))) {
-        warn.style.color = '#27ae60';
-      } else {
-        warn.style.color = '#c0392b';
-      }
-
-      // タイル更新
-      if (overlayTile) { map.removeLayer(overlayTile); overlayTile = null; }
-      if (t.tile) {
-        overlayTile = L.tileLayer(t.tile, {
-          maxZoom: t.maxZoom || 18,
-          opacity: state.currentOpacity / 100,
-          attribution: '国土地理院'
-        }).addTo(map);
-      }
-
-      // 古地図で中心座標があれば移動
-      if (state.currentLayer === 'historical' && t.centerLat && t.centerLng) {
-        map.flyTo([t.centerLat, t.centerLng], 15, { duration: 1 });
-      }
-    }
-
-    // =====================================================
-    // イベント
-    // =====================================================
-    document.getElementById('prev-time-btn').addEventListener('click', () => {
-      if (state.currentTimeIndex > 0) { state.currentTimeIndex--; updateLayerDisplay(); }
-    });
-    document.getElementById('next-time-btn').addEventListener('click', () => {
-      const layer = LAYERS[state.currentLayer];
-      if (state.currentTimeIndex < layer.times.length - 1) { state.currentTimeIndex++; updateLayerDisplay(); }
-    });
-    document.getElementById('opacity-slider').addEventListener('input', (e) => {
-      state.currentOpacity = parseInt(e.target.value, 10);
-      document.getElementById('opacity-value').textContent = state.currentOpacity + '%';
-      if (overlayTile) overlayTile.setOpacity(state.currentOpacity / 100);
-    });
-    document.getElementById('current-location-btn').addEventListener('click', () => {
-      if (!navigator.geolocation) { showToast('位置情報が使えません'); return; }
-      navigator.geolocation.getCurrentPosition(
-        p => { map.flyTo([p.coords.latitude, p.coords.longitude], 14); showToast('現在地に移動'); },
-        () => showToast('現在地を取得できませんでした')
-      );
-    });
-    document.getElementById('menu-btn').addEventListener('click', () => {
-      document.getElementById('time-selector-panel').classList.toggle('collapsed');
+    // ============ 起動 ============
+    window.addEventListener('load', () => {
+      initMap();
+      applySidebarState();
+      selectCategory('aerial');
+      loadHistoricalMaps();
     });
 
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.style.opacity = '1';
-      clearTimeout(showToast._timer);
-      showToast._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
-    }
-
-    // =====================================================
-    // 起動
-    // =====================================================
-    window.addEventListener('load', init);
+    // リサイズで地図を再計算
+    window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+  })();
   </script>
 </body>
 </html>
