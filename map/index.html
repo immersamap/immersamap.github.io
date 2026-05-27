@@ -643,7 +643,7 @@
         const { data, error } = await sb
           .from('maps')
           .select('id,name,era,description,source,tiles_url,zoom_max,center_lat,center_lng,zoom_default,image_url,image_bounds,image_rotation')
-          .eq('category', 'historical')
+          .eq('category', 'old_map')
           .eq('is_public', true)
           .order('sort_order', { ascending: true });
         if (error) { console.warn('historical maps query failed:', error); return; }

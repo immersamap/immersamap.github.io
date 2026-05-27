@@ -792,7 +792,7 @@
 
       const { error: insErr } = await sb.from('maps').insert({
         id, name, era, description: desc, source,
-        category: 'historical',
+        category: 'old_map',
         tier: 'standard', is_standard: false, is_verified: false,
         is_public: true, price: 0,
         image_url: publicUrl,
