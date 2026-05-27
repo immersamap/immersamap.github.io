@@ -194,11 +194,12 @@
   .toast {
     position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
     background: rgba(26,26,26,0.92); color: #fff;
-    padding: 10px 18px; border-radius: 6px; font-size: 13px;
-    z-index: 2000; opacity: 0; transition: opacity .3s; pointer-events: none;
-    max-width: 80%; text-align: center;
+    padding: 12px 20px; border-radius: 8px; font-size: 13px; line-height: 1.6;
+    z-index: 2000; opacity: 0; transition: opacity .3s;
+    max-width: 520px; text-align: left;
+    box-shadow: var(--shadow-strong);
   }
-  .toast.show { opacity: 1; }
+  .toast.show { opacity: 1; pointer-events: auto; }
   .toast.error { background: var(--red); }
 
   /* モバイル: 左右並びは厳しいので上下＋タブ切替 */
@@ -757,7 +758,27 @@
         contentType: state.file.type,
         upsert: false,
       });
-      if (upErr) throw new Error('アップロード失敗: ' + upErr.message);
+      if (upErr) {
+        const msg = upErr.message || '';
+        if (/bucket not found/i.test(msg)) {
+          throw new Error(
+            'Storageバケット「' + BUCKET + '」が見つかりません。\n' +
+            'Supabaseダッシュボード → Storage → New bucket で\n' +
+            '名前「' + BUCKET + '」、Public ON で作成してください。'
+          );
+        }
+        if (/row.level security|permission|denied|unauthor/i.test(msg)) {
+          throw new Error(
+            'アクセス権がありません。historical_maps_setup.sql の\n' +
+            'Storageポリシー部分を再実行してください。\n' +
+            '元のエラー: ' + msg
+          );
+        }
+        if (/payload too large|exceed/i.test(msg)) {
+          throw new Error('ファイルが大きすぎます。バケットのFile size limitを確認してください。');
+        }
+        throw new Error('アップロード失敗: ' + (msg || '不明なエラー'));
+      }
 
       const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
       const publicUrl = pub.publicUrl;
@@ -804,11 +825,11 @@
   let toastTimer;
   function toast(msg, isError) {
     const el = $('toast');
-    el.textContent = msg;
+    el.innerHTML = String(msg).replace(/\n/g, '<br>');
     el.classList.toggle('error', !!isError);
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+    toastTimer = setTimeout(() => el.classList.remove('show'), isError ? 8000 : 2800);
   }
 
   $('sidebar-toggle').addEventListener('click', () => {
