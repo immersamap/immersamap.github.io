@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ImmersaMap 管理者ツール</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .header p {
+      font-size: 1.1em;
+      color: #bbb;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 50px;
+    }
+
+    .tool-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 30px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .tool-card:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-5px);
+    }
+
+    .tool-card h2 {
+      font-size: 1.5em;
+      margin-bottom: 15px;
+      color: #fff;
+    }
+
+    .tool-card p {
+      font-size: 1em;
+      color: #aaa;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .tool-card a {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .tool-card a:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .icon {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+    }
+
+    .warning {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      color: #ffc107;
+    }
+
+    .warning strong {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .footer {
+      text-align: center;
+      color: #666;
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .back-link a {
+      color: #667eea;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .back-link a:hover {
+      color: #764ba2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛠️ ImmersaMap 管理者ツール</h1>
+      <p>地図データの作成・編集・調整</p>
+    </div>
+
+    <div class="warning">
+      <strong>⚠️ 管理者専用ページです</strong>
+      このページはプライベートアクセスが必要です。本番環境では認証機能の追加を推奨します。
+    </div>
+
+    <div class="tools-grid">
+      <!-- 古地図調整ツール -->
+      <div class="tool-card">
+        <div class="icon">🗾</div>
+        <h2>古地図調整ツール</h2>
+        <p>古地図を OpenStreetMap に重ね合わせて、位置・スケールを正確に調整できます。東京湾などの既知の地形を基準に、ジオリファレンスを行います。</p>
+        <a href="./map-editor.html">古地図を調整</a>
+      </div>
+
+      <!-- 地図編集ツール -->
+      <div class="tool-card">
+        <div class="icon">🗺️</div>
+        <h2>地図作成・編集ツール</h2>
+        <p>新しい地図データを作成したり、既存の地図を編集します。ポイント・ライン・ポリゴンの描画、画像の重ね合わせなどが可能です。</p>
+        <a href="./map-editor.html">地図を編集</a>
+      </div>
+
+      <!-- カバレッジポリゴン編集 -->
+      <div class="tool-card">
+        <div class="icon">📐</div>
+        <h2>カバレッジポリゴン編集</h2>
+        <p>航空写真のカバレッジ（提供範囲）を示すポリゴンを編集します。データが利用可能な地域を視覚的に管理します。</p>
+        <a href="./polygon-editor.html">ポリゴンを編集</a>
+      </div>
+    </div>
+
+    <div class="back-link">
+      <a href="/">← 公開ページに戻る</a>
+    </div>
+
+    <div class="footer">
+      <p>ImmersaMap Admin Panel | <a href="https://github.com/immersamap/immersamap.github.io" style="color: #667eea;">GitHub Repository</a></p>
+    </div>
+  </div>
+</body>
+</html>
