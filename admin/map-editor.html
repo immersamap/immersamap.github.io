@@ -309,9 +309,22 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // 地図初期化
 // ============================================================
 const map = L.map('map', {center:[35.6812, 139.7671], zoom:13});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom:19, attribution:'© OpenStreetMap contributors'
-}).addTo(map);
+
+// 複数の地図レイヤーを定義
+const baseLayers = {
+  '通常地図': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19, attribution:'© OpenStreetMap contributors'
+  }),
+  '白地図': L.tileLayer('https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
+    maxZoom:18, attribution:'© OpenStreetMap contributors'
+  })
+};
+
+// デフォルトは通常地図
+baseLayers['通常地図'].addTo(map);
+
+// レイヤーコントロール（右上）
+L.control.layers(baseLayers, {}, {position:'topright'}).addTo(map);
 
 // ============================================================
 // 状態管理
