@@ -87,6 +87,44 @@
   .guide-bar.success { background: var(--green); }
   .guide-bar i { font-size: 14px; }
 
+  .editor-tabs {
+    display: flex; gap: 4px; padding: 8px 8px 0;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0;
+    background: var(--bg-alt); z-index: 10;
+  }
+  .editor-tab {
+    flex: 1; padding: 9px 8px; border: none; background: transparent;
+    color: var(--text-faint); font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    border-radius: 6px 6px 0 0; border-bottom: 2px solid transparent;
+  }
+  .editor-tab i { font-size: 14px; }
+  .editor-tab:hover { background: #f0f0f0; color: var(--text); }
+  .editor-tab.active { background: #fff; color: var(--text); border-bottom-color: var(--accent); }
+
+  .manage-card {
+    display: flex; gap: 12px; padding: 12px;
+    border: 1px solid var(--border); border-radius: 8px; align-items: center;
+  }
+  .manage-thumb {
+    width: 60px; height: 60px; border-radius: 6px; flex-shrink: 0;
+    object-fit: cover; background: #eee; border: 1px solid var(--border);
+  }
+  .manage-info { flex: 1; min-width: 0; }
+  .manage-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .manage-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .manage-sub { font-size: 10px; color: var(--text-faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .manage-btn {
+    width: 32px; height: 32px; border: 1px solid var(--border-strong);
+    background: #fff; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--text);
+  }
+  .manage-btn:hover { background: #f0f0f0; }
+  .manage-btn.danger { border-color: var(--red); color: var(--red); }
+  .manage-btn.danger:hover { background: #fbeaea; }
+  .manage-empty { padding: 24px 12px; text-align: center; color: var(--text-faint); font-size: 12px; line-height: 1.6; }
+
   .step {
     border-bottom: 1px solid var(--border);
     padding: 14px 16px;
@@ -278,6 +316,17 @@
 
 <aside class="sidebar" id="sidebar">
 
+  <div class="editor-tabs">
+    <button class="editor-tab active" id="tab-create" data-tab="create">
+      <i class="ti ti-plus"></i> 新規作成
+    </button>
+    <button class="editor-tab" id="tab-manage" data-tab="manage">
+      <i class="ti ti-list"></i> 一覧・管理
+    </button>
+  </div>
+
+  <div id="panel-create">
+
   <section class="step active" id="step-1">
     <div class="step-head">
       <div class="step-num"><span>1</span></div>
@@ -378,7 +427,17 @@
     </div>
   </section>
 
+  </div><!-- /panel-create -->
+
+  <div id="panel-manage" style="display:none;">
+    <div style="padding: 14px 16px;">
+      <div style="font-size: 12px; color: var(--text-faint); margin-bottom: 12px;" id="manage-count">読み込み中…</div>
+      <div id="manage-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+  </div>
+
 </aside>
+
 
 <main class="stage">
   <div class="panes">
@@ -442,6 +501,8 @@
     opacity: 0.7,
     bounds: null,              // 適用後の地理 bounds
     transformApplied: false,   // 1度でも位置合わせを適用したか
+    editingId: null,           // 編集中のレコードID（nullなら新規）
+    editingImageUrl: null,     // 編集時の既存画像URL
     residualMax: 0,            // 最大残差(m)
     residualMean: 0,           // 平均残差(m)
     overlay: null,             // 現代地図側の imageOverlay (プレビュー)
@@ -879,7 +940,9 @@
   async function publish() {
     const name = $('meta-name').value.trim();
     if (!name) { toast('地図名を入力してください', true); $('meta-name').focus(); return; }
-    if (!state.bounds || !state.file) { toast('位置合わせが完了していません', true); return; }
+    if (!state.bounds) { toast('位置合わせが完了していません', true); return; }
+    const isEdit = !!state.editingId;
+    if (!state.file && !isEdit) { toast('画像がありません', true); return; }
 
     const era = $('meta-era').value.trim();
     const coverageLabel = $('meta-coverage').value.trim();
@@ -889,52 +952,48 @@
     const btn = $('btn-publish');
     btn.disabled = true;
     const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="ti ti-loader"></i> アップロード中…';
 
     try {
-      const ext = (state.file.name.match(/\.(\w+)$/) || ['', 'jpg'])[1].toLowerCase();
-      const path = BUCKET_PREFIX + `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, state.file, {
-        contentType: state.file.type,
-        upsert: false,
-      });
-      if (upErr) {
-        const msg = upErr.message || '';
-        if (/bucket not found/i.test(msg)) {
-          throw new Error(
-            'Storageバケット「' + BUCKET + '」が見つかりません。\n' +
-            'Supabaseダッシュボード → Storage → New bucket で\n' +
-            '名前「' + BUCKET + '」、Public ON で作成してください。'
-          );
+      let publicUrl = state.editingImageUrl || null;
+
+      // 新しい画像が選ばれている場合のみアップロード
+      if (state.file) {
+        btn.innerHTML = '<i class="ti ti-loader"></i> アップロード中…';
+        const ext = (state.file.name.match(/\.(\w+)$/) || ['', 'jpg'])[1].toLowerCase();
+        const path = BUCKET_PREFIX + `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await sb.storage.from(BUCKET).upload(path, state.file, {
+          contentType: state.file.type,
+          upsert: false,
+        });
+        if (upErr) {
+          const msg = upErr.message || '';
+          if (/bucket not found/i.test(msg)) {
+            throw new Error(
+              'Storageバケット「' + BUCKET + '」が見つかりません。\n' +
+              'Supabaseダッシュボード → Storage → New bucket で\n' +
+              '名前「' + BUCKET + '」、Public ON で作成してください。'
+            );
+          }
+          if (/row.level security|permission|denied|unauthor/i.test(msg)) {
+            throw new Error(
+              'アクセス権がありません。historical_maps_setup.sql の\n' +
+              'Storageポリシー部分を再実行してください。\n元のエラー: ' + msg
+            );
+          }
+          if (/payload too large|exceed/i.test(msg)) {
+            throw new Error('ファイルが大きすぎます。バケットのFile size limitを確認してください。');
+          }
+          throw new Error('アップロード失敗: ' + (msg || '不明なエラー'));
         }
-        if (/row.level security|permission|denied|unauthor/i.test(msg)) {
-          throw new Error(
-            'アクセス権がありません。historical_maps_setup.sql の\n' +
-            'Storageポリシー部分を再実行してください。\n' +
-            '元のエラー: ' + msg
-          );
-        }
-        if (/payload too large|exceed/i.test(msg)) {
-          throw new Error('ファイルが大きすぎます。バケットのFile size limitを確認してください。');
-        }
-        throw new Error('アップロード失敗: ' + (msg || '不明なエラー'));
+        publicUrl = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
       }
 
-      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
-      const publicUrl = pub.publicUrl;
-
-      const id = 'hist-' + Date.now();
       const centerLat = (state.bounds[0][0] + state.bounds[1][0]) / 2;
       const centerLng = (state.bounds[0][1] + state.bounds[1][1]) / 2;
 
-      btn.innerHTML = '<i class="ti ti-loader"></i> 登録中…';
-
-      const { error: insErr } = await sb.from('maps').insert({
-        id, name, era, description: desc, source,
+      const record = {
+        name, era, description: desc, source,
         coverage_label: coverageLabel || null,
-        category: 'old_map',
-        tier: 'standard', is_standard: false, is_verified: false,
-        is_public: true, price: 0,
         image_url: publicUrl,
         image_bounds: state.bounds,
         image_rotation: state.rotationDeg,
@@ -943,8 +1002,25 @@
         center_lat: Math.round(centerLat * 100000) / 100000,
         center_lng: Math.round(centerLng * 100000) / 100000,
         zoom_default: mapNew.getZoom(),
-        sort_order: 100,
-      });
+      };
+
+      btn.innerHTML = isEdit ? '<i class="ti ti-loader"></i> 更新中…' : '<i class="ti ti-loader"></i> 登録中…';
+
+      let dbErr;
+      if (isEdit) {
+        const { error } = await sb.from('maps').update(record).eq('id', state.editingId);
+        dbErr = error;
+      } else {
+        const { error } = await sb.from('maps').insert({
+          id: 'hist-' + Date.now(),
+          category: 'old_map',
+          tier: 'standard', is_standard: false, is_verified: false,
+          is_public: true, price: 0, sort_order: 100,
+          ...record,
+        });
+        dbErr = error;
+      }
+      const insErr = dbErr;
       if (insErr) {
         const msg = insErr.message || '';
         if (/audit_log/i.test(msg) && /row.level security|policy/i.test(msg)) {
@@ -969,12 +1045,15 @@
       }
 
       markStepDone(3); markStepDone(4);
-      btn.innerHTML = '<i class="ti ti-check"></i> 公開完了！';
+      const wasEdit = isEdit;
+      btn.innerHTML = wasEdit ? '<i class="ti ti-check"></i> 更新完了！' : '<i class="ti ti-check"></i> 公開完了！';
       btn.style.background = 'var(--green)';
-      toast('公開しました！');
-      setGuide('success', '公開完了 — /map/ の古地図タブから誰でも見られます');
+      toast(wasEdit ? '更新しました！' : '公開しました！');
+      setGuide('success', wasEdit ? '更新完了 — /map/ に反映されました' : '公開完了 — /map/ の古地図タブから誰でも見られます');
+      state.editingId = null;
+      state.editingImageUrl = null;
       setTimeout(() => {
-        if (confirm('公開完了。/map/ で確認しますか？')) window.location.href = '/map/';
+        if (confirm((wasEdit ? '更新' : '公開') + '完了。/map/ で確認しますか？')) window.location.href = '/map/';
       }, 1200);
     } catch (e) {
       console.error(e);
@@ -1001,6 +1080,173 @@
       if (mapNew) mapNew.invalidateSize();
     }, 260);
   });
+
+  // ============ タブ切替（新規作成 / 一覧・管理） ============
+  document.querySelectorAll('.editor-tab').forEach(t => {
+    t.addEventListener('click', () => switchTab(t.dataset.tab));
+  });
+  function switchTab(tab) {
+    document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    $('panel-create').style.display = tab === 'create' ? '' : 'none';
+    $('panel-manage').style.display = tab === 'manage' ? '' : 'none';
+    if (tab === 'manage') loadManageList();
+  }
+
+  // ============ 一覧・管理 ============
+  async function loadManageList() {
+    const listEl = $('manage-list');
+    const countEl = $('manage-count');
+    listEl.innerHTML = '';
+    countEl.textContent = '読み込み中…';
+    try {
+      const { data, error } = await sb
+        .from('maps')
+        .select('id,name,era,coverage_label,description,source,image_url')
+        .eq('category', 'old_map')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        countEl.textContent = '';
+        listEl.innerHTML = '<div class="manage-empty">登録済みの古地図はありません。<br>「新規作成」から追加できます。</div>';
+        return;
+      }
+      countEl.textContent = `登録済みの古地図 ${data.length}件`;
+      data.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'manage-card';
+        const meta = [m.era, m.coverage_label ? 'カバー範囲：' + m.coverage_label : ''].filter(Boolean).join(' · ');
+        const thumb = m.image_url
+          ? `<img class="manage-thumb" src="${escapeAttr(m.image_url)}" alt="">`
+          : `<div class="manage-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="ti ti-map" style="font-size:22px;color:#999;"></i></div>`;
+        card.innerHTML = `
+          ${thumb}
+          <div class="manage-info">
+            <div class="manage-name">${escapeHtml(m.name || '(無題)')}</div>
+            <div class="manage-meta">${escapeHtml(meta || '—')}</div>
+            <div class="manage-sub">${escapeHtml(m.description || (m.source ? '出典：' + m.source : ''))}</div>
+          </div>
+          <div class="manage-actions">
+            <button class="manage-btn" title="編集" data-act="edit"><i class="ti ti-edit"></i></button>
+            <button class="manage-btn danger" title="削除" data-act="delete"><i class="ti ti-trash"></i></button>
+          </div>
+        `;
+        card.querySelector('[data-act="edit"]').addEventListener('click', () => editMap(m));
+        card.querySelector('[data-act="delete"]').addEventListener('click', () => deleteMap(m, card));
+        listEl.appendChild(card);
+      });
+    } catch (e) {
+      console.error(e);
+      countEl.textContent = '';
+      listEl.innerHTML = `<div class="manage-empty" style="color:var(--red);">読み込みに失敗しました<br>${escapeHtml(e.message || '')}</div>`;
+    }
+  }
+
+  // ============ 削除 ============
+  async function deleteMap(m, cardEl) {
+    if (!confirm(`「${m.name || '(無題)'}」を削除しますか？\nこの操作は取り消せません。画像ファイルも削除されます。`)) return;
+    try {
+      // 1. DB行を削除
+      const { error: delErr } = await sb.from('maps').delete().eq('id', m.id);
+      if (delErr) throw new Error('DB削除失敗: ' + delErr.message);
+
+      // 2. Storage画像を削除（URLからパスを逆算）
+      if (m.image_url) {
+        const marker = `/object/public/${BUCKET}/`;
+        const idx = m.image_url.indexOf(marker);
+        if (idx >= 0) {
+          const path = decodeURIComponent(m.image_url.slice(idx + marker.length));
+          const { error: stErr } = await sb.storage.from(BUCKET).remove([path]);
+          if (stErr) console.warn('Storage削除に失敗（DB行は削除済み）:', stErr.message);
+        }
+      }
+      cardEl.remove();
+      toast('削除しました');
+      // 件数更新
+      const remaining = $('manage-list').children.length;
+      $('manage-count').textContent = remaining > 0 ? `登録済みの古地図 ${remaining}件` : '';
+      if (remaining === 0) {
+        $('manage-list').innerHTML = '<div class="manage-empty">登録済みの古地図はありません。<br>「新規作成」から追加できます。</div>';
+      }
+    } catch (e) {
+      console.error(e);
+      toast(e.message, true);
+    }
+  }
+
+  // ============ 編集（新規作成タブに値を復元して開く） ============
+  async function editMap(m) {
+    if (!m.image_url) { toast('この地図には画像がないため編集できません', true); return; }
+    if (state.transformApplied || state.file) {
+      if (!confirm('編集中の内容は破棄されます。よろしいですか？')) return;
+    }
+    switchTab('create');
+    toast('編集データを読み込んでいます…');
+
+    try {
+      // メタ情報を復元
+      $('meta-name').value = m.name || '';
+      $('meta-era').value = m.era || '';
+      $('meta-coverage').value = m.coverage_label || '';
+      $('meta-desc').value = m.description || '';
+      $('meta-source').value = m.source || '';
+
+      // 画像を取得して File 化（再アップロード or 既存URL維持のため）
+      state.editingId = m.id;
+      state.editingImageUrl = m.image_url;
+
+      // 完全なレコードを取得（gcps, bounds, rotation）
+      const { data: full, error } = await sb.from('maps')
+        .select('image_url,image_bounds,image_rotation,image_opacity,gcps')
+        .eq('id', m.id).single();
+      if (error) throw error;
+
+      // 画像をimg要素に読み込み、古地図ペインを構築
+      const img = new Image();
+      img.onload = () => {
+        state.naturalSize = { w: img.naturalWidth, h: img.naturalHeight };
+        state.imageUrl = m.image_url; // 既存URLをそのまま使う
+        state.file = null;            // 新規ファイルはなし（画像変更しない限り）
+        $('file-info').textContent = `✓ 既存画像を読み込みました (${img.naturalWidth}×${img.naturalHeight}px)`;
+        $('file-info').style.display = 'block';
+        initMapOld(img.naturalWidth, img.naturalHeight);
+        $('btn-add-gcp').disabled = false;
+        markStepDone(1);
+        activateStep(2);
+
+        // GCP復元
+        let gcps = full.gcps;
+        if (typeof gcps === 'string') { try { gcps = JSON.parse(gcps); } catch { gcps = []; } }
+        state.gcps = (gcps || []).map(g => ({
+          imgX: g.imgX, imgY: g.imgY,
+          _rawX: g.imgX * img.naturalWidth, _rawY: g.imgY * img.naturalHeight,
+          mapLat: g.mapLat, mapLng: g.mapLng,
+        }));
+
+        refreshGcpUI(); drawPinsOld(); drawPinsNew();
+
+        // 既に3点以上あれば位置合わせを再現
+        if (state.gcps.length >= 3) {
+          state.transformApplied = true;
+          computeTransform();
+          markStepDone(2); activateStep(3);
+          $('btn-publish').disabled = false;
+          $('overlay-controls').style.display = 'flex';
+          mapNew.fitBounds(state.bounds, { padding: [40, 40] });
+        }
+        toast('編集準備ができました');
+      };
+      img.onerror = () => toast('画像の読み込みに失敗しました', true);
+      img.src = m.image_url;
+    } catch (e) {
+      console.error(e);
+      toast('編集データの読み込みに失敗: ' + (e.message || ''), true);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
 
   window.addEventListener('load', initMapNew);
   window.addEventListener('resize', () => {
