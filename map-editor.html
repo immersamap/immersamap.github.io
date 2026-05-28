@@ -805,7 +805,28 @@
         zoom_default: mapNew.getZoom(),
         sort_order: 100,
       });
-      if (insErr) throw new Error('DB登録失敗: ' + insErr.message);
+      if (insErr) {
+        const msg = insErr.message || '';
+        if (/audit_log/i.test(msg) && /row.level security|policy/i.test(msg)) {
+          throw new Error(
+            'audit_log テーブルの権限不足です。Supabase SQL Editor で以下を実行してください：\n\n' +
+            'create policy "audit_log public write" on audit_log for insert with check (true);\n' +
+            'create policy "audit_log public read" on audit_log for select using (true);'
+          );
+        }
+        if (/valid_category|check constraint/i.test(msg)) {
+          throw new Error(
+            'category制約違反です。エディタ側のコードを確認してください。\n元のエラー: ' + msg
+          );
+        }
+        if (/row.level security|policy/i.test(msg)) {
+          throw new Error(
+            'mapsテーブルの書き込み権限不足です。historical_maps_setup.sql の\n' +
+            '"maps public write" ポリシー部分を再実行してください。\n元のエラー: ' + msg
+          );
+        }
+        throw new Error('DB登録失敗: ' + msg);
+      }
 
       markStepDone(3); markStepDone(4);
       btn.innerHTML = '<i class="ti ti-check"></i> 公開完了！';
