@@ -55,6 +55,14 @@ begin
   ) then
     execute 'create policy "maps public update" on maps for update using (true)';
   end if;
+  if not exists (
+    select 1 from pg_policies where tablename = 'maps' and policyname = 'maps public delete'
+  ) then
+    execute 'create policy "maps public delete" on maps for delete using (true)';
+  end if;
 end $$;
+
+-- anon role への明示的な権限付与（2026年以降のSupabase既定変更に対応）
+grant select, insert, update, delete on maps to anon;
 
 alter table maps enable row level security;

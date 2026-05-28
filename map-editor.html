@@ -1145,9 +1145,21 @@
   async function deleteMap(m, cardEl) {
     if (!confirm(`「${m.name || '(無題)'}」を削除しますか？\nこの操作は取り消せません。画像ファイルも削除されます。`)) return;
     try {
-      // 1. DB行を削除
-      const { error: delErr } = await sb.from('maps').delete().eq('id', m.id);
+      // 1. DB行を削除し、実際に削除された行を取得して検証
+      const { data: deleted, error: delErr } = await sb
+        .from('maps')
+        .delete()
+        .eq('id', m.id)
+        .select();
       if (delErr) throw new Error('DB削除失敗: ' + delErr.message);
+      if (!deleted || deleted.length === 0) {
+        throw new Error(
+          '削除できませんでした（権限不足の可能性）。\n' +
+          'Supabase SQL Editor で以下を実行してください：\n\n' +
+          'grant delete on maps to anon;\n' +
+          'create policy "maps public delete" on maps for delete using (true);'
+        );
+      }
 
       // 2. Storage画像を削除（URLからパスを逆算）
       if (m.image_url) {
