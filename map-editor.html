@@ -191,6 +191,32 @@
   details summary { font-size: 11px; color: var(--text-muted); cursor: pointer; padding: 4px 0; }
   details summary:hover { color: var(--text); }
 
+  /* 適用後オーバーレイ用フローティングコントロール */
+  .overlay-controls {
+    position: absolute; top: 8px; right: 12px; z-index: 600;
+    background: rgba(255,255,255,0.96); border-radius: 8px;
+    padding: 8px 12px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 10px;
+    max-width: calc(100% - 24px);
+  }
+  .overlay-ctrl-row { display: flex; align-items: center; gap: 8px; }
+  .overlay-ctrl-row i { font-size: 14px; color: var(--text-muted); }
+  .overlay-ctrl-row input[type=range] {
+    width: 140px; cursor: pointer;
+  }
+  .overlay-ctrl-val {
+    font-size: 11px; color: var(--text); width: 36px; text-align: right;
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .overlay-toggle {
+    width: 28px; height: 28px; border: none; background: transparent;
+    border-radius: 6px; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+  }
+  .overlay-toggle:hover { background: #f0f0f0; color: var(--text); }
+  .overlay-toggle.hidden i { color: var(--red); }
+
   /* GCPピンのスタイル（divIcon用） */
   .gcp-pin {
     background: var(--blue); color: #fff;
@@ -297,18 +323,14 @@
       </div>
 
       <details>
-        <summary>手動で微調整（任意）</summary>
+        <summary>回転を微調整（任意）</summary>
         <div style="margin-top: 8px;">
-          <div class="slider-row">
-            <label>透明度</label>
-            <input type="range" id="opa-slider" min="10" max="100" value="70" step="1">
-            <span class="val" id="opa-val">70%</span>
-          </div>
           <div class="slider-row">
             <label>回転</label>
             <input type="range" id="rot-slider" min="-180" max="180" value="0" step="0.5">
             <span class="val" id="rot-val">0°</span>
           </div>
+          <div class="step-hint" style="margin-top: 4px;">基準点を増やすと自動でも調整されます</div>
         </div>
       </details>
     </div>
@@ -368,6 +390,16 @@
     </div>
     <div class="pane" id="pane-new">
       <div class="pane-label" id="label-new"><i class="ti ti-map-2"></i><span>現代地図</span></div>
+      <div id="overlay-controls" class="overlay-controls" style="display:none;">
+        <div class="overlay-ctrl-row">
+          <i class="ti ti-eye" aria-hidden="true"></i>
+          <input type="range" id="opa-slider" min="0" max="100" value="70" step="1" aria-label="古地図の透明度">
+          <span class="overlay-ctrl-val" id="opa-val">70%</span>
+        </div>
+        <button type="button" class="overlay-toggle" id="overlay-toggle" title="古地図の表示/非表示">
+          <i class="ti ti-eye-off" id="overlay-toggle-icon" aria-hidden="true"></i>
+        </button>
+      </div>
       <div id="map-new" class="pane-map"></div>
     </div>
   </div>
@@ -710,7 +742,11 @@
     markStepDone(2);
     activateStep(3);
     $('btn-publish').disabled = false;
+    $('overlay-controls').style.display = 'flex';
     mapNew.fitBounds(state.bounds, { padding: [40, 40] });
+    setTimeout(() => {
+      setGuide('success', '🔍 透明度スライダーで重なりを確認できます。ズレている場所には地図をクリックして基準点を追加できます');
+    }, 100);
   });
 
   // 位置合わせ計算（GCP変更時にも呼ばれる）
@@ -803,11 +839,35 @@
     state.opacity = parseInt(e.target.value, 10) / 100;
     $('opa-val').textContent = e.target.value + '%';
     if (state.overlay) state.overlay.setOpacity(state.opacity);
+    // 表示/非表示トグルが「非表示」状態なら、操作したら元に戻す
+    if (state.overlayHidden && state.opacity > 0) {
+      state.overlayHidden = false;
+      $('overlay-toggle').classList.remove('hidden');
+      $('overlay-toggle-icon').className = 'ti ti-eye-off';
+    }
   });
   $('rot-slider').addEventListener('input', (e) => {
     state.rotationDeg = parseFloat(e.target.value);
     $('rot-val').textContent = state.rotationDeg.toFixed(0) + '°';
     applyRotation();
+  });
+
+  // 古地図オーバーレイの表示/非表示トグル
+  $('overlay-toggle').addEventListener('click', () => {
+    state.overlayHidden = !state.overlayHidden;
+    const btn = $('overlay-toggle');
+    const icon = $('overlay-toggle-icon');
+    if (state.overlayHidden) {
+      if (state.overlay) state.overlay.setOpacity(0);
+      btn.classList.add('hidden');
+      icon.className = 'ti ti-eye';
+      btn.title = '古地図を表示';
+    } else {
+      if (state.overlay) state.overlay.setOpacity(state.opacity);
+      btn.classList.remove('hidden');
+      icon.className = 'ti ti-eye-off';
+      btn.title = '古地図を非表示';
+    }
   });
 
   $('btn-publish').addEventListener('click', publish);
