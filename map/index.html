@@ -642,7 +642,7 @@
         // tiles_url 形式と image_url 形式の両方を取得
         const { data, error } = await sb
           .from('maps')
-          .select('id,name,era,description,source,tiles_url,zoom_max,center_lat,center_lng,zoom_default,image_url,image_bounds,image_rotation')
+          .select('id,name,era,description,source,tiles_url,zoom_max,center_lat,center_lng,zoom_default,image_url,image_bounds,image_rotation,coverage_label')
           .eq('category', 'old_map')
           .eq('is_public', true)
           .order('sort_order', { ascending: true });
@@ -668,7 +668,8 @@
               imageRotation: m.image_rotation || 0,
               maxZoom: m.zoom_max || 18,
               coverage: 'limited',
-              coverageLabel: m.era || '部分',
+              // バッジは coverage_label を優先、無ければ era、それも無ければ「部分」
+              coverageLabel: m.coverage_label || m.era || '部分',
               desc: m.description || (m.source ? `出典：${m.source}` : ''),
               centerLat: m.center_lat,
               centerLng: m.center_lng,

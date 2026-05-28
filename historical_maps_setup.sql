@@ -12,6 +12,7 @@ alter table maps add column if not exists image_rotation real default 0;
 alter table maps add column if not exists image_opacity real default 0.8;
 alter table maps add column if not exists source        text;
 alter table maps add column if not exists gcps          jsonb;
+alter table maps add column if not exists coverage_label text;   -- カバー範囲（例：東京、関東一円）
 
 -- 2. Storage の RLS ポリシー（map-tiles バケット用）
 --    既存バケットに後から追加しても安全な書き方

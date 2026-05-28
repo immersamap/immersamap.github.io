@@ -351,6 +351,10 @@
         <input type="text" class="form-input" id="meta-era" placeholder="例：天保年間（1830-1844）">
       </div>
       <div class="form-row">
+        <label class="form-label">カバー範囲</label>
+        <input type="text" class="form-input" id="meta-coverage" placeholder="例：東京、関東一円、大阪市域">
+      </div>
+      <div class="form-row">
         <label class="form-label">説明</label>
         <textarea class="form-textarea" id="meta-desc" placeholder="特徴・見どころなど"></textarea>
       </div>
@@ -878,6 +882,7 @@
     if (!state.bounds || !state.file) { toast('位置合わせが完了していません', true); return; }
 
     const era = $('meta-era').value.trim();
+    const coverageLabel = $('meta-coverage').value.trim();
     const desc = $('meta-desc').value.trim();
     const source = $('meta-source').value.trim();
 
@@ -926,6 +931,7 @@
 
       const { error: insErr } = await sb.from('maps').insert({
         id, name, era, description: desc, source,
+        coverage_label: coverageLabel || null,
         category: 'old_map',
         tier: 'standard', is_standard: false, is_verified: false,
         is_public: true, price: 0,
