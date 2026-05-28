@@ -170,6 +170,18 @@
   .gcp-stats .ok { color: var(--green); font-weight: 500; }
   .gcp-stats .warn { color: var(--amber); font-weight: 500; }
 
+  .gcp-residual {
+    font-size: 10px; padding: 1px 5px; border-radius: 8px;
+    flex-shrink: 0; font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+  .gcp-residual.good { background: #e8f5ee; color: var(--green); }
+  .gcp-residual.warn { background: #fff4e6; color: var(--amber); }
+  .gcp-residual.bad  { background: #fbeaea; color: var(--red); }
+
+  .gcp-item.has-bad-residual { border-color: var(--red); background: #fffafa; }
+  .gcp-item.has-warn-residual { border-color: var(--amber); }
+
   .slider-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .slider-row label { font-size: 11px; color: var(--text-muted); width: 48px; flex-shrink: 0; }
   .slider-row input[type=range] { flex: 1; }
@@ -393,6 +405,9 @@
     rotationDeg: 0,
     opacity: 0.7,
     bounds: null,              // 適用後の地理 bounds
+    transformApplied: false,   // 1度でも位置合わせを適用したか
+    residualMax: 0,            // 最大残差(m)
+    residualMean: 0,           // 平均残差(m)
     overlay: null,             // 現代地図側の imageOverlay (プレビュー)
   };
 
@@ -525,7 +540,10 @@
     refreshGcpUI();
     drawPinsOld(); drawPinsNew();
     const n = state.gcps.length;
-    if (n < 3) {
+    // 既に位置合わせ済みなら自動で再計算（精度を更新表示）
+    if (state.transformApplied && n >= 3) {
+      computeTransform();
+    } else if (n < 3) {
       setGuide('idle', `${n} 点登録済み。あと ${3 - n} 点で位置合わせできます。続けて「基準点を追加」をどうぞ`);
     } else {
       setGuide('success', `${n} 点登録済み。「位置合わせを適用」できます。さらに点を増やすと精度が上がります`);
@@ -554,7 +572,8 @@
         const ll = ev.target.getLatLng();
         g._rawY = ll.lat; g._rawX = ll.lng;
         g.imgX = ll.lng / w; g.imgY = ll.lat / h;
-        refreshGcpUI();
+        if (state.transformApplied && state.gcps.length >= 3) computeTransform();
+        else refreshGcpUI();
       });
       m.addTo(mapOld);
       pinsOld.push(m);
@@ -575,7 +594,8 @@
       m.on('dragend', (ev) => {
         const ll = ev.target.getLatLng();
         g.mapLat = ll.lat; g.mapLng = ll.lng;
-        refreshGcpUI();
+        if (state.transformApplied && state.gcps.length >= 3) computeTransform();
+        else refreshGcpUI();
       });
       m.addTo(mapNew);
       pinsNew.push(m);
@@ -587,23 +607,47 @@
     }
   }
 
+  // 残差(m)を「good/warn/bad」に分類
+  function residualLevel(m) {
+    if (m == null) return null;
+    if (m < 50) return 'good';
+    if (m < 200) return 'warn';
+    return 'bad';
+  }
+  function formatMeters(m) {
+    if (m < 10) return m.toFixed(1) + 'm';
+    if (m < 10000) return Math.round(m) + 'm';
+    return (m / 1000).toFixed(1) + 'km';
+  }
+
   function refreshGcpUI() {
     const list = $('gcp-list');
     list.innerHTML = '';
     state.gcps.forEach((g, i) => {
       const row = document.createElement('div');
-      row.className = 'gcp-item';
+      const level = residualLevel(g.residual);
+      row.className = 'gcp-item' + (level === 'bad' ? ' has-bad-residual' : level === 'warn' ? ' has-warn-residual' : '');
+      const residualBadge = (g.residual != null && state.transformApplied)
+        ? `<span class="gcp-residual ${level}" title="この点の位置ズレ">${formatMeters(g.residual)}</span>`
+        : '';
       row.innerHTML = `
         <div class="gcp-num">${i + 1}</div>
         <div class="gcp-info">
           <div class="gcp-info-line"><i class="ti ti-map"></i>${(g.imgX*100).toFixed(1)}%, ${(g.imgY*100).toFixed(1)}%</div>
           <div class="gcp-info-line muted"><i class="ti ti-map-2"></i>${g.mapLat.toFixed(5)}, ${g.mapLng.toFixed(5)}</div>
         </div>
+        ${residualBadge}
         <button class="gcp-del" data-i="${i}" aria-label="削除"><i class="ti ti-x"></i></button>
       `;
       row.querySelector('.gcp-del').addEventListener('click', () => {
         state.gcps.splice(i, 1);
         refreshGcpUI(); drawPinsOld(); drawPinsNew();
+        // 既に位置合わせ済みなら再計算
+        if (state.transformApplied && state.gcps.length >= 3) computeTransform();
+        else if (state.gcps.length < 3) {
+          state.transformApplied = false;
+          if (state.overlay) { mapNew.removeLayer(state.overlay); state.overlay = null; }
+        }
       });
       list.appendChild(row);
     });
@@ -632,6 +676,13 @@
     } else if (state.gcps.length < 3) {
       stats.style.display = 'block';
       stats.innerHTML = `<span class="warn">あと ${3 - state.gcps.length} 点必要</span>`;
+    } else if (state.transformApplied) {
+      stats.style.display = 'block';
+      const maxLevel = residualLevel(state.residualMax);
+      const summary = maxLevel === 'good' ? '<span class="ok">精度：良好</span>'
+                    : maxLevel === 'warn' ? '<span class="warn">精度：許容範囲</span>'
+                    : '<span style="color:var(--red);font-weight:500;">精度：要改善（赤い点を確認）</span>';
+      stats.innerHTML = `${state.gcps.length}点 — 平均 ${formatMeters(state.residualMean)} / 最大 ${formatMeters(state.residualMax)}<br>${summary}`;
     } else {
       stats.style.display = 'block';
       stats.innerHTML = `<span class="ok">${state.gcps.length} 点 — 位置合わせ可能</span>`;
@@ -643,13 +694,27 @@
     if (!confirm('すべての基準点を削除しますか？')) return;
     state.gcps = [];
     state.addingGcp = false;
+    state.transformApplied = false;
+    state.residualMax = state.residualMean = 0;
     state.pendingOldXY = state.pendingMapLatLng = null;
+    if (state.overlay) { mapNew.removeLayer(state.overlay); state.overlay = null; }
     refreshGcpUI(); drawPinsOld(); drawPinsNew();
     setPaneLabel('old', false); setPaneLabel('new', false);
     setGuide('idle', '基準点をすべて削除しました');
   });
 
   $('btn-apply').addEventListener('click', () => {
+    if (state.gcps.length < 3) return;
+    state.transformApplied = true;
+    computeTransform();
+    markStepDone(2);
+    activateStep(3);
+    $('btn-publish').disabled = false;
+    mapNew.fitBounds(state.bounds, { padding: [40, 40] });
+  });
+
+  // 位置合わせ計算（GCP変更時にも呼ばれる）
+  function computeTransform() {
     if (state.gcps.length < 3) return;
     const A = state.gcps.map(g => [g.imgX, g.imgY, 1]);
     const Blng = state.gcps.map(g => g.mapLng);
@@ -666,21 +731,30 @@
     $('rot-slider').value = state.rotationDeg.toFixed(1);
     $('rot-val').textContent = state.rotationDeg.toFixed(0) + '°';
 
-    drawOverlayOnNew();
-
-    let maxResid = 0;
+    // 各GCPの残差を計算（メートル単位）
+    // 緯度1度 = 111km、経度1度 = 緯度cosに依存。平均緯度から推定
+    const meanLat = state.gcps.reduce((s, g) => s + g.mapLat, 0) / state.gcps.length;
+    const mPerDegLng = 111000 * Math.cos(meanLat * Math.PI / 180);
+    const mPerDegLat = 111000;
+    let maxResid = 0, sumResid = 0;
     state.gcps.forEach(g => {
       const [pLat, pLng] = imgToGeo(g.imgX, g.imgY);
-      const dlat = (pLat - g.mapLat) * 111000;
-      const dlng = (pLng - g.mapLng) * 91000;
-      maxResid = Math.max(maxResid, Math.hypot(dlat, dlng));
+      const dx = (pLng - g.mapLng) * mPerDegLng;
+      const dy = (pLat - g.mapLat) * mPerDegLat;
+      g.residual = Math.hypot(dx, dy); // m
+      maxResid = Math.max(maxResid, g.residual);
+      sumResid += g.residual;
     });
-    markStepDone(2);
-    activateStep(3);
-    $('btn-publish').disabled = false;
-    setGuide('success', `位置合わせ完了（最大残差 ${maxResid.toFixed(0)}m）。情報を入力して公開できます`);
-    mapNew.fitBounds(state.bounds, { padding: [40, 40] });
-  });
+    state.residualMax = maxResid;
+    state.residualMean = sumResid / state.gcps.length;
+
+    drawOverlayOnNew();
+    refreshGcpUI();
+
+    const maxStr = maxResid < 10 ? maxResid.toFixed(1) : Math.round(maxResid);
+    const meanStr = state.residualMean < 10 ? state.residualMean.toFixed(1) : Math.round(state.residualMean);
+    setGuide('success', `位置合わせ完了 — 平均残差 ${meanStr}m / 最大残差 ${maxStr}m`);
+  }
 
   function lsq3(A, b) {
     const ATA = [[0,0,0],[0,0,0],[0,0,0]];
