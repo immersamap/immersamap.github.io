@@ -316,6 +316,10 @@
     .tile-filter-blue-to-pink {
       filter: hue-rotate(110deg) saturate(1.15);
     }
+    /* 1928年頃の紫系もピンクに寄せる */
+    .tile-filter-purple-to-pink {
+      filter: hue-rotate(40deg) saturate(1.1);
+    }
 
     /* 現在地マーカー（青いドット + パルスリング） */
     .current-location-marker {
@@ -644,10 +648,10 @@
           { id:'gazo3',    name:'1980年代中頃', era:'1984〜1986年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第3回撮影' },
           { id:'gazo2',    name:'1980年代前半', era:'1979〜1983年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第2回撮影' },
           { id:'gazo1',    name:'1970年代',     era:'1974〜1978年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'国土画像情報 第1回撮影' },
-          { id:'ort_old10',name:'1960年代',     era:'1961〜1969年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'高度経済成長期の空中写真' },
+          { id:'ort_old10',name:'1960年代',     era:'1961〜1969年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'高度経済成長期の空中写真', zoomFade:true },
           { id:'ort_USA10',name:'1940年代',     era:'1945〜1950年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'partial', coverageLabel:'主要都市', desc:'米軍撮影の戦後空中写真', filter:'blue-to-pink' },
           { id:'ort_riku10',name:'1930年代',    era:'1936〜1942年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom:17, coverage:'limited', coverageLabel:'東京・大阪', desc:'陸軍撮影の戦前空中写真', filter:'blue-to-pink' },
-          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom:18, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真' },
+          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom:18, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真', filter:'purple-to-pink' },
         ]
       },
       historical: {
@@ -669,6 +673,7 @@
       activeId: 'seamless',
       opacity: 70,
       overlay: null,
+      currentTileItem: null, // ズーム連動 opacity 計算用
     };
 
     // ============ DOM ============
@@ -695,6 +700,9 @@
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
       $('locate').addEventListener('click', toggleCurrentLocation);
+
+      // ズーム変化に応じて zoomFade タイルの不透明度を更新
+      map.on('zoomend', applyZoomFade);
     }
 
     // ============ 現在地マーカー ============
@@ -828,6 +836,7 @@
       clearOverlay();
       if (item.imageUrl && item.imageBounds) {
         // 古地図：画像オーバーレイ
+        state.currentTileItem = null;
         state.overlay = L.imageOverlay(item.imageUrl, item.imageBounds, {
           opacity: state.opacity / 100,
           interactive: false,
@@ -844,9 +853,10 @@
         }
       } else if (item.tile) {
         // 通常：XYZタイル
+        state.currentTileItem = item;
         state.overlay = L.tileLayer(item.tile, {
           maxZoom: item.maxZoom || 18,
-          opacity: state.opacity / 100,
+          opacity: computeEffectiveOpacity(item),
           className: item.filter ? ('tile-filter-' + item.filter) : '',
         }).addTo(map);
       }
@@ -871,13 +881,39 @@
 
     function clearOverlay() {
       if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
+      state.currentTileItem = null;
+    }
+
+    // ============ ズームに応じたタイル不透明度 ============
+    // 1960年代(ort_old10) など全面ピンク塗りのタイルは、
+    // 広域では薄く、拡大では濃く表示する
+    function computeEffectiveOpacity(item) {
+      const userOpa = state.opacity / 100;
+      if (!item || !item.zoomFade || !map) return userOpa;
+      const z = map.getZoom();
+      // z ≤ 9 で 0.5x、z ≥ 12 で 1.0x、その間は線形補間
+      let factor;
+      if (z <= 9) factor = 0.5;
+      else if (z >= 12) factor = 1.0;
+      else factor = 0.5 + (z - 9) * (0.5 / 3);
+      return userOpa * factor;
+    }
+
+    function applyZoomFade() {
+      if (state.overlay && state.currentTileItem && state.currentTileItem.zoomFade) {
+        state.overlay.setOpacity(computeEffectiveOpacity(state.currentTileItem));
+      }
     }
 
     // ============ 透明度 ============
     $('opacity-slider').addEventListener('input', (e) => {
       state.opacity = parseInt(e.target.value, 10);
       $('opacity-value').textContent = state.opacity + '%';
-      if (state.overlay) state.overlay.setOpacity(state.opacity / 100);
+      if (state.overlay) {
+        state.overlay.setOpacity(
+          state.currentTileItem ? computeEffectiveOpacity(state.currentTileItem) : state.opacity / 100
+        );
+      }
     });
 
     // ============ タブ操作 ============
