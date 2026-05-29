@@ -312,13 +312,9 @@
     }
     .map-action-btn.active:hover { background: #1f57d6; }
 
-    /* タイル色フィルタ：青系のカバレッジ表示を1960年代の薄マゼンタに揃える */
-    .tile-filter-blue-to-pink {
-      filter: hue-rotate(90deg) saturate(0.7);
-    }
-    /* 1928年頃の青紫系も同じ薄マゼンタに揃える */
-    .tile-filter-purple-to-pink {
-      filter: hue-rotate(50deg) saturate(0.7);
+    /* タイル色フィルタ：1940s/1930s/1928 のカバレッジ色を統一 */
+    .tile-filter-unify-pink {
+      filter: hue-rotate(70deg) saturate(0.75);
     }
 
     /* 現在地マーカー（青いドット + パルスリング） */
@@ -649,9 +645,9 @@
           { id:'gazo2',    name:'1980年代前半', era:'1979〜1983年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第2回撮影' },
           { id:'gazo1',    name:'1970年代',     era:'1974〜1978年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'国土画像情報 第1回撮影' },
           { id:'ort_old10',name:'1960年代',     era:'1961〜1969年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'高度経済成長期の空中写真', zoomFade:true },
-          { id:'ort_USA10',name:'1940年代',     era:'1945〜1950年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'partial', coverageLabel:'主要都市', desc:'米軍撮影の戦後空中写真', filter:'blue-to-pink' },
-          { id:'ort_riku10',name:'1930年代',    era:'1936〜1942年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom:17, coverage:'limited', coverageLabel:'東京・大阪', desc:'陸軍撮影の戦前空中写真', filter:'blue-to-pink' },
-          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom:18, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真', filter:'purple-to-pink' },
+          { id:'ort_USA10',name:'1940年代',     era:'1945〜1950年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'partial', coverageLabel:'主要都市', desc:'米軍撮影の戦後空中写真', filter:'unify-pink' },
+          { id:'ort_riku10',name:'1930年代',    era:'1936〜1942年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom:17, coverage:'limited', coverageLabel:'東京・大阪', desc:'陸軍撮影の戦前空中写真', filter:'unify-pink' },
+          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom:18, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真', filter:'unify-pink' },
         ]
       },
       historical: {
