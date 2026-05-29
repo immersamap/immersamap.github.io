@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ImmersaMap ｜ 過去地図 切替テスト</title>
+
+<!-- Leaflet 1.9.4（cdnjs から読み込み：アプリ内プレビューでも動くように） -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- 日本語表示用の落ち着いたゴシック -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#1c1a17;
+    --panel:#26231f;
+    --panel-2:#2f2b26;
+    --ink:#f1ece2;
+    --muted:#a59c8c;
+    --line:#3d382f;
+    --accent:#c98a3a;          /* セピア寄りの琥珀色（古地図テーマ） */
+    --accent-soft:#3a2f1e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:"Zen Kaku Gothic New",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+  }
+  #map{position:absolute;inset:0;background:#0e0d0b;}
+
+  /* ---- コントロールパネル ---- */
+  #panel{
+    position:absolute;
+    top:14px;left:14px;
+    width:296px;max-width:calc(100vw - 28px);
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 18px 40px rgba(0,0,0,.45), 0 2px 0 rgba(255,255,255,.03) inset;
+    z-index:1000;
+    overflow:hidden;
+  }
+  #panel header{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    background:
+      repeating-linear-gradient(45deg, rgba(201,138,58,.06) 0 6px, transparent 6px 12px),
+      var(--accent-soft);
+  }
+  #panel header .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--accent);box-shadow:0 0 0 4px rgba(201,138,58,.15);
+    flex:none;
+  }
+  #panel header h1{
+    margin:0;font-size:14px;font-weight:700;letter-spacing:.04em;
+  }
+  #panel header h1 small{
+    display:block;font-family:"Space Mono",monospace;
+    font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.12em;
+    margin-top:2px;text-transform:uppercase;
+  }
+  .body{padding:6px 16px 16px;max-height:calc(100vh - 130px);overflow:auto;}
+
+  .group{margin-top:16px;}
+  .group > .label{
+    font-family:"Space Mono",monospace;
+    font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .group > .label::after{content:"";height:1px;flex:1;background:var(--line);}
+
+  /* 選択肢ボタン */
+  .opt{
+    display:flex;align-items:center;gap:10px;
+    width:100%;text-align:left;
+    padding:9px 11px;margin:5px 0;
+    background:transparent;color:var(--ink);
+    border:1px solid var(--line);border-radius:9px;
+    font-family:inherit;font-size:13px;cursor:pointer;
+    transition:border-color .15s, background .15s, transform .05s;
+  }
+  .opt:hover{border-color:#5a5142;background:rgba(255,255,255,.02);}
+  .opt:active{transform:scale(.99);}
+  .opt .tick{
+    width:14px;height:14px;border-radius:50%;flex:none;
+    border:2px solid #5a5142;background:transparent;
+    transition:all .15s;
+  }
+  .opt .meta{margin-left:auto;font-family:"Space Mono",monospace;font-size:10px;color:var(--muted);}
+  .opt.active{border-color:var(--accent);background:rgba(201,138,58,.10);}
+  .opt.active .tick{border-color:var(--accent);background:var(--accent);box-shadow:0 0 0 3px rgba(201,138,58,.2) inset;}
+
+  /* 不透明度スライダー */
+  .slider-row{display:flex;align-items:center;gap:10px;margin-top:4px;}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    flex:1;height:4px;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--val,80%),#3d382f var(--val,80%),#3d382f 100%);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--ink);border:3px solid var(--accent);cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,.4);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;
+    background:var(--ink);border:3px solid var(--accent);cursor:pointer;
+  }
+  .val{font-family:"Space Mono",monospace;font-size:11px;width:38px;text-align:right;color:var(--accent);}
+
+  .note{
+    margin-top:16px;padding:10px 12px;
+    font-size:11px;line-height:1.6;color:var(--muted);
+    background:rgba(0,0,0,.18);border-radius:9px;border:1px dashed var(--line);
+  }
+  .note b{color:var(--ink);font-weight:500;}
+
+  /* 出典表記（常時表示・今昔マップの利用条件） */
+  #credit{
+    position:absolute;bottom:8px;right:8px;z-index:1000;
+    font-size:10px;color:#e9e2d4;
+    background:rgba(28,26,23,.82);backdrop-filter:blur(4px);
+    border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;max-width:62vw;line-height:1.5;
+  }
+  #credit a{color:var(--accent);text-decoration:none;}
+
+  /* モバイル：パネル折り畳み */
+  #toggle{display:none;}
+  @media (max-width:640px){
+    #panel{width:calc(100vw - 28px);}
+    #toggle{
+      display:block;margin-left:auto;background:none;border:none;
+      color:var(--muted);font-size:18px;cursor:pointer;line-height:1;
+    }
+    #panel.collapsed .body{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="panel">
+  <header>
+    <span class="dot"></span>
+    <h1>過去地図 切替テスト<small>ImmersaMap / time-travel demo</small></h1>
+    <button id="toggle" aria-label="開閉">▾</button>
+  </header>
+  <div class="body">
+
+    <div class="group">
+      <div class="label">ベース地図</div>
+      <div id="baseList"></div>
+    </div>
+
+    <div class="group">
+      <div class="label">重ねる地図（過去）</div>
+      <div id="overlayList"></div>
+    </div>
+
+    <div class="group" id="opacityGroup" style="display:none;">
+      <div class="label">重ねる地図の不透明度</div>
+      <div class="slider-row">
+        <input type="range" id="opacity" min="0" max="100" value="80">
+        <span class="val" id="opacityVal">80%</span>
+      </div>
+    </div>
+
+    <div class="note">
+      この試作は東京・<b>日本橋周辺</b>を初期表示しています。今昔マップ（首都圏）と
+      迅速測図（関東）は<b>首都圏中心のカバレッジ</b>のため、地方では空白になります。<br>
+      ベース地図に過去の地図を選べば「地図そのものを昔に切り替え」、
+      ベースを現代地図のままにして過去地図を重ねれば「重ね合わせトレース」になります。
+    </div>
+
+  </div>
+</div>
+
+<div id="credit">
+  出典：<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">地理院タイル</a> ／
+  <span id="creditKj" style="display:none;"><a href="https://ktgis.net/kjmapw/" target="_blank" rel="noopener">今昔マップ on the web</a> ／ </span>
+  <span id="creditRapid" style="display:none;">迅速測図（農研機構, boiledorange73 配信） ／ </span>
+  © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors
+</div>
+
+<script>
+/* =========================================================
+   タイル定義
+   - tms:true … 今昔マップ（南西原点 = TMS。Leafletではy反転）
+   - maxNativeZoom … 元データの限界。それ以上はLeafletが拡大表示
+   ========================================================= */
+
+const ATTR_GSI = "地理院タイル";
+const ATTR_OSM = "© OpenStreetMap contributors";
+
+// --- ベース地図 ---
+const baseMaps = {
+  osm: {
+    name:"OpenStreetMap", meta:"現代",
+    layer: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {maxZoom:19, attribution:ATTR_OSM})
+  },
+  std: {
+    name:"地理院 標準地図", meta:"現代",
+    layer: L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+      {maxZoom:18, attribution:ATTR_GSI})
+  },
+  pale: {
+    name:"地理院 淡色地図", meta:"現代",
+    layer: L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+      {maxZoom:18, attribution:ATTR_GSI})
+  }
+};
+
+// --- 重ねる / 切り替える 過去地図 ---
+const overlayMaps = {
+  none: { name:"（なし）", meta:"", layer:null },
+
+  rapid: {
+    name:"迅速測図", meta:"明治前期", credit:"rapid",
+    layer: L.tileLayer("https://boiledorange73.sakura.ne.jp/ws/tile/Kanto_Rapid-900913/{z}/{x}/{y}.png",
+      {maxNativeZoom:17, maxZoom:18, attribution:"迅速測図（農研機構）"})
+  },
+  kj_meiji: {
+    name:"今昔マップ 首都圏", meta:"1896–1909", credit:"kj",
+    layer: L.tileLayer("https://ktgis.net/kjmapw/kjtilemap/tokyo50/2man/{z}/{x}/{y}.png",
+      {tms:true, minZoom:8, maxNativeZoom:16, maxZoom:18, attribution:"今昔マップ on the web"})
+  },
+  kj_taisho: {
+    name:"今昔マップ 首都圏", meta:"1917–1924", credit:"kj",
+    layer: L.tileLayer("https://ktgis.net/kjmapw/kjtilemap/tokyo50/00/{z}/{x}/{y}.png",
+      {tms:true, minZoom:8, maxNativeZoom:16, maxZoom:18, attribution:"今昔マップ on the web"})
+  },
+  kj_showa1: {
+    name:"今昔マップ 首都圏", meta:"1927–1939", credit:"kj",
+    layer: L.tileLayer("https://ktgis.net/kjmapw/kjtilemap/tokyo50/01/{z}/{x}/{y}.png",
+      {tms:true, minZoom:8, maxNativeZoom:16, maxZoom:18, attribution:"今昔マップ on the web"})
+  },
+  kj_showa2: {
+    name:"今昔マップ 首都圏", meta:"1944–1954", credit:"kj",
+    layer: L.tileLayer("https://ktgis.net/kjmapw/kjtilemap/tokyo50/02/{z}/{x}/{y}.png",
+      {tms:true, minZoom:8, maxNativeZoom:16, maxZoom:18, attribution:"今昔マップ on the web"})
+  },
+  ort_old: {
+    name:"空中写真", meta:"1961–1969", credit:"",
+    layer: L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png",
+      {maxNativeZoom:17, maxZoom:18, attribution:ATTR_GSI})
+  },
+  seamless: {
+    name:"最新 空中写真", meta:"2004–", credit:"",
+    layer: L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+      {maxNativeZoom:18, maxZoom:18, attribution:ATTR_GSI})
+  }
+};
+
+/* =========================================================
+   地図初期化（日本橋周辺）
+   ========================================================= */
+if (typeof L === "undefined") {
+  document.getElementById("map").innerHTML =
+    '<div style="padding:28px;color:#f1ece2;font-family:sans-serif;line-height:1.7">' +
+    '地図ライブラリ(Leaflet)を読み込めませんでした。<br>' +
+    'ネット接続を確認するか、このHTMLファイルを通常のブラウザ(Chrome/Safari)で直接開いてみてください。</div>';
+  throw new Error("Leaflet (L) failed to load");
+}
+
+const map = L.map("map", {zoomControl:true, minZoom:5, maxZoom:18})
+              .setView([35.6841, 139.7745], 15);
+L.control.scale({imperial:false}).addTo(map);
+
+// タイル読み込み失敗の検知 → 原因が分かるバナーを表示
+let tileErrorShown = false;
+function showTileError(){
+  if(tileErrorShown) return;
+  tileErrorShown = true;
+  const b = document.createElement("div");
+  b.style.cssText =
+    "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1200;"+
+    "max-width:80%;padding:18px 22px;background:rgba(28,26,23,.94);color:#f1ece2;"+
+    "border:1px solid #c98a3a;border-radius:12px;font-size:13px;line-height:1.7;text-align:center;"+
+    "font-family:'Zen Kaku Gothic New',sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.5)";
+  b.innerHTML =
+    "地図タイル画像を読み込めませんでした。<br>"+
+    "<span style='color:#c98a3a'>このプレビュー枠ではタイル通信がブロックされている可能性があります。</span><br>"+
+    "HTMLファイルをダウンロードして Chrome / Safari で直接開く、"+
+    "または GitHub Pages に置くと表示されます。";
+  document.getElementById("map").appendChild(b);
+}
+map.on("tileerror", showTileError);
+
+let currentBaseKey = "pale";
+let currentBase = baseMaps[currentBaseKey].layer.addTo(map);
+let currentOverlay = null;
+let overlayOpacity = 0.8;
+
+/* ---- UI 生成 ---- */
+function makeOpt(container, label, meta, active, onClick){
+  const el = document.createElement("button");
+  el.className = "opt" + (active ? " active":"");
+  el.innerHTML = `<span class="tick"></span><span>${label}</span>` +
+                 (meta ? `<span class="meta">${meta}</span>` : "");
+  el.onclick = ()=>{ onClick(el); };
+  container.appendChild(el);
+  return el;
+}
+
+// ベース地図 UI
+const baseList = document.getElementById("baseList");
+Object.entries(baseMaps).forEach(([key,def])=>{
+  makeOpt(baseList, def.name, def.meta, key===currentBaseKey, (el)=>{
+    if(key===currentBaseKey) return;
+    map.removeLayer(currentBase);
+    currentBaseKey = key;
+    currentBase = def.layer.addTo(map);
+    currentBase.bringToBack();
+    [...baseList.children].forEach(c=>c.classList.remove("active"));
+    el.classList.add("active");
+  });
+});
+
+// 過去地図 UI
+const overlayList = document.getElementById("overlayList");
+const opacityGroup = document.getElementById("opacityGroup");
+let activeOverlayKey = "none";
+
+Object.entries(overlayMaps).forEach(([key,def])=>{
+  makeOpt(overlayList, def.name, def.meta, key==="none", (el)=>{
+    if(currentOverlay){ map.removeLayer(currentOverlay); currentOverlay=null; }
+    activeOverlayKey = key;
+    [...overlayList.children].forEach(c=>c.classList.remove("active"));
+    el.classList.add("active");
+
+    if(def.layer){
+      currentOverlay = def.layer.addTo(map);
+      currentOverlay.setOpacity(overlayOpacity);
+      currentOverlay.bringToFront();
+      opacityGroup.style.display = "block";
+    }else{
+      opacityGroup.style.display = "none";
+    }
+    updateCredits();
+  });
+});
+
+// 不透明度
+const opacity = document.getElementById("opacity");
+const opacityVal = document.getElementById("opacityVal");
+function syncSliderFill(){ opacity.style.setProperty("--val", opacity.value + "%"); }
+syncSliderFill();
+opacity.addEventListener("input", ()=>{
+  overlayOpacity = opacity.value/100;
+  opacityVal.textContent = opacity.value + "%";
+  syncSliderFill();
+  if(currentOverlay) currentOverlay.setOpacity(overlayOpacity);
+});
+
+// 出典表記の出し分け（今昔マップ・迅速測図は使用時のみ強調表示）
+function updateCredits(){
+  const c = overlayMaps[activeOverlayKey]?.credit;
+  document.getElementById("creditKj").style.display    = (c==="kj")    ? "inline":"none";
+  document.getElementById("creditRapid").style.display = (c==="rapid") ? "inline":"none";
+}
+
+// モバイル折り畳み
+document.getElementById("toggle").addEventListener("click", ()=>{
+  document.getElementById("panel").classList.toggle("collapsed");
+});
+</script>
+</body>
+</html>
