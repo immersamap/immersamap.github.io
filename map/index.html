@@ -317,6 +317,53 @@
       filter: hue-rotate(70deg) saturate(0.3);
     }
 
+    /* ============ フィルタ調整パネル (?debug で表示) ============ */
+    .filter-debug-panel {
+      position: fixed; bottom: 16px; left: 16px; z-index: 1500;
+      background: rgba(26,26,26,0.95); color: #fff;
+      border-radius: 8px; padding: 12px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      font-size: 12px; max-width: 320px;
+      display: none;
+    }
+    .filter-debug-panel.show { display: block; }
+    .filter-debug-title {
+      font-weight: 500; margin-bottom: 8px; display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    .filter-debug-close {
+      background: transparent; border: none; color: #aaa;
+      cursor: pointer; padding: 0 4px; font-size: 14px;
+    }
+    .filter-debug-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .filter-debug-row label {
+      width: 80px; font-size: 11px; color: #ccc; flex-shrink: 0;
+    }
+    .filter-debug-row input[type=range] { flex: 1; }
+    .filter-debug-row .val {
+      width: 50px; text-align: right; font-size: 11px;
+      font-variant-numeric: tabular-nums; color: #fff;
+    }
+    .filter-debug-presets {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 4px; margin-top: 10px;
+    }
+    .filter-debug-preset {
+      padding: 6px 4px; border: 1px solid #444;
+      background: #2a2a2a; color: #ccc; cursor: pointer;
+      border-radius: 4px; font-size: 10px; text-align: center;
+      line-height: 1.3;
+    }
+    .filter-debug-preset:hover { background: #3a3a3a; color: #fff; }
+    .filter-debug-css {
+      margin-top: 8px; padding: 6px 8px; background: #0d0d0d;
+      border-radius: 4px; font-family: ui-monospace, monospace;
+      font-size: 10px; color: #8fd; word-break: break-all;
+      user-select: all;
+    }
+
     /* 現在地マーカー（青いドット + パルスリング） */
     .current-location-marker {
       width: 16px; height: 16px;
@@ -507,6 +554,40 @@
   </nav>
 
   <div class="toast" id="toast" role="status"></div>
+
+  <!-- フィルタ調整パネル (?debug で表示) -->
+  <div class="filter-debug-panel" id="filter-debug-panel">
+    <div class="filter-debug-title">
+      <span>🎨 タイル色フィルタ調整</span>
+      <button class="filter-debug-close" id="filter-debug-close" aria-label="閉じる">✕</button>
+    </div>
+    <div class="filter-debug-row">
+      <label>色相回転</label>
+      <input type="range" id="dbg-hue" min="0" max="360" value="70" step="5">
+      <span class="val" id="dbg-hue-val">70°</span>
+    </div>
+    <div class="filter-debug-row">
+      <label>彩度</label>
+      <input type="range" id="dbg-sat" min="0" max="200" value="30" step="5">
+      <span class="val" id="dbg-sat-val">0.30</span>
+    </div>
+    <div class="filter-debug-row">
+      <label>明度</label>
+      <input type="range" id="dbg-bri" min="50" max="200" value="100" step="5">
+      <span class="val" id="dbg-bri-val">1.00</span>
+    </div>
+    <div class="filter-debug-presets" id="dbg-presets">
+      <button class="filter-debug-preset" data-h="70"  data-s="30"  data-b="100">現在<br>70/0.3/1.0</button>
+      <button class="filter-debug-preset" data-h="320" data-s="100" data-b="100">濃ピンク<br>320/1.0/1.0</button>
+      <button class="filter-debug-preset" data-h="330" data-s="150" data-b="100">鮮ピンク<br>330/1.5/1.0</button>
+      <button class="filter-debug-preset" data-h="320" data-s="100" data-b="110">明ピンク<br>320/1.0/1.1</button>
+      <button class="filter-debug-preset" data-h="300" data-s="100" data-b="100">マゼンタ<br>300/1.0/1.0</button>
+      <button class="filter-debug-preset" data-h="340" data-s="80"  data-b="100">サーモン<br>340/0.8/1.0</button>
+      <button class="filter-debug-preset" data-h="0"   data-s="100" data-b="100">無効<br>(元色)</button>
+      <button class="filter-debug-preset" data-h="70"  data-s="50"  data-b="100">中間<br>70/0.5/1.0</button>
+    </div>
+    <div class="filter-debug-css" id="dbg-css">filter: hue-rotate(70deg) saturate(0.30);</div>
+  </div>
 
   <!-- このサイトについて Modal -->
   <div class="info-overlay" id="info-overlay" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
@@ -1223,6 +1304,63 @@
       });
     }
 
+    // ============ フィルタ調整パネル (?debug) ============
+    function initFilterDebugPanel() {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has('debug')) return;
+
+      const panel = $('filter-debug-panel');
+      const hue = $('dbg-hue'), sat = $('dbg-sat'), bri = $('dbg-bri');
+      const hueVal = $('dbg-hue-val'), satVal = $('dbg-sat-val'), briVal = $('dbg-bri-val');
+      const cssOut = $('dbg-css');
+      panel.classList.add('show');
+
+      function apply() {
+        const h = parseInt(hue.value, 10);
+        const s = parseInt(sat.value, 10) / 100;
+        const b = parseInt(bri.value, 10) / 100;
+        hueVal.textContent = h + '°';
+        satVal.textContent = s.toFixed(2);
+        briVal.textContent = b.toFixed(2);
+        const filterStr = `hue-rotate(${h}deg) saturate(${s.toFixed(2)}) brightness(${b.toFixed(2)})`;
+        cssOut.textContent = `filter: ${filterStr};`;
+        // ライブ反映：既存のフィルタクラスのCSSを上書き
+        let styleEl = document.getElementById('dbg-filter-style');
+        if (!styleEl) {
+          styleEl = document.createElement('style');
+          styleEl.id = 'dbg-filter-style';
+          document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = `.tile-filter-unify-pink { filter: ${filterStr} !important; }`;
+      }
+
+      hue.addEventListener('input', apply);
+      sat.addEventListener('input', apply);
+      bri.addEventListener('input', apply);
+
+      // プリセット
+      document.querySelectorAll('.filter-debug-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          hue.value = btn.dataset.h;
+          sat.value = btn.dataset.s;
+          bri.value = btn.dataset.b;
+          apply();
+        });
+      });
+
+      $('filter-debug-close').addEventListener('click', () => panel.classList.remove('show'));
+
+      // CSS文字列をクリックでクリップボードへ
+      cssOut.addEventListener('click', () => {
+        navigator.clipboard?.writeText(cssOut.textContent).then(
+          () => toast('CSSをコピーしました'),
+          () => {}
+        );
+      });
+
+      apply();
+    }
+
     // ============ 起動 ============
     window.addEventListener('load', () => {
       initMap();
@@ -1231,6 +1369,7 @@
       loadHistoricalMaps();
       initSearch();
       initInfoModal();
+      initFilterDebugPanel();
     });
 
     // リサイズで地図を再計算
