@@ -56,6 +56,83 @@
     .header-link { color: var(--text-muted); text-decoration: none; font-size: 13px; padding: 6px 8px; border-radius: 6px; }
     .header-link:hover { background: #f0f0f0; color: var(--text); }
 
+    .header-info-btn {
+      width: 36px; height: 36px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-info-btn:hover { background: #f0f0f0; color: var(--text); }
+    .header-info-btn i { font-size: 20px; }
+
+    /* ============ Info Modal ============ */
+    .info-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; transition: opacity .2s;
+    }
+    .info-overlay.show { display: flex; opacity: 1; }
+    .info-modal {
+      background: #fff; border-radius: 12px; max-width: 560px; width: 100%;
+      max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .info-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .info-modal-title { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .info-modal-title i { font-size: 20px; }
+    .info-modal-close {
+      width: 32px; height: 32px; border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+    }
+    .info-modal-close:hover { background: #f0f0f0; color: var(--text); }
+    .info-tabs {
+      display: flex; padding: 0 16px; border-bottom: 1px solid var(--border);
+      background: var(--bg-alt, #fafafa); flex-shrink: 0;
+    }
+    .info-tab {
+      flex: 1; padding: 12px 8px; border: none; background: transparent;
+      color: var(--text-muted); font-size: 13px; font-weight: 500;
+      border-bottom: 2px solid transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .info-tab:hover { color: var(--text); }
+    .info-tab.active { color: var(--text); border-bottom-color: var(--text); }
+    .info-tab i { font-size: 15px; }
+    .info-body {
+      flex: 1; overflow-y: auto; padding: 20px 24px;
+    }
+    .info-section { display: none; }
+    .info-section.active { display: block; }
+    .info-section h3 {
+      font-size: 14px; font-weight: 500; margin: 16px 0 8px; color: var(--text);
+    }
+    .info-section h3:first-child { margin-top: 0; }
+    .info-section p, .info-section li {
+      font-size: 13px; color: var(--text-muted); line-height: 1.7;
+    }
+    .info-section ul { padding-left: 20px; margin: 4px 0 12px; }
+    .info-section li { margin-bottom: 4px; }
+    .info-section a { color: #185fa5; text-decoration: none; }
+    .info-section a:hover { text-decoration: underline; }
+    .info-section strong { color: var(--text); font-weight: 500; }
+    .info-section .info-keybox {
+      display: inline-block; padding: 1px 6px; background: #f0f0f0;
+      border-radius: 4px; font-size: 11px; color: var(--text);
+      font-family: ui-monospace, monospace; border: 1px solid var(--border);
+    }
+    .info-section .credit-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .info-section .credit-row:last-child { border-bottom: none; }
+    .info-section .credit-label {
+      width: 110px; flex-shrink: 0; font-size: 12px;
+      color: var(--text); font-weight: 500;
+    }
+    .info-section .credit-value { flex: 1; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
     /* ============ 検索ボックス（ヘッダー中央） ============ */
     .search-wrap {
       position: relative; flex: 1; max-width: 360px; margin: 0 20px;
@@ -341,8 +418,9 @@
       <div class="search-results" id="search-results" role="listbox"></div>
     </div>
     <div class="header-right">
-      <a class="header-link" href="/okunohosomichi/">物語モード</a>
-      <a class="header-link" href="/">使い方</a>
+      <button class="header-info-btn" id="info-btn" aria-label="このサイトについて" title="このサイトについて">
+        <i class="ti ti-info-circle"></i>
+      </button>
     </div>
   </header>
 
@@ -397,6 +475,119 @@
   </nav>
 
   <div class="toast" id="toast" role="status"></div>
+
+  <!-- このサイトについて Modal -->
+  <div class="info-overlay" id="info-overlay" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+    <div class="info-modal">
+      <div class="info-modal-header">
+        <div class="info-modal-title" id="info-modal-title"><i class="ti ti-info-circle"></i>このサイトについて</div>
+        <button class="info-modal-close" id="info-modal-close" aria-label="閉じる"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="info-tabs" role="tablist">
+        <button class="info-tab active" data-info-tab="usage" role="tab" aria-selected="true"><i class="ti ti-help"></i>使い方</button>
+        <button class="info-tab" data-info-tab="sources" role="tab" aria-selected="false"><i class="ti ti-license"></i>データ出典</button>
+        <button class="info-tab" data-info-tab="about" role="tab" aria-selected="false"><i class="ti ti-map-2"></i>このサイトについて</button>
+      </div>
+      <div class="info-body">
+
+        <section class="info-section active" id="info-usage">
+          <h3>基本操作</h3>
+          <p>
+            画面下（モバイル）または左サイドバー（PC）の3つのカテゴリ —
+            <strong>✈️ 空中写真</strong> / <strong>🗾 古地図</strong> / <strong>⛰ 地形</strong> —
+            を切り替えて、過去から現代までの様々な地図を重ね合わせて見られます。
+          </p>
+
+          <h3>レイヤーの選択</h3>
+          <p>各カテゴリ内のリストから年代や種類を選びます。緑のバッジは全国カバー、橙は限定エリアです。</p>
+
+          <h3>透明度の調整</h3>
+          <p>地図の右側にある縦のスライダーで、重ねた地図の濃さを調整できます。下にすると現代地図が透けて見え、過去と現在を比べられます。</p>
+
+          <h3>地名・住所の検索</h3>
+          <p>画面上部の検索ボックスから地名や住所、施設名で場所に飛べます。国土地理院とOpenStreetMapの両方を検索します。</p>
+
+          <h3>サイドバーの折りたたみ（PC）</h3>
+          <p>ヘッダー左の <span class="info-keybox">☰</span> ボタンで、サイドバーを閉じて地図を広く表示できます。</p>
+
+          <h3>現在地への移動</h3>
+          <p>地図右下の <i class="ti ti-current-location" aria-hidden="true"></i> ボタンで現在地に移動します（位置情報の許可が必要です）。</p>
+        </section>
+
+        <section class="info-section" id="info-sources">
+          <p style="margin-bottom: 12px;">このサイトは以下のオープンデータを利用しています。各データはそれぞれの提供元の利用条件に従います。</p>
+
+          <div class="credit-row">
+            <div class="credit-label">ベース地図</div>
+            <div class="credit-value">
+              <strong>OpenStreetMap</strong>（© OpenStreetMap contributors）<br>
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">利用規約・著作権</a>
+            </div>
+          </div>
+
+          <div class="credit-row">
+            <div class="credit-label">空中写真</div>
+            <div class="credit-value">
+              <strong>国土地理院</strong> 地理院タイル<br>
+              シームレス空中写真、国土画像情報（第1〜4回撮影）、戦後米軍撮影、戦前陸軍撮影 など<br>
+              <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル一覧</a>
+            </div>
+          </div>
+
+          <div class="credit-row">
+            <div class="credit-label">地形図</div>
+            <div class="credit-value">
+              <strong>国土地理院</strong> 色別標高図・陰影起伏図
+            </div>
+          </div>
+
+          <div class="credit-row">
+            <div class="credit-label">古地図</div>
+            <div class="credit-value">
+              各地図ごとの出典は、地図を選択した際に左上の情報カードに表示されます。
+            </div>
+          </div>
+
+          <div class="credit-row">
+            <div class="credit-label">地名検索</div>
+            <div class="credit-value">
+              <strong>国土地理院</strong> 住所検索API、<strong>Nominatim</strong>（OpenStreetMap）
+            </div>
+          </div>
+        </section>
+
+        <section class="info-section" id="info-about">
+          <h3>ImmersaMap とは</h3>
+          <p>
+            「時を遡る地図体験」をテーマに、現代の地図に古い空中写真や古地図を重ね合わせて、
+            同じ場所がかつてどんな姿だったかを直感的に確かめられる Web アプリです。
+          </p>
+
+          <h3>このサービスでできること</h3>
+          <ul>
+            <li>1928年から現代までの空中写真を切り替えて閲覧</li>
+            <li>古地図と現代地図の重ね合わせ表示</li>
+            <li>標高・起伏などの地形図表示</li>
+            <li>地名・住所による場所検索</li>
+          </ul>
+
+          <h3>古地図の追加</h3>
+          <p>
+            手元の古地図画像を位置合わせして公開できる
+            <a href="/map-editor.html" target="_blank" rel="noopener">古地図エディタ</a>
+            も用意しています。
+          </p>
+
+          <h3>免責事項</h3>
+          <p>
+            古地図の位置合わせは目視と基準点による近似であり、地図自体の歪みや誇張表現により、
+            完全に正確な位置を示すものではありません。研究・調査用途では出典元の原資料をご確認ください。
+          </p>
+        </section>
+
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -884,6 +1075,50 @@
       toast(r.name + ' に移動');
     }
 
+    // ============ 「このサイトについて」モーダル ============
+    function initInfoModal() {
+      const overlay = $('info-overlay');
+      const openBtn = $('info-btn');
+      const closeBtn = $('info-modal-close');
+      if (!openBtn || !overlay) return;
+
+      function open() {
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        // 1つ目のタブにフォーカス
+        const firstTab = overlay.querySelector('.info-tab.active');
+        if (firstTab) firstTab.focus();
+      }
+      function close() {
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+      }
+
+      openBtn.addEventListener('click', open);
+      closeBtn.addEventListener('click', close);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('show')) close();
+      });
+
+      // タブ切替
+      overlay.querySelectorAll('.info-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.infoTab;
+          overlay.querySelectorAll('.info-tab').forEach(t => {
+            const on = t === tab;
+            t.classList.toggle('active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+          overlay.querySelectorAll('.info-section').forEach(s => {
+            s.classList.toggle('active', s.id === 'info-' + target);
+          });
+          // 上部にスクロール
+          overlay.querySelector('.info-body').scrollTop = 0;
+        });
+      });
+    }
+
     // ============ 起動 ============
     window.addEventListener('load', () => {
       initMap();
@@ -891,6 +1126,7 @@
       selectCategory('aerial');
       loadHistoricalMaps();
       initSearch();
+      initInfoModal();
     });
 
     // リサイズで地図を再計算
