@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="ImmersaMap - 古地図と物語で時間と場所に没入する。">
+<meta property="og:title" content="ImmersaMap — 没入する地図体験プラットフォーム">
+<meta property="og:description" content="古地図・空中写真で街の時間旅行を。物語の舞台を時系列で追う。">
+<meta property="og:image" content="https://immersamap.github.io/og-image.png">
+<title>ImmersaMap — 没入する地図体験プラットフォーム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Cinzel:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   グローバルスタイル（既存のindex.htmlから継承）
+   ============================================================ */
+:root {
+  --ink:#1a1008;
+  --ink2:#221408;
+  --parchment:#f2e8d0;
+  --parchment2:#e8d8b0;
+  --sepia:#8b6914;
+  --gold:#d4a017;
+  --gold-l:#f0c040;
+  --rust:#c0392b;
+  --blue:#3498db;
+  --surface:rgba(22,14,4,0.92);
+  --border:rgba(212,160,23,0.28);
+  --radius:8px;
+}
+
+*, *::before, *::after {
+  margin:0; padding:0; box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html, body {
+  width:100%; height:100%;
+  font-family:'Noto Sans JP',sans-serif;
+  background:var(--ink);
+  color:var(--parchment);
+  line-height:1.6;
+}
+
+/* ============================================================
+   ヘッダー・ナビゲーション
+   ============================================================ */
+header {
+  position:fixed;
+  top:0;
+  width:100%;
+  z-index:100;
+  background:linear-gradient(180deg, rgba(26,16,8,0.95) 0%, rgba(26,16,8,0) 100%);
+  padding:16px 20px;
+}
+
+nav {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.logo {
+  font-family:'Cinzel',serif;
+  font-size:24px;
+  font-weight:600;
+  color:var(--gold-l);
+  letter-spacing:0.14em;
+  text-decoration:none;
+}
+
+.nav-links {
+  display:flex;
+  gap:24px;
+  list-style:none;
+}
+
+.nav-links a {
+  color:var(--parchment);
+  text-decoration:none;
+  font-size:13px;
+  letter-spacing:0.1em;
+  transition:color 0.3s;
+  text-transform:uppercase;
+}
+
+.nav-links a:hover {
+  color:var(--gold-l);
+}
+
+@media (max-width:768px) {
+  .nav-links {
+    gap:12px;
+    font-size:11px;
+  }
+}
+
+/* ============================================================
+   メインコンテンツ
+   ============================================================ */
+main {
+  padding-top:80px;
+  min-height:100vh;
+}
+
+/* ============================================================
+   ヒーロー領域
+   ============================================================ */
+.hero {
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg, rgba(26,16,8,1) 0%, rgba(34,20,8,0.8) 100%);
+  text-align:center;
+  padding:40px 20px;
+  position:relative;
+  overflow:hidden;
+}
+
+.hero::before {
+  content:'';
+  position:absolute;
+  top:-50%;
+  left:-50%;
+  width:200%;
+  height:200%;
+  background:radial-gradient(circle, rgba(212,160,23,0.05) 0%, transparent 70%);
+  animation:pulse 8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform:scale(1); }
+  50% { transform:scale(1.1); }
+}
+
+.hero-content {
+  position:relative;
+  z-index:1;
+  max-width:600px;
+}
+
+.hero-ring {
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  border:2px solid var(--gold);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:32px;
+  margin:0 auto 30px;
+  animation:spin 20s linear infinite;
+}
+
+@keyframes spin {
+  from { transform:rotate(0deg); }
+  to { transform:rotate(360deg); }
+}
+
+.hero h1 {
+  font-family:'Cinzel',serif;
+  font-size:clamp(32px, 8vw, 64px);
+  color:var(--gold-l);
+  margin:20px 0;
+  letter-spacing:0.2em;
+  font-weight:600;
+}
+
+.hero-subtitle {
+  font-size:14px;
+  color:var(--sepia);
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  margin-bottom:40px;
+}
+
+.hero-description {
+  font-size:16px;
+  color:var(--parchment2);
+  margin-bottom:50px;
+  line-height:1.8;
+}
+
+/* ============================================================
+   CTA ボタン
+   ============================================================ */
+.cta-button {
+  display:inline-block;
+  padding:14px 40px;
+  border:1.5px solid var(--gold);
+  background:transparent;
+  color:var(--gold-l);
+  font-family:'Cinzel',serif;
+  font-size:13px;
+  letter-spacing:0.15em;
+  cursor:pointer;
+  transition:all 0.3s;
+  text-decoration:none;
+  text-transform:uppercase;
+}
+
+.cta-button:hover {
+  background:rgba(212,160,23,0.1);
+  box-shadow:0 0 20px rgba(212,160,23,0.3);
+}
+
+/* ============================================================
+   モードセクション
+   ============================================================ */
+.modes-section {
+  padding:100px 20px;
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.section-title {
+  font-family:'Cinzel',serif;
+  font-size:clamp(28px, 6vw, 44px);
+  color:var(--gold-l);
+  margin-bottom:20px;
+  letter-spacing:0.1em;
+  text-align:center;
+}
+
+.section-subtitle {
+  font-size:14px;
+  color:var(--sepia);
+  text-align:center;
+  margin-bottom:60px;
+  letter-spacing:0.15em;
+}
+
+.modes-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+  gap:40px;
+  margin-bottom:80px;
+}
+
+.mode-card {
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:40px;
+  background:rgba(34,20,8,0.6);
+  transition:all 0.3s;
+  position:relative;
+  overflow:hidden;
+}
+
+.mode-card::before {
+  content:'';
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:3px;
+  background:linear-gradient(90deg, var(--gold) 0%, transparent 100%);
+}
+
+.mode-card:hover {
+  border-color:var(--gold);
+  background:rgba(34,20,8,0.9);
+  box-shadow:0 8px 24px rgba(212,160,23,0.2);
+  transform:translateY(-4px);
+}
+
+.mode-icon {
+  font-size:40px;
+  margin-bottom:20px;
+}
+
+.mode-card h2 {
+  font-family:'Cinzel',serif;
+  font-size:24px;
+  color:var(--gold-l);
+  margin-bottom:16px;
+  letter-spacing:0.1em;
+}
+
+.mode-card p {
+  font-size:14px;
+  color:var(--parchment2);
+  margin-bottom:12px;
+  line-height:1.7;
+}
+
+.mode-status {
+  font-size:12px;
+  color:var(--sepia);
+  margin-bottom:24px;
+  font-style:italic;
+}
+
+.mode-button {
+  display:inline-block;
+  padding:12px 28px;
+  border:1px solid var(--gold);
+  background:transparent;
+  color:var(--gold);
+  font-size:12px;
+  letter-spacing:0.1em;
+  cursor:pointer;
+  transition:all 0.3s;
+  text-decoration:none;
+  text-transform:uppercase;
+}
+
+.mode-button:hover {
+  background:rgba(212,160,23,0.15);
+  color:var(--gold-l);
+}
+
+/* ============================================================
+   フィーチャーセクション
+   ============================================================ */
+.features-section {
+  padding:80px 20px;
+  background:rgba(34,20,8,0.5);
+}
+
+.features-container {
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.features-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+  gap:30px;
+}
+
+.feature {
+  padding:30px;
+  border-left:3px solid var(--gold);
+}
+
+.feature h3 {
+  font-size:16px;
+  color:var(--gold-l);
+  margin-bottom:12px;
+  letter-spacing:0.1em;
+}
+
+.feature p {
+  font-size:13px;
+  color:var(--parchment2);
+  line-height:1.7;
+}
+
+/* ============================================================
+   作品紹介セクション
+   ============================================================ */
+.works-section {
+  padding:100px 20px;
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.work-card {
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:40px;
+  background:rgba(34,20,8,0.6);
+  text-align:center;
+  transition:all 0.3s;
+}
+
+.work-card:hover {
+  border-color:var(--gold);
+  background:rgba(34,20,8,0.9);
+}
+
+.work-title {
+  font-family:'Noto Serif JP',serif;
+  font-size:24px;
+  color:var(--gold-l);
+  margin-bottom:8px;
+}
+
+.work-author {
+  font-size:13px;
+  color:var(--sepia);
+  margin-bottom:16px;
+  letter-spacing:0.1em;
+}
+
+.work-description {
+  font-size:14px;
+  color:var(--parchment2);
+  margin-bottom:24px;
+  line-height:1.7;
+}
+
+.work-status {
+  font-size:12px;
+  color:var(--gold);
+  margin-bottom:24px;
+  font-weight:500;
+}
+
+.work-button {
+  display:inline-block;
+  padding:12px 32px;
+  border:1.5px solid var(--gold);
+  background:transparent;
+  color:var(--gold-l);
+  font-family:'Cinzel',serif;
+  font-size:12px;
+  letter-spacing:0.15em;
+  cursor:pointer;
+  transition:all 0.3s;
+  text-decoration:none;
+  text-transform:uppercase;
+}
+
+.work-button:hover {
+  background:rgba(212,160,23,0.1);
+}
+
+/* ============================================================
+   フッター
+   ============================================================ */
+footer {
+  padding:60px 20px;
+  background:rgba(26,16,8,0.95);
+  border-top:1px solid var(--border);
+  text-align:center;
+}
+
+.footer-content {
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.footer-links {
+  display:flex;
+  justify-content:center;
+  gap:24px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+
+.footer-links a {
+  font-size:12px;
+  color:var(--sepia);
+  text-decoration:none;
+  transition:color 0.3s;
+  letter-spacing:0.1em;
+}
+
+.footer-links a:hover {
+  color:var(--gold);
+}
+
+.footer-text {
+  font-size:12px;
+  color:var(--sepia);
+  letter-spacing:0.05em;
+}
+
+.disclaimer {
+  font-size:11px;
+  color:var(--sepia);
+  margin-top:16px;
+  opacity:0.8;
+}
+
+/* ============================================================
+   レスポンシブ
+   ============================================================ */
+@media (max-width:768px) {
+  header {
+    padding:12px 16px;
+  }
+
+  .logo {
+    font-size:18px;
+  }
+
+  .nav-links {
+    gap:8px;
+  }
+
+  main {
+    padding-top:60px;
+  }
+
+  .hero {
+    height:auto;
+    min-height:80vh;
+    padding:60px 20px;
+  }
+
+  .hero h1 {
+    margin:16px 0;
+  }
+
+  .hero-description {
+    font-size:14px;
+    margin-bottom:40px;
+  }
+
+  .modes-section,
+  .features-section,
+  .works-section {
+    padding:60px 20px;
+  }
+
+  .section-title {
+    margin-bottom:16px;
+  }
+
+  .section-subtitle {
+    margin-bottom:40px;
+  }
+
+  .mode-card,
+  .work-card {
+    padding:28px;
+  }
+
+  .footer-links {
+    gap:12px;
+    font-size:11px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ヘッダー・ナビゲーション
+     ============================================================ -->
+<header>
+  <nav>
+    <a href="/" class="logo">ImmersaMap</a>
+    <ul class="nav-links">
+      <li><a href="#modes">体験</a></li>
+      <li><a href="#works">作品</a></li>
+      <li><a href="/map/">地図を見る</a></li>
+      <li><a href="#about">概要</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- ============================================================
+     メインコンテンツ
+     ============================================================ -->
+<main>
+
+  <!-- ============================================================
+       ヒーロー領域
+       ============================================================ -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="hero-ring">🗺️</div>
+      <h1>ImmersaMap</h1>
+      <p class="hero-subtitle">没入する地図体験プラットフォーム</p>
+      <p class="hero-description">
+        古地図と物語で、時間と場所に没入する。<br>
+        街の時間旅行から歴史人物の動線まで、<br>
+        地図上で多次元の物語を追体験できるサービスです。
+      </p>
+      <a href="#modes" class="cta-button">始める</a>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       モードセクション
+       ============================================================ -->
+  <section class="modes-section" id="modes">
+    <h2 class="section-title">2つの楽しみ方</h2>
+    <p class="section-subtitle">あなたの興味に応じて選んでください</p>
+
+    <div class="modes-grid">
+      <!-- 地図探索モード -->
+      <div class="mode-card">
+        <div class="mode-icon">🗺️</div>
+        <h2>地図探索モード</h2>
+        <p>古地図・空中写真で街の時間旅行を。江戸の町並み、戦後の街並み、地形の変化を時代ごとに見比べることで、街の歴史が見えてきます。</p>
+        <p class="mode-status">✅ 利用可能</p>
+        <a href="/map/" class="mode-button">地図を開く</a>
+      </div>
+
+      <!-- 物語追体験モード -->
+      <div class="mode-card">
+        <div class="mode-icon">📖</div>
+        <h2>物語追体験モード</h2>
+        <p>歴史作品の舞台を時系列で追う。松尾芭蕉の『おくのほそ道』から始まり、幕末の志士たちの足跡、古典文学の舞台へ。地図上で物語が動く。</p>
+        <p class="mode-status">【現在】『おくのほそ道』第1〜3章公開中</p>
+        <a href="/okunohosomichi/" class="mode-button">物語を見る</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       フィーチャーセクション
+       ============================================================ -->
+  <section class="features-section">
+    <div class="features-container">
+      <h2 class="section-title">ImmersaMapの特徴</h2>
+
+      <div class="features-grid">
+        <div class="feature">
+          <h3>没入する地図体験</h3>
+          <p>地図と物語が一体になった独特の体験。ただ情報を得るのではなく、その場所と時代に「没入」できます。</p>
+        </div>
+
+        <div class="feature">
+          <h3>時間軸で街を追う</h3>
+          <p>古地図から現在まで、街の変化を層状に見ることで、歴史が時間の流れとして理解できます。</p>
+        </div>
+
+        <div class="feature">
+          <h3>物語と場所の再会</h3>
+          <p>歴史小説や古典で読んだ舞台を地図上で再発見。「ここに本当に立った」という実感が歴史を身近にします。</p>
+        </div>
+
+        <div class="feature">
+          <h3>拡張し続ける作品</h3>
+          <p>『おくのほそ道』から始まり、『太平記』『羅生門』など、複数の時代・ジャンルの物語を順次追加予定。</p>
+        </div>
+
+        <div class="feature">
+          <h3>現地体験との連携</h3>
+          <p>スマートフォンで旅先で使用。聖地巡礼や旅行計画に。ストリートビューと古地図を行き来して歴史を確認。</p>
+        </div>
+
+        <div class="feature">
+          <h3>物語の新しい読み方</h3>
+          <p>従来の読書・視聴とは異なる、地理的・時間的な「追体験」。複数の視点から物語を立体化させます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       作品セクション
+       ============================================================ -->
+  <section class="works-section" id="works">
+    <h2 class="section-title">公開中の作品</h2>
+    <p class="section-subtitle">歴史文学の舞台を地図上で体験</p>
+
+    <div class="modes-grid">
+      <div class="work-card">
+        <div class="mode-icon">🌸</div>
+        <p class="work-title">おくのほそ道</p>
+        <p class="work-author">松尾芭蕉 / 元禄2年（1689年）</p>
+        <p class="work-description">
+          江戸から奥州・北陸への150日の旅。古い地名と現在の地名を行き来しながら、芭蕉が詠んだ俳句の舞台を時系列で追うことができます。第1〜3章が公開中。
+        </p>
+        <p class="work-status">第1〜3章公開 / 全10章予定</p>
+        <a href="/okunohosomichi/" class="work-button">物語を追う</a>
+      </div>
+
+      <div class="work-card" style="opacity:0.6;">
+        <div class="mode-icon">⛩️</div>
+        <p class="work-title">太平記</p>
+        <p class="work-author">軍記物語 / 南北朝時代</p>
+        <p class="work-description">
+          新田義貞・楠木正成・足利尊氏たちが躍動する南北朝の動乱。鎌倉攻めから始まる各地の戦いを、実在の地点で追体験します。
+        </p>
+        <p class="work-status">準備中</p>
+        <button class="work-button" disabled style="opacity:0.5;">近日公開</button>
+      </div>
+
+      <div class="work-card" style="opacity:0.6;">
+        <div class="mode-icon">🏮</div>
+        <p class="work-title">羅生門 ほか</p>
+        <p class="work-author">芥川龍之介</p>
+        <p class="work-description">
+          平安京を舞台にした短編群。時間を消費せずに、1つの短編を15分で場所とともに体験。複数の短編をめぐる新しい読み方。
+        </p>
+        <p class="work-status">準備中</p>
+        <button class="work-button" disabled style="opacity:0.5;">近日公開</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================================================
+     フッター
+     ============================================================ -->
+<footer>
+  <div class="footer-content">
+    <div class="footer-links">
+      <a href="/map/">地図探索</a>
+      <a href="/okunohosomichi/">物語追体験</a>
+      <a href="#about">このサービスについて</a>
+      <a href="https://github.com/immersamap/immersamap.github.io">GitHub</a>
+    </div>
+
+    <p class="footer-text">
+      © 2024 ImmersaMap. All rights reserved.
+    </p>
+
+    <p class="disclaimer">
+      当サイトはAIを活用して物語コンテンツを生成しています。<br>
+      記載内容は作品の解釈であり、完全な史実考証ではありません。詳細は各作品ページをご参照ください。
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
