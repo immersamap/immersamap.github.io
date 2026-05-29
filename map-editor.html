@@ -123,6 +123,12 @@
   .manage-btn:hover { background: #f0f0f0; }
   .manage-btn.danger { border-color: var(--red); color: var(--red); }
   .manage-btn.danger:hover { background: #fbeaea; }
+  .manage-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status-badge {
+    display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 3px;
+    font-weight: 500; margin-left: 4px; vertical-align: middle;
+  }
+  .status-badge.bad { background: var(--red); color: #fff; }
   .manage-empty { padding: 24px 12px; text-align: center; color: var(--text-faint); font-size: 12px; line-height: 1.6; }
 
   .step {
@@ -1115,22 +1121,28 @@
         const card = document.createElement('div');
         card.className = 'manage-card';
         const meta = [m.era, m.coverage_label ? 'カバー範囲：' + m.coverage_label : ''].filter(Boolean).join(' · ');
-        const thumb = m.image_url
-          ? `<img class="manage-thumb" src="${escapeAttr(m.image_url)}" alt="">`
-          : `<div class="manage-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="ti ti-map" style="font-size:22px;color:#999;"></i></div>`;
+        const hasImage = !!m.image_url;
+        const statusBadge = !hasImage
+          ? '<span class="status-badge bad" title="画像が登録されていません">画像なし</span>'
+          : '';
+        const thumb = hasImage
+          ? `<img class="manage-thumb" src="${escapeAttr(m.image_url)}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <div class="manage-thumb" style="display:none;align-items:center;justify-content:center;background:#fbeaea;"><i class="ti ti-photo-off" style="font-size:22px;color:var(--red);"></i></div>`
+          : `<div class="manage-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="ti ti-photo-off" style="font-size:22px;color:#999;"></i></div>`;
         card.innerHTML = `
           ${thumb}
           <div class="manage-info">
-            <div class="manage-name">${escapeHtml(m.name || '(無題)')}</div>
+            <div class="manage-name">${escapeHtml(m.name || '(無題)')} ${statusBadge}</div>
             <div class="manage-meta">${escapeHtml(meta || '—')}</div>
-            <div class="manage-sub">${escapeHtml(m.description || (m.source ? '出典：' + m.source : ''))}</div>
+            <div class="manage-sub" style="font-family:monospace;font-size:9px;">ID: ${escapeHtml(m.id)}</div>
           </div>
           <div class="manage-actions">
-            <button class="manage-btn" title="編集" data-act="edit"><i class="ti ti-edit"></i></button>
+            <button class="manage-btn" title="編集" data-act="edit"${!hasImage ? ' disabled' : ''}><i class="ti ti-edit"></i></button>
             <button class="manage-btn danger" title="削除" data-act="delete"><i class="ti ti-trash"></i></button>
           </div>
         `;
-        card.querySelector('[data-act="edit"]').addEventListener('click', () => editMap(m));
+        const editBtn = card.querySelector('[data-act="edit"]');
+        if (hasImage) editBtn.addEventListener('click', () => editMap(m));
         card.querySelector('[data-act="delete"]').addEventListener('click', () => deleteMap(m, card));
         listEl.appendChild(card);
       });
