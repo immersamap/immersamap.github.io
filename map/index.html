@@ -778,8 +778,8 @@
       $('zoom-out').addEventListener('click', () => map.zoomOut());
       $('locate').addEventListener('click', toggleCurrentLocation);
 
-      // ズーム変化に応じて zoomFade タイルの不透明度を更新
-      map.on('zoomend', applyZoomFade);
+      // ズーム変化に応じて zoomFade タイルの不透明度とフィルタを更新
+      map.on('zoomend', () => { applyZoomFade(); applyZoomFilter(); });
     }
 
     // ============ 現在地マーカー ============
@@ -934,8 +934,9 @@
         state.overlay = L.tileLayer(item.tile, {
           maxZoom: item.maxZoom || 18,
           opacity: computeEffectiveOpacity(item),
-          className: item.filter ? ('tile-filter-' + item.filter) : '',
+          className: '',
         }).addTo(map);
+        applyZoomFilter();
       }
 
       // 「いま見ているもの」更新
@@ -980,6 +981,21 @@
       if (state.overlay && state.currentTileItem && state.currentTileItem.zoomFade) {
         state.overlay.setOpacity(computeEffectiveOpacity(state.currentTileItem));
       }
+    }
+
+    // フィルタの ON/OFF をズームに応じて切り替え
+    // 広域(zoom≤11): カバレッジ色を統一する目的でフィルタON
+    // 拡大(zoom≥12): 実際の空中写真が見える領域なのでフィルタOFF
+    function applyZoomFilter() {
+      if (!state.overlay || !state.currentTileItem) return;
+      const item = state.currentTileItem;
+      if (!item.filter) return;
+      const container = state.overlay.getContainer && state.overlay.getContainer();
+      if (!container) return;
+      const cls = 'tile-filter-' + item.filter;
+      const z = map.getZoom();
+      if (z <= 11) container.classList.add(cls);
+      else container.classList.remove(cls);
     }
 
     // ============ 透明度 ============
