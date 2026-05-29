@@ -307,6 +307,33 @@
     }
     .map-action-btn:hover { background: #f8f8f8; }
     .map-action-btn i { font-size: 16px; }
+    .map-action-btn.active {
+      background: #2563eb; color: #fff;
+    }
+    .map-action-btn.active:hover { background: #1f57d6; }
+
+    /* 現在地マーカー（青いドット + パルスリング） */
+    .current-location-marker {
+      width: 16px; height: 16px;
+      background: #2563eb;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .current-location-marker::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.3);
+      animation: pulse-loc 2s ease-out infinite;
+    }
+    @keyframes pulse-loc {
+      0%   { width: 16px; height: 16px; opacity: 0.7; }
+      100% { width: 48px; height: 48px; opacity: 0; }
+    }
 
     .attribution {
       position: absolute; left: 16px; bottom: 8px; font-size: 10px;
@@ -455,7 +482,7 @@
     <div class="map-actions">
       <button class="map-action-btn" id="zoom-in" aria-label="拡大"><i class="ti ti-plus"></i></button>
       <button class="map-action-btn" id="zoom-out" aria-label="縮小"><i class="ti ti-minus"></i></button>
-      <button class="map-action-btn" id="locate" aria-label="現在地"><i class="ti ti-current-location"></i></button>
+      <button class="map-action-btn" id="locate" aria-label="現在地" aria-pressed="false"><i class="ti ti-current-location"></i></button>
     </div>
 
     <div class="attribution">
@@ -511,7 +538,7 @@
           <p>ヘッダー左の <span class="info-keybox">☰</span> ボタンで、サイドバーを閉じて地図を広く表示できます。</p>
 
           <h3>現在地への移動</h3>
-          <p>地図右下の <i class="ti ti-current-location" aria-hidden="true"></i> ボタンで現在地に移動します（位置情報の許可が必要です）。</p>
+          <p>地図右下の <i class="ti ti-current-location" aria-hidden="true"></i> ボタンで現在地に移動し、青いマーカーを表示します。もう一度押すと消えます（位置情報の許可が必要です）。</p>
         </section>
 
         <section class="info-section" id="info-sources">
@@ -662,13 +689,52 @@
 
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
-      $('locate').addEventListener('click', () => {
-        if (!navigator.geolocation) return toast('位置情報が使えません');
-        navigator.geolocation.getCurrentPosition(
-          p => { map.flyTo([p.coords.latitude, p.coords.longitude], 14); toast('現在地に移動'); },
-          () => toast('現在地を取得できませんでした')
-        );
-      });
+      $('locate').addEventListener('click', toggleCurrentLocation);
+    }
+
+    // ============ 現在地マーカー ============
+    let currentLocationMarker = null;
+
+    function toggleCurrentLocation() {
+      const btn = $('locate');
+      // 既に表示中なら消す
+      if (currentLocationMarker) {
+        map.removeLayer(currentLocationMarker);
+        currentLocationMarker = null;
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+        return;
+      }
+      // 表示する
+      if (!navigator.geolocation) { toast('位置情報が使えません'); return; }
+      // 取得中の視覚フィードバック
+      btn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          btn.disabled = false;
+          const ll = [p.coords.latitude, p.coords.longitude];
+          const icon = L.divIcon({
+            className: '', // 余計なクラス無し
+            html: '<div class="current-location-marker"></div>',
+            iconSize: [16, 16], iconAnchor: [8, 8],
+          });
+          currentLocationMarker = L.marker(ll, { icon, interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(map);
+          // 細かく見ていた人をいきなり広域に飛ばさない
+          const targetZoom = Math.max(map.getZoom(), 15);
+          map.flyTo(ll, targetZoom, { duration: 1 });
+          btn.classList.add('active');
+          btn.setAttribute('aria-pressed', 'true');
+          toast('現在地を表示しました');
+        },
+        (err) => {
+          btn.disabled = false;
+          const msg = err && err.code === 1
+            ? '位置情報の使用が拒否されています。ブラウザの設定をご確認ください'
+            : '現在地を取得できませんでした';
+          toast(msg);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
     }
 
     // ============ カテゴリ切替 ============
