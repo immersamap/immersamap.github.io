@@ -394,6 +394,33 @@
     }
     .attribution a { color: inherit; pointer-events: auto; }
 
+    /* ============ タイル読み込みプログレス ============ */
+    .tile-progress-bar {
+      position: fixed; top: var(--header-h); left: 0; right: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, #6382b8, #b88263);
+      box-shadow: 0 0 6px rgba(99,130,184,0.5);
+      z-index: 1900; opacity: 0; pointer-events: none;
+      transition: width 0.25s ease, opacity 0.3s ease;
+    }
+    .tile-progress-bar.show { opacity: 1; }
+    .tile-progress-chip {
+      position: fixed; top: calc(var(--header-h) + 12px); left: 50%;
+      transform: translateX(-50%) translateY(-6px);
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(26,26,26,0.82); color: #fff;
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      font-size: 12px; line-height: 1; padding: 7px 13px; border-radius: 999px;
+      z-index: 1900; opacity: 0; pointer-events: none; white-space: nowrap;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .tile-progress-chip.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .tile-progress-chip .tp-spinner {
+      width: 12px; height: 12px; border-radius: 50%; flex: none;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      animation: tp-spin 0.7s linear infinite;
+    }
+    @keyframes tp-spin { to { transform: rotate(360deg); } }
+
     /* ============ モバイル：下端タブ＋年代リスト ============ */
     .mobile-tabs { display: none; }
     .mobile-list-panel { display: none; }
@@ -540,6 +567,8 @@
     <div class="attribution">
       © <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>
     </div>
+    <div class="tile-progress-bar" id="tile-progress-bar"></div>
+    <div class="tile-progress-chip" id="tile-progress-chip"><span class="tp-spinner"></span><span class="tp-text">読み込み中…</span></div>
   </main>
 
   <div class="mobile-list-panel">
@@ -959,7 +988,10 @@
         };
         if (item.maxNativeZoom != null) tileOpts.maxNativeZoom = item.maxNativeZoom;
         if (item.minNativeZoom != null) tileOpts.minNativeZoom = item.minNativeZoom;
-        state.overlay = L.tileLayer(item.tile, tileOpts).addTo(map);
+        const overlay = L.tileLayer(item.tile, tileOpts);
+        attachTileProgress(overlay, item.name);
+        state.overlay = overlay;   // loadingイベントのガード用に addTo より前に代入
+        overlay.addTo(map);
         applyZoomFilter();
       }
 
@@ -987,6 +1019,7 @@
       if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
       state.currentTileItem = null;
       updateLiveAttribution(null);
+      tpHide();
     }
 
     // ============ 画面下クレジットの動的更新 ============
@@ -996,6 +1029,54 @@
       const el = document.querySelector('.attribution');
       if (!el) return;
       el.innerHTML = (item && item.attribution) ? (DEFAULT_ATTR + ' · ' + item.attribution) : DEFAULT_ATTR;
+    }
+
+    // ============ タイル読み込みプログレス ============
+    // 遅いタイル(今昔マップ等)の読み込み状況をバー＋スピナーで表示。
+    // 250ms以上かかる時だけ出すので、速いレイヤーではチラつかない。
+    const _tp = { pending: 0, done: 0, pct: 0, timer: null };
+    function tpShow() {
+      const bar = $('tile-progress-bar'), chip = $('tile-progress-chip');
+      if (bar) bar.classList.add('show');
+      if (chip) chip.classList.add('show');
+    }
+    function tpHide() {
+      clearTimeout(_tp.timer);
+      const bar = $('tile-progress-bar'), chip = $('tile-progress-chip');
+      if (bar) { bar.classList.remove('show'); bar.style.width = '0%'; }
+      if (chip) chip.classList.remove('show');
+      _tp.pending = 0; _tp.done = 0; _tp.pct = 0;
+    }
+    function tpSet(pct) {
+      if (pct > _tp.pct) _tp.pct = pct; // 後退させない
+      const bar = $('tile-progress-bar');
+      if (bar) bar.style.width = _tp.pct + '%';
+    }
+    function tpTick() {
+      if (_tp.pending <= 0) return;
+      tpSet(Math.min(99, Math.round(_tp.done / _tp.pending * 100)));
+    }
+    function tpFinish() {
+      clearTimeout(_tp.timer);
+      const bar = $('tile-progress-bar');
+      const shown = bar && bar.classList.contains('show');
+      if (shown) { if (bar) bar.style.width = '100%'; _tp.timer = setTimeout(tpHide, 400); }
+      else { tpHide(); }
+    }
+    function attachTileProgress(layer, label) {
+      layer.on('loading', () => {
+        if (state.overlay !== layer) return;
+        _tp.pending = 0; _tp.done = 0; _tp.pct = 0;
+        const bar = $('tile-progress-bar'), chip = $('tile-progress-chip');
+        if (bar) bar.style.width = '0%';
+        if (chip) { const t = chip.querySelector('.tp-text'); if (t) t.textContent = (label ? label + 'を' : '') + '読み込み中…'; }
+        clearTimeout(_tp.timer);
+        _tp.timer = setTimeout(tpShow, 250);
+      });
+      layer.on('tileloadstart', () => { if (state.overlay !== layer) return; _tp.pending++; });
+      layer.on('tileload',  () => { if (state.overlay !== layer) return; _tp.done++; tpTick(); });
+      layer.on('tileerror', () => { if (state.overlay !== layer) return; _tp.done++; tpTick(); });
+      layer.on('load',      () => { if (state.overlay !== layer) return; tpFinish(); });
     }
 
     // ============ ズームに応じたタイル不透明度 ============
