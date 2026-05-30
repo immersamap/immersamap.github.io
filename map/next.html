@@ -722,10 +722,10 @@
     const KJ_ATTR = '<a href="https://ktgis.net/kjmapw/" target="_blank" rel="noopener">今昔マップ on the web</a>（埼玉大学 谷謙二）';
     const KJ_DESC = '今昔マップ on the web（埼玉大学 谷謙二 氏作成）／ 1:50000地形図';
     const BUILTIN_HISTORICAL = [
-      { id:'kj_tokyo_2man', name:'明治後期',   era:'1896〜1909年', tile:KJ_BASE+'/2man/{z}/{x}/{y}.png', tms:true, minNativeZoom:8, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
-      { id:'kj_tokyo_00',   name:'大正期',     era:'1917〜1924年', tile:KJ_BASE+'/00/{z}/{x}/{y}.png',   tms:true, minNativeZoom:8, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
-      { id:'kj_tokyo_01',   name:'昭和戦前',   era:'1927〜1939年', tile:KJ_BASE+'/01/{z}/{x}/{y}.png',   tms:true, minNativeZoom:8, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
-      { id:'kj_tokyo_02',   name:'戦後復興期', era:'1944〜1954年', tile:KJ_BASE+'/02/{z}/{x}/{y}.png',   tms:true, minNativeZoom:8, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_2man', name:'明治後期',   era:'1896〜1909年', tile:KJ_BASE+'/2man/{z}/{x}/{y}.png', tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_00',   name:'大正期',     era:'1917〜1924年', tile:KJ_BASE+'/00/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_01',   name:'昭和戦前',   era:'1927〜1939年', tile:KJ_BASE+'/01/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_02',   name:'戦後復興期', era:'1944〜1954年', tile:KJ_BASE+'/02/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
     ];
 
     const LAYERS = {
@@ -784,7 +784,11 @@
     // ============ 地図初期化 ============
     function initMap() {
       map = L.map('map', { center: [35.6812, 139.7671], zoom: 12, zoomControl: false });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        updateWhenZooming: false,   // ズーム途中ではタイルを取りに行かない（無駄な取得を削減）
+        keepBuffer: 2,
+      }).addTo(map);
 
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
@@ -948,6 +952,10 @@
           opacity: computeEffectiveOpacity(item),
           className: '',
           tms: !!item.tms,
+          updateWhenZooming: false,  // ズーム途中の無駄な取得を抑制
+          keepBuffer: 2,
+          // カバレッジ外(404)の壊れ画像表示を避ける透明1pxタイル
+          errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
         };
         if (item.maxNativeZoom != null) tileOpts.maxNativeZoom = item.maxNativeZoom;
         if (item.minNativeZoom != null) tileOpts.minNativeZoom = item.minNativeZoom;
