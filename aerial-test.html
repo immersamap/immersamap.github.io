@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>ImmersaMap ｜ 航空写真くらべ（地理院 / Esri / Google）テスト</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#16181c; --panel:#20242b; --panel-2:#272c34;
+    --ink:#eef2f6; --muted:#9aa4b2; --line:#363c46;
+    --accent:#4f9cf0; --accent-soft:#16273d;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:"Zen Kaku Gothic New",system-ui,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden;}
+  #map{position:absolute;inset:0;background:#0b0d10;}
+
+  #panel{
+    position:absolute;top:14px;left:14px;width:300px;max-width:calc(100vw - 28px);
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 18px 40px rgba(0,0,0,.45);z-index:1000;overflow:hidden;
+  }
+  #panel header{
+    display:flex;align-items:center;gap:10px;padding:14px 16px;
+    border-bottom:1px solid var(--line);background:var(--accent-soft);
+  }
+  #panel header .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(79,156,240,.15);flex:none;}
+  #panel header h1{margin:0;font-size:14px;font-weight:700;letter-spacing:.03em;}
+  #panel header h1 small{display:block;font-family:"Space Mono",monospace;font-size:10px;font-weight:400;color:var(--muted);letter-spacing:.1em;margin-top:2px;}
+  .body{padding:6px 16px 16px;max-height:calc(100vh - 120px);overflow:auto;}
+  #toggle{display:none;}
+
+  .group{margin-top:16px;}
+  .group>.label{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .group>.label::after{content:"";height:1px;flex:1;background:var(--line);}
+
+  .opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 11px;margin:5px 0;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:13px;cursor:pointer;transition:border-color .15s,background .15s;}
+  .opt:hover{border-color:#586273;background:rgba(255,255,255,.02);}
+  .opt .tick{width:14px;height:14px;border-radius:50%;flex:none;border:2px solid #586273;}
+  .opt .meta{margin-left:auto;font-family:"Space Mono",monospace;font-size:10px;color:var(--muted);text-align:right;}
+  .opt.active{border-color:var(--accent);background:rgba(79,156,240,.10);}
+  .opt.active .tick{border-color:var(--accent);background:var(--accent);box-shadow:0 0 0 3px rgba(79,156,240,.2) inset;}
+  .opt.disabled{opacity:.55;}
+
+  .slider-row{display:flex;align-items:center;gap:10px;}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--val,100%),#363c46 var(--val,100%),#363c46 100%);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ink);border:3px solid var(--accent);cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:3px solid var(--accent);cursor:pointer;}
+  .val{font-family:"Space Mono",monospace;font-size:11px;width:38px;text-align:right;color:var(--accent);}
+
+  .key-box{margin-top:8px;}
+  .key-box input[type=text]{width:100%;padding:8px 10px;background:#171b21;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:"Space Mono",monospace;font-size:11px;}
+  .key-box input[type=text]:focus{outline:none;border-color:var(--accent);}
+  .key-actions{display:flex;gap:8px;margin-top:8px;}
+  .btn{flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#08121f;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);font-weight:400;}
+  .key-status{margin-top:8px;font-size:11px;line-height:1.5;color:var(--muted);min-height:16px;}
+  .key-status.err{color:#ff8f8f;}
+  .key-status.ok{color:#7fd99a;}
+
+  .note{margin-top:16px;padding:10px 12px;font-size:11px;line-height:1.65;color:var(--muted);background:rgba(0,0,0,.2);border-radius:9px;border:1px dashed var(--line);}
+  .note b{color:var(--ink);font-weight:500;}
+
+  #credit{position:absolute;bottom:8px;right:8px;z-index:1000;font-size:10px;color:#eef2f6;background:rgba(22,24,28,.82);backdrop-filter:blur(4px);border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-width:64vw;line-height:1.5;}
+  #credit a{color:var(--accent);text-decoration:none;}
+
+  @media (max-width:640px){
+    #panel{width:calc(100vw - 28px);}
+    #toggle{display:block;margin-left:auto;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+    #panel.collapsed .body{display:none;}
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="panel">
+  <header>
+    <span class="dot"></span>
+    <h1>航空写真くらべ<small>GSI / ESRI / GOOGLE — test</small></h1>
+    <button id="toggle" aria-label="開閉">▾</button>
+  </header>
+  <div class="body">
+
+    <div class="group">
+      <div class="label">航空・衛星写真</div>
+      <div id="layerList"></div>
+    </div>
+
+    <div class="group" id="keyGroup">
+      <div class="label">Google APIキー（任意）</div>
+      <div class="key-box">
+        <input type="text" id="apiKey" placeholder="AIza... (Map Tiles API のキー)" autocomplete="off" spellcheck="false">
+        <div class="key-actions">
+          <button class="btn" id="applyKey">適用してGoogleを表示</button>
+        </div>
+        <div class="key-status" id="keyStatus"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="label">不透明度</div>
+      <div class="slider-row">
+        <input type="range" id="opacity" min="0" max="100" value="100">
+        <span class="val" id="opacityVal">100%</span>
+      </div>
+    </div>
+
+    <div class="note">
+      下地は地理院の淡色地図。上に選んだ写真を重ねています。<br>
+      <b>Esri World Imagery</b> は地域により地理院の最新写真より新しい・高精細なことがあります（商用利用不可・帰属表示必須）。<br>
+      <b>Google</b> は正規の Map Tiles API 経由のみ。Google Cloud で Map Tiles API を有効化し課金を設定したキーが必要です。キーには「HTTPリファラ制限（immersamap.github.io）」をかけることを推奨します。
+    </div>
+  </div>
+</div>
+
+<div id="credit"></div>
+
+<script>
+const GSI_PALE = "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png";
+
+// 重ねる写真レイヤー定義
+const LAYERS = {
+  gsi: {
+    name:"地理院 最新空中写真", meta:"2004年〜",
+    make:()=>L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+      {maxNativeZoom:18,maxZoom:20,attribution:"地理院タイル（シームレス空中写真）"}),
+    credit:'出典：<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">地理院タイル</a>'
+  },
+  esri: {
+    name:"Esri World Imagery", meta:"高精細・比較的新しい",
+    make:()=>L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {maxNativeZoom:19,maxZoom:20,attribution:"Tiles © Esri"}),
+    credit:'Tiles © Esri — Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+  },
+  google: {
+    name:"Google 衛星写真", meta:"要APIキー",
+    make:null, // キー適用時に動的生成
+    credit:'Imagery ©Google'
+  },
+};
+
+const map = L.map("map",{zoomControl:true,minZoom:4,maxZoom:20}).setView([35.6812,139.7671],16);
+L.control.scale({imperial:false}).addTo(map);
+const baseLayer = L.tileLayer(GSI_PALE,{maxZoom:18,attribution:"地理院タイル"}).addTo(map);
+
+let current=null, currentKey=null, googleLayer=null, opacity=1;
+
+function setCredit(key){
+  const base='出典：<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">地理院タイル</a>（下地）';
+  const c = LAYERS[key] ? LAYERS[key].credit : '';
+  document.getElementById("credit").innerHTML = c ? (c + ' ／ ' + base) : base;
+}
+
+function selectLayer(key){
+  if(key==="google" && !googleLayer){
+    document.getElementById("keyStatus").textContent = "先に下のAPIキーを適用してください。";
+    document.getElementById("keyStatus").className = "key-status err";
+    return;
+  }
+  if(current){ map.removeLayer(current); current=null; }
+  currentKey = key;
+  current = (key==="google") ? googleLayer : LAYERS[key].make();
+  current.setOpacity(opacity);
+  current.addTo(map);
+  [...document.querySelectorAll(".opt")].forEach(el=>el.classList.toggle("active", el.dataset.key===key));
+  setCredit(key);
+}
+
+// レイヤー選択UI
+const list=document.getElementById("layerList");
+Object.entries(LAYERS).forEach(([key,def])=>{
+  const el=document.createElement("button");
+  el.className="opt"+(key==="google"?" disabled":"");
+  el.dataset.key=key;
+  el.innerHTML=`<span class="tick"></span><span>${def.name}</span><span class="meta">${def.meta}</span>`;
+  el.onclick=()=>selectLayer(key);
+  list.appendChild(el);
+});
+
+// 不透明度
+const op=document.getElementById("opacity"), opv=document.getElementById("opacityVal");
+op.addEventListener("input",()=>{
+  opacity=op.value/100; opv.textContent=op.value+"%";
+  op.style.setProperty("--val",op.value+"%");
+  if(current) current.setOpacity(opacity);
+});
+
+// Google Map Tiles API（正規）：セッショントークン取得 → タイルレイヤー生成
+async function applyGoogleKey(){
+  const key=document.getElementById("apiKey").value.trim();
+  const status=document.getElementById("keyStatus");
+  if(!key){ status.textContent="キーを入力してください。"; status.className="key-status err"; return; }
+  status.textContent="セッション作成中…"; status.className="key-status";
+  try{
+    const res=await fetch("https://tile.googleapis.com/v1/createSession?key="+encodeURIComponent(key),{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({mapType:"satellite",language:"ja-JP",region:"JP"})
+    });
+    if(!res.ok){
+      const t=await res.text();
+      throw new Error("HTTP "+res.status+" / "+t.slice(0,160));
+    }
+    const data=await res.json();
+    if(!data.session) throw new Error("session が返りませんでした");
+    const url="https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session="+encodeURIComponent(data.session)+"&key="+encodeURIComponent(key);
+    if(googleLayer){ if(current===googleLayer) map.removeLayer(googleLayer); googleLayer=null; }
+    googleLayer=L.tileLayer(url,{maxZoom:20,maxNativeZoom:20,attribution:"Imagery ©Google",tileSize:256});
+    document.querySelector('.opt[data-key="google"]').classList.remove("disabled");
+    status.textContent="OK：Google衛星を表示できます。"; status.className="key-status ok";
+    selectLayer("google");
+  }catch(e){
+    status.innerHTML="失敗："+String(e.message)+"<br>（Map Tiles API有効化・課金設定・キー制限/リファラを確認）";
+    status.className="key-status err";
+  }
+}
+document.getElementById("applyKey").addEventListener("click",applyGoogleKey);
+
+document.getElementById("toggle").addEventListener("click",()=>{
+  document.getElementById("panel").classList.toggle("collapsed");
+});
+
+// 初期表示
+selectLayer("gsi");
+</script>
+</body>
+</html>
