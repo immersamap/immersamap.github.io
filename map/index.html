@@ -29,7 +29,7 @@
       --header-h: 52px;
       --sidebar-w: 240px;
       --mobile-tabs-h: 60px;
-      --mobile-list-h: 168px;
+      --mobile-list-h: 112px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; overflow: hidden; }
@@ -394,6 +394,33 @@
     }
     .attribution a { color: inherit; pointer-events: auto; }
 
+    /* ============ タイル読み込みプログレス ============ */
+    .tile-progress-bar {
+      position: fixed; top: var(--header-h); left: 0; right: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, #6382b8, #b88263);
+      box-shadow: 0 0 6px rgba(99,130,184,0.5);
+      z-index: 1900; opacity: 0; pointer-events: none;
+      transition: width 0.25s ease, opacity 0.3s ease;
+    }
+    .tile-progress-bar.show { opacity: 1; }
+    .tile-progress-chip {
+      position: fixed; top: calc(var(--header-h) + 12px); left: 50%;
+      transform: translateX(-50%) translateY(-6px);
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(26,26,26,0.82); color: #fff;
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      font-size: 12px; line-height: 1; padding: 7px 13px; border-radius: 999px;
+      z-index: 1900; opacity: 0; pointer-events: none; white-space: nowrap;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .tile-progress-chip.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .tile-progress-chip .tp-spinner {
+      width: 12px; height: 12px; border-radius: 50%; flex: none;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      animation: tp-spin 0.7s linear infinite;
+    }
+    @keyframes tp-spin { to { transform: rotate(360deg); } }
+
     /* ============ モバイル：下端タブ＋年代リスト ============ */
     .mobile-tabs { display: none; }
     .mobile-list-panel { display: none; }
@@ -540,6 +567,8 @@
     <div class="attribution">
       © <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>
     </div>
+    <div class="tile-progress-bar" id="tile-progress-bar"></div>
+    <div class="tile-progress-chip" id="tile-progress-chip"><span class="tp-spinner"></span><span class="tp-text">読み込み中…</span></div>
   </main>
 
   <div class="mobile-list-panel">
@@ -716,6 +745,18 @@
 
     // ============ レイヤー定義 ============
     // 各 item: { id, name, era, tile, maxZoom, coverage('full'|'partial'|'limited'), coverageLabel, desc, centerLat?, centerLng? }
+    // 今昔マップ on the web（埼玉大学 谷謙二 氏）首都圏データ。TMS配信のため tms:true。
+    // 出典表記必須／一般公開時は作成者への連絡が必要。
+    const KJ_BASE = 'https://ktgis.net/kjmapw/kjtilemap/tokyo50';
+    const KJ_ATTR = '<a href="https://ktgis.net/kjmapw/" target="_blank" rel="noopener">今昔マップ on the web</a>（埼玉大学 谷謙二）';
+    const KJ_DESC = '今昔マップ on the web（埼玉大学 谷謙二 氏作成）／ 1:50000地形図';
+    const BUILTIN_HISTORICAL = [
+      { id:'kj_tokyo_2man', name:'明治後期',   era:'1896〜1909年', tile:KJ_BASE+'/2man/{z}/{x}/{y}.png', tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_00',   name:'大正期',     era:'1917〜1924年', tile:KJ_BASE+'/00/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_01',   name:'昭和戦前',   era:'1927〜1939年', tile:KJ_BASE+'/01/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_02',   name:'戦後復興期', era:'1944〜1954年', tile:KJ_BASE+'/02/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+    ];
+
     const LAYERS = {
       aerial: {
         label: '空中写真', icon: 'ti-plane', listHeader: '年代を選ぶ',
@@ -733,7 +774,7 @@
       },
       historical: {
         label: '古地図', icon: 'ti-map', listHeader: '古地図を選ぶ',
-        items: [] // Supabaseから動的ロード
+        items: [...BUILTIN_HISTORICAL] // 組み込み(今昔マップ等)＋Supabase分を後段で追加
       },
       terrain: {
         label: '地形', icon: 'ti-mountain', listHeader: '表示方法を選ぶ',
@@ -772,7 +813,11 @@
     // ============ 地図初期化 ============
     function initMap() {
       map = L.map('map', { center: [35.6812, 139.7671], zoom: 12, zoomControl: false });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        updateWhenZooming: false,   // ズーム途中ではタイルを取りに行かない（無駄な取得を削減）
+        keepBuffer: 2,
+      }).addTo(map);
 
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
@@ -929,15 +974,28 @@
           }, 0);
         }
       } else if (item.tile) {
-        // 通常：XYZタイル
+        // 通常：XYZタイル（item.tms=true なら今昔マップ等のTMS=y反転に対応）
         state.currentTileItem = item;
-        state.overlay = L.tileLayer(item.tile, {
+        const tileOpts = {
           maxZoom: item.maxZoom || 18,
           opacity: computeEffectiveOpacity(item),
           className: '',
-        }).addTo(map);
+          tms: !!item.tms,
+          updateWhenZooming: false,  // ズーム途中の無駄な取得を抑制
+          keepBuffer: 2,
+          // カバレッジ外(404)の壊れ画像表示を避ける透明1pxタイル
+          errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+        };
+        if (item.maxNativeZoom != null) tileOpts.maxNativeZoom = item.maxNativeZoom;
+        if (item.minNativeZoom != null) tileOpts.minNativeZoom = item.minNativeZoom;
+        const overlay = L.tileLayer(item.tile, tileOpts);
+        attachTileProgress(overlay, item.name);
+        state.overlay = overlay;   // loadingイベントのガード用に addTo より前に代入
+        overlay.addTo(map);
         applyZoomFilter();
       }
+
+      updateLiveAttribution(item);
 
       // 「いま見ているもの」更新
       $('now-name').textContent = `${item.era === '現代' || !item.era ? item.name : item.name + 'の' + layer.label}`;
@@ -960,6 +1018,65 @@
     function clearOverlay() {
       if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
       state.currentTileItem = null;
+      updateLiveAttribution(null);
+      tpHide();
+    }
+
+    // ============ 画面下クレジットの動的更新 ============
+    // 今昔マップなど、表示中に出典表記が必須のレイヤーに対応
+    const DEFAULT_ATTR = '© <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>';
+    function updateLiveAttribution(item) {
+      const el = document.querySelector('.attribution');
+      if (!el) return;
+      el.innerHTML = (item && item.attribution) ? (DEFAULT_ATTR + ' · ' + item.attribution) : DEFAULT_ATTR;
+    }
+
+    // ============ タイル読み込みプログレス ============
+    // 遅いタイル(今昔マップ等)の読み込み状況をバー＋スピナーで表示。
+    // 250ms以上かかる時だけ出すので、速いレイヤーではチラつかない。
+    const _tp = { pending: 0, done: 0, pct: 0, timer: null };
+    function tpShow() {
+      const bar = $('tile-progress-bar'), chip = $('tile-progress-chip');
+      if (bar) bar.classList.add('show');
+      if (chip) chip.classList.add('show');
+    }
+    function tpHide() {
+      clearTimeout(_tp.timer);
+      const bar = $('tile-progress-bar'), chip = $('tile-progress-chip');
+      if (bar) { bar.classList.remove('show'); bar.style.width = '0%'; }
+      if (chip) chip.classList.remove('show');
+      _tp.pending = 0; _tp.done = 0; _tp.pct = 0;
+    }
+    function tpSet(pct) {
+      if (pct > _tp.pct) _tp.pct = pct; // 後退させない
+      const bar = $('tile-progress-bar');
+      if (bar) bar.style.width = _tp.pct + '%';
+    }
+    function tpTick() {
+      if (_tp.pending <= 0) return;
+      tpSet(Math.min(99, Math.round(_tp.done / _tp.pending * 100)));
+    }
+    function tpFinish() {
+      clearTimeout(_tp.timer);
+      const bar = $('tile-progress-bar');
+      const shown = bar && bar.classList.contains('show');
+      if (shown) { if (bar) bar.style.width = '100%'; _tp.timer = setTimeout(tpHide, 400); }
+      else { tpHide(); }
+    }
+    function attachTileProgress(layer, label) {
+      layer.on('loading', () => {
+        if (state.overlay !== layer) return;
+        _tp.pending = 0; _tp.done = 0; _tp.pct = 0;
+        const bar = $('tile-progress-bar'), chip = $('tile-progress-chip');
+        if (bar) bar.style.width = '0%';
+        if (chip) { const t = chip.querySelector('.tp-text'); if (t) t.textContent = (label ? label + 'を' : '') + '読み込み中…'; }
+        clearTimeout(_tp.timer);
+        _tp.timer = setTimeout(tpShow, 250);
+      });
+      layer.on('tileloadstart', () => { if (state.overlay !== layer) return; _tp.pending++; });
+      layer.on('tileload',  () => { if (state.overlay !== layer) return; _tp.done++; tpTick(); });
+      layer.on('tileerror', () => { if (state.overlay !== layer) return; _tp.done++; tpTick(); });
+      layer.on('load',      () => { if (state.overlay !== layer) return; tpFinish(); });
     }
 
     // ============ ズームに応じたタイル不透明度 ============
@@ -1041,8 +1158,9 @@
         if (error) { console.warn('historical maps query failed:', error); return; }
         if (!data || data.length === 0) return;
 
-        LAYERS.historical.items = data
+        const _sbHistorical = data
           .filter(m => m.tiles_url || m.image_url)
+          .filter(m => !/1894/.test(((m.era || '') + ' ' + (m.name || '')))) // 1894年の古地図は表示しない
           .map(m => {
             // image_bounds は jsonb で [[s,w],[n,e]]
             let bounds = null;
@@ -1068,6 +1186,8 @@
               zoom: m.zoom_default,
             };
           });
+
+        LAYERS.historical.items = [...BUILTIN_HISTORICAL, ..._sbHistorical];
 
         if (state.category === 'historical') {
           renderLayerList();
