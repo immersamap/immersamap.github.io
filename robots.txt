@@ -1,0 +1,10 @@
+# ImmersaMap robots.txt
+# 検索エンジン・AIクローラーともにクロールを許可（AI検索での引用を狙うため）
+User-agent: *
+Allow: /
+
+# 内部編集ツールはインデックス対象外
+Disallow: /map-editor.html
+Disallow: /polygon-editor.html
+
+Sitemap: https://immersamap.github.io/sitemap.xml

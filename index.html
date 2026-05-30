@@ -1,148 +1,417 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="ImmersaMap — 古地図・空中写真で街の時間旅行を。準備中です。">
-<meta name="robots" content="noindex">
-<meta property="og:title" content="ImmersaMap — 準備中">
-<meta property="og:description" content="古地図・空中写真で時を遡る地図体験。鋭意準備中です。">
-<title>ImmersaMap — 準備中</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- ===== 基本SEO ===== -->
+<title>ImmersaMap｜古地図・空中写真を現代地図に重ねて見る無料Web地図</title>
+<meta name="description" content="ImmersaMap（イマーサマップ）は、古地図・地形図・年代別の空中写真を現代の地図に重ね合わせて閲覧できる無料のWeb地図です。1930年代から現在までの航空写真を切り替え、街の移り変わりを直感的にたどれます。" />
+<meta name="robots" content="index,follow,max-image-preview:large" />
+<meta name="theme-color" content="#16263F" />
+<link rel="canonical" href="https://immersamap.github.io/" />
+
+<!-- ===== OGP / SNS ===== -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ImmersaMap" />
+<meta property="og:title" content="ImmersaMap｜古地図・空中写真で街の時間旅行" />
+<meta property="og:description" content="古地図や年代別の空中写真を現代地図に重ねて、街のむかしを直感的にたどれる無料のWeb地図。" />
+<meta property="og:url" content="https://immersamap.github.io/" />
+<meta property="og:locale" content="ja_JP" />
+<meta property="og:image" content="https://immersamap.github.io/ogp.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ImmersaMap｜古地図・空中写真で街の時間旅行" />
+<meta name="twitter:description" content="古地図や年代別の空中写真を現代地図に重ねて、街のむかしを直感的にたどれる無料のWeb地図。" />
+<meta name="twitter:image" content="https://immersamap.github.io/ogp.png" />
+
+<!-- ===== favicon（インラインSVG） ===== -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2316263F'/%3E%3Cg fill='none' stroke='%23B07C42' stroke-width='2.4'%3E%3Cpath d='M32 12c10 0 16 7 16 14s-7 14-16 14-16-7-16-14 6-14 16-14z'/%3E%3Cpath d='M32 20c6 0 9 4 9 8s-4 8-9 8-9-3-9-8 3-8 9-8z'/%3E%3C/g%3E%3Ccircle cx='32' cy='28' r='3' fill='%23C0392B'/%3E%3C/svg%3E" />
+
+<!-- ===== フォント ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<!-- ===== 構造化データ（AI/検索向け） ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "ImmersaMap",
+      "alternateName": "イマーサマップ",
+      "url": "https://immersamap.github.io/",
+      "applicationCategory": "MapApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript. 最新のWebブラウザに対応。",
+      "inLanguage": "ja",
+      "description": "古地図・地形図・年代別の空中写真を現代地図に重ね合わせて閲覧できる無料のWeb地図サービス。1930年代から現在までの航空写真を切り替え、街の移り変わりをたどれます。",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+      "isAccessibleForFree": true
+    },
+    {
+      "@type": "Organization",
+      "name": "ImmersaMap",
+      "url": "https://immersamap.github.io/",
+      "logo": "https://immersamap.github.io/ogp.png"
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "ImmersaMapとは何ですか？",
+          "acceptedAnswer": { "@type": "Answer", "text": "ImmersaMap（イマーサマップ）は、古地図・地形図・年代別の空中写真を現代の地図に重ね合わせて閲覧できる無料のWeb地図サービスです。1930年代から現在までの航空写真を切り替えながら、街の移り変わりを直感的にたどれます。" }
+        },
+        {
+          "@type": "Question",
+          "name": "ImmersaMapは無料で使えますか？",
+          "acceptedAnswer": { "@type": "Answer", "text": "はい。会員登録もアプリのインストールも不要で、Webブラウザから無料でご利用いただけます。" }
+        },
+        {
+          "@type": "Question",
+          "name": "スマートフォンでも使えますか？",
+          "acceptedAnswer": { "@type": "Answer", "text": "はい。スマートフォン・タブレット・パソコンのいずれのブラウザでも動作します。" }
+        },
+        {
+          "@type": "Question",
+          "name": "どの年代の空中写真が見られますか？",
+          "acceptedAnswer": { "@type": "Answer", "text": "1930年代（1936〜1942年）から現在（2004年〜）までの空中写真を年代別に切り替えて閲覧できます。古い年代は東京・大阪など対応地域が限られ、1960年代以降は全国を広くカバーしています。" }
+        },
+        {
+          "@type": "Question",
+          "name": "地図や空中写真のデータはどこのものですか？",
+          "acceptedAnswer": { "@type": "Answer", "text": "ベース地図にOpenStreetMap、空中写真・地形図に国土地理院の地理院タイルを利用しています。" }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    height: 100%;
-    font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    color: #1a1a1a;
-    background: #fafafa;
-    -webkit-font-smoothing: antialiased;
+  :root{
+    --paper:#F7F2E6;
+    --paper-2:#EFE6D3;
+    --ink:#16263F;
+    --ink-soft:#41506A;
+    --sepia:#B07C42;
+    --sepia-deep:#8A5E2E;
+    --vermilion:#BC3B2E;
+    --line:rgba(22,38,63,.14);
+    --serif:'Shippori Mincho B1',serif;
+    --sans:'Noto Sans JP',sans-serif;
+    --maxw:1120px;
   }
-  body {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 24px;
-    background:
-      radial-gradient(circle at 20% 30%, rgba(99, 130, 184, 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(184, 130, 99, 0.06) 0%, transparent 50%),
-      #fafafa;
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    line-height:1.85;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
   }
+  /* 和紙のグレイン */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;position:relative;z-index:1}
+  h1,h2,h3{font-family:var(--serif);font-weight:700;line-height:1.4;letter-spacing:.01em}
+  .serif{font-family:var(--serif)}
 
-  .container {
-    max-width: 520px; width: 100%;
-    text-align: center;
-  }
+  /* ===== ヘッダー ===== */
+  header{position:sticky;top:0;z-index:50;background:rgba(247,242,230,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:800;font-size:1.18rem;letter-spacing:.02em}
+  .brand .mark{width:30px;height:30px}
+  .nav-links{display:flex;align-items:center;gap:28px;font-size:.92rem;font-weight:500}
+  .nav-links a.muted{color:var(--ink-soft)}
+  .nav-links a.muted:hover{color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;border-radius:999px;padding:11px 22px;font-size:.92rem;transition:transform .2s ease,box-shadow .2s ease}
+  .btn-primary{background:var(--ink);color:var(--paper);box-shadow:0 6px 22px -8px rgba(22,38,63,.6)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 28px -10px rgba(22,38,63,.7)}
+  .btn-ghost{border:1.5px solid var(--ink);color:var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:var(--paper)}
+  @media(max-width:640px){.nav-links a.muted{display:none}}
 
-  .logo {
-    display: inline-flex; align-items: center; gap: 12px;
-    margin-bottom: 28px;
-  }
-  .logo i {
-    font-size: 36px; color: #1a1a1a;
-  }
-  .logo span {
-    font-size: 24px; font-weight: 500;
-    letter-spacing: 0.5px;
-  }
+  /* ===== ヒーロー ===== */
+  .hero{position:relative;padding:88px 0 96px;overflow:hidden}
+  .contours{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5}
+  .contours svg{position:absolute;right:-12%;top:-8%;width:780px;max-width:120%;color:var(--sepia)}
+  .hero .wrap{max-width:880px}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:.82rem;font-weight:700;letter-spacing:.16em;color:var(--sepia-deep);text-transform:none;margin-bottom:26px}
+  .eyebrow::before{content:"";width:30px;height:1.5px;background:var(--sepia)}
+  .hero h1{font-size:clamp(2.3rem,6.4vw,4.1rem);font-weight:800;letter-spacing:.02em;line-height:1.32}
+  .hero h1 .accent{color:var(--vermilion)}
+  .lead{font-size:clamp(1.02rem,2.4vw,1.18rem);color:var(--ink-soft);margin:28px 0 0;max-width:620px;font-weight:400}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:40px}
+  .hero-note{margin-top:20px;font-size:.84rem;color:var(--ink-soft)}
+  .hero-note b{color:var(--ink);font-weight:700}
 
-  .badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #fff; border: 1px solid #e5e5e5;
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-size: 12px; color: #555;
-    margin-bottom: 24px;
-  }
-  .badge .dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #2d8659;
-    animation: pulse 1.8s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: 0.4; transform: scale(0.8); }
-  }
+  /* リビール */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .8s ease,transform .8s ease}
+  .reveal.in{opacity:1;transform:none}
 
-  h1 {
-    font-size: 32px; font-weight: 500;
-    line-height: 1.4; margin-bottom: 16px;
-    color: #1a1a1a;
-  }
+  /* ===== 定義（アンサーカプセル） ===== */
+  .capsule{background:var(--ink);color:var(--paper);position:relative}
+  .capsule .wrap{padding:54px 24px}
+  .capsule p{font-family:var(--serif);font-size:clamp(1.15rem,2.8vw,1.5rem);font-weight:500;line-height:1.95;max-width:880px}
+  .capsule .kw{color:#E8C892;font-weight:700}
 
-  .lede {
-    font-size: 15px; color: #555;
-    line-height: 1.7; margin-bottom: 32px;
-  }
+  /* ===== セクション共通 ===== */
+  section.block{padding:84px 0}
+  .sec-head{margin-bottom:48px;max-width:680px}
+  .sec-tag{font-size:.78rem;font-weight:700;letter-spacing:.18em;color:var(--sepia-deep);margin-bottom:14px}
+  .sec-head h2{font-size:clamp(1.7rem,4vw,2.4rem)}
+  .sec-head p{color:var(--ink-soft);margin-top:16px}
 
-  .preview-link {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: #1a1a1a; color: #fff;
-    padding: 12px 22px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 14px; font-weight: 500;
-    transition: background 0.15s;
-  }
-  .preview-link:hover { background: #000; }
-  .preview-link i { font-size: 18px; }
+  /* できること */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  @media(max-width:820px){.features{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,#FFFDF7,var(--paper-2));border:1px solid var(--line);border-radius:18px;padding:34px 30px;position:relative;overflow:hidden}
+  .card .num{font-family:var(--serif);font-size:.9rem;color:var(--sepia);font-weight:700;letter-spacing:.1em}
+  .card .ic{width:46px;height:46px;color:var(--ink);margin:18px 0 18px}
+  .card h3{font-size:1.32rem;margin-bottom:10px}
+  .card p{color:var(--ink-soft);font-size:.96rem}
+  .card::after{content:"";position:absolute;right:-30px;bottom:-30px;width:120px;height:120px;border-radius:50%;border:1px solid var(--line)}
 
-  .sub-links {
-    display: flex; gap: 24px; justify-content: center;
-    margin-top: 32px;
-    font-size: 13px;
-    flex-wrap: wrap;
-  }
-  .sub-links a {
-    color: #888; text-decoration: none;
-    display: inline-flex; align-items: center; gap: 4px;
-  }
-  .sub-links a:hover { color: #1a1a1a; }
-  .sub-links i { font-size: 14px; }
+  /* 年表 */
+  .timeline{background:var(--paper-2)}
+  .tl{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border-top:2px solid var(--ink);position:relative}
+  @media(max-width:820px){.tl{grid-template-columns:1fr;border-top:none}}
+  .tl .era{padding:26px 18px 30px;border-right:1px solid var(--line);position:relative}
+  .tl .era:last-child{border-right:none}
+  @media(max-width:820px){.tl .era{border-right:none;border-left:2px solid var(--ink);padding:18px 0 18px 22px}}
+  .tl .era::before{content:"";position:absolute;top:-8px;left:18px;width:13px;height:13px;border-radius:50%;background:var(--vermilion);border:3px solid var(--paper-2)}
+  @media(max-width:820px){.tl .era::before{top:6px;left:-8px}}
+  .tl .yr{font-family:var(--serif);font-size:1.28rem;font-weight:700}
+  .tl .rng{font-size:.8rem;color:var(--sepia-deep);font-weight:700;margin:4px 0 10px}
+  .tl .area{font-size:.86rem;color:var(--ink-soft)}
+  .tl-foot{margin-top:26px;font-size:.86rem;color:var(--ink-soft)}
 
-  footer {
-    position: fixed; bottom: 16px; left: 0; right: 0;
-    text-align: center;
-    font-size: 11px; color: #aaa;
-  }
+  /* 使い方 */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+  .step .step-no{font-family:var(--serif);font-size:2.6rem;font-weight:800;color:var(--sepia);line-height:1}
+  .step h3{font-size:1.18rem;margin:12px 0 8px}
+  .step p{color:var(--ink-soft);font-size:.94rem}
 
-  @media (max-width: 600px) {
-    h1 { font-size: 24px; }
-    .lede { font-size: 14px; }
-    .logo span { font-size: 20px; }
-  }
+  /* FAQ */
+  .faq{border-top:1px solid var(--line)}
+  details{border-bottom:1px solid var(--line)}
+  summary{list-style:none;cursor:pointer;padding:24px 44px 24px 0;font-family:var(--serif);font-size:1.12rem;font-weight:600;position:relative}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";position:absolute;right:6px;top:50%;transform:translateY(-50%);font-family:var(--sans);font-size:1.5rem;color:var(--sepia);transition:transform .25s ease}
+  details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+  details p{padding:0 44px 26px 0;color:var(--ink-soft);font-size:.98rem}
+
+  /* 運営者 */
+  .about{background:var(--ink);color:var(--paper)}
+  .about .wrap{padding:78px 24px}
+  .about .sec-tag{color:#E8C892}
+  .about h2{color:var(--paper)}
+  .about p{color:rgba(247,242,230,.82);max-width:680px;margin-top:16px}
+  .about .todo{margin-top:22px;font-size:.82rem;color:#E8C892;border:1px dashed rgba(232,200,146,.5);border-radius:10px;padding:14px 18px;max-width:680px}
+
+  /* 末尾CTA */
+  .endcta{text-align:center;padding:96px 0}
+  .endcta h2{font-size:clamp(1.9rem,4.6vw,2.8rem)}
+  .endcta p{color:var(--ink-soft);margin:18px auto 34px;max-width:520px}
+
+  /* フッター */
+  footer{border-top:1px solid var(--line);padding:40px 0;font-size:.86rem;color:var(--ink-soft)}
+  .foot{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center}
+  .foot a:hover{color:var(--ink)}
+  .foot-links{display:flex;gap:22px;flex-wrap:wrap}
 </style>
 </head>
 <body>
-  <main class="container">
-    <div class="logo">
-      <i class="ti ti-map-2"></i>
-      <span>ImmersaMap</span>
-    </div>
 
-    <div class="badge">
-      <span class="dot"></span>
-      <span>準備中</span>
-    </div>
-
-    <h1>時を遡る地図体験を、<br>もうすぐお届けします。</h1>
-
-    <p class="lede">
-      古地図と現代地図を重ね合わせ、街がかつてどんな姿だったかを直感的に味わえる
-      Web サービスです。空中写真や地形図も切り替えて閲覧できます。
-    </p>
-
-    <a class="preview-link" href="/map/">
-      <i class="ti ti-eye"></i>
-      先行プレビューを見る
+<!-- ヘッダー -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/" aria-label="ImmersaMap トップ">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="12" fill="#16263F"/>
+        <g fill="none" stroke="#B07C42" stroke-width="2.4">
+          <path d="M32 12c10 0 16 7 16 14s-7 14-16 14-16-7-16-14 6-14 16-14z"/>
+          <path d="M32 20c6 0 9 4 9 8s-4 8-9 8-9-3-9-8 3-8 9-8z"/>
+        </g>
+        <circle cx="32" cy="28" r="3" fill="#C0392B"/>
+      </svg>
+      ImmersaMap
     </a>
+    <nav class="nav-links">
+      <a class="muted" href="#features">できること</a>
+      <a class="muted" href="#data">収録データ</a>
+      <a class="muted" href="#faq">よくある質問</a>
+      <a class="btn btn-primary" href="/map/">地図をひらく</a>
+    </nav>
+  </div>
+</header>
 
-    <div class="sub-links">
-      <a href="/map/"><i class="ti ti-map"></i>地図を見る</a>
+<!-- ヒーロー -->
+<section class="hero">
+  <div class="contours" aria-hidden="true">
+    <svg viewBox="0 0 600 600" fill="none" stroke="currentColor" stroke-width="1.4">
+      <path d="M300 90c120 0 190 80 190 160s-90 150-190 150-190-70-190-150S180 90 300 90z" opacity=".5"/>
+      <path d="M300 130c95 0 150 60 150 120s-70 118-150 118-150-58-150-118 55-120 150-120z" opacity=".55"/>
+      <path d="M300 170c70 0 112 44 112 90s-52 86-112 86-112-40-112-86 42-90 112-90z" opacity=".6"/>
+      <path d="M300 210c46 0 76 28 76 58s-34 54-76 54-76-24-76-54 30-58 76-58z" opacity=".7"/>
+      <path d="M300 248c26 0 44 16 44 32s-20 30-44 30-44-14-44-30 18-32 44-32z" opacity=".8"/>
+    </svg>
+  </div>
+  <div class="wrap">
+    <span class="eyebrow reveal">古地図 × 現代地図 × 空中写真</span>
+    <h1 class="reveal">街の<span class="accent">むかし</span>を、<br>地図の上で旅する。</h1>
+    <p class="lead reveal">ImmersaMap（イマーサマップ）は、古地図や年代別の空中写真を現代の地図に重ね合わせ、あなたの街がかつてどんな姿だったかを直感的にたどれる、無料のWeb地図です。</p>
+    <div class="hero-cta reveal">
+      <a class="btn btn-primary" href="/map/">地図をひらく →</a>
+      <a class="btn btn-ghost" href="#features">できることを見る</a>
     </div>
-  </main>
+    <p class="hero-note reveal"><b>登録不要・無料</b>／スマホのブラウザだけですぐに使えます。</p>
+  </div>
+</section>
 
-  <footer>
-    © ImmersaMap
-  </footer>
+<!-- 定義（アンサーカプセル：AIに引用されやすい一文） -->
+<div class="capsule">
+  <div class="wrap">
+    <p><span class="kw">ImmersaMap</span> は、<span class="kw">古地図・地形図・年代別の空中写真</span>を現代地図に重ねて閲覧できる無料のWeb地図サービスです。<span class="kw">1930年代から現在まで</span>の航空写真を切り替えながら、街の移り変わりを直感的にたどれます。</p>
+  </div>
+</div>
+
+<!-- できること -->
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-tag">WHAT YOU CAN DO</div>
+      <h2>地図で、時間を行き来する。</h2>
+      <p>難しい操作はいりません。見たい場所へ移動し、時代を切り替えるだけ。</p>
+    </div>
+    <div class="features">
+      <div class="card reveal">
+        <div class="num">01</div>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13M15 7v13"/></svg>
+        <h3>重ねて見比べる</h3>
+        <p>古地図と現代地図を半透明で重ね合わせ。透明度スライダーで「今」と「むかし」をなめらかに見比べられます。</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">02</div>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <h3>時代を切り替える</h3>
+        <p>1930年代から現在までの空中写真をワンタップで行き来。同じ場所が数十年でどう変わったかが一目でわかります。</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">03</div>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <h3>直感的に旅する</h3>
+        <p>地名や住所で目的地へ移動。地形図への切り替えにも対応し、スマホでも軽快に動きます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 収録データ年表 -->
+<section class="block timeline" id="data">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-tag">ARCHIVE</div>
+      <h2>1930年代から現在まで。</h2>
+      <p>年代別の空中写真と古地図・地形図を収録。年代が古いほど対応地域は限られます。</p>
+    </div>
+    <div class="tl reveal">
+      <div class="era"><div class="yr">1930s</div><div class="rng">1936–1942</div><div class="area">東京・大阪</div></div>
+      <div class="era"><div class="yr">1940s</div><div class="rng">1945–1950</div><div class="area">主要都市</div></div>
+      <div class="era"><div class="yr">1960s</div><div class="rng">1961–1969</div><div class="area">全国</div></div>
+      <div class="era"><div class="yr">1970s</div><div class="rng">1974–1978</div><div class="area">全国</div></div>
+      <div class="era"><div class="yr">1980s</div><div class="rng">1979–1990</div><div class="area">大都市圏</div></div>
+      <div class="era"><div class="yr">現在</div><div class="rng">2004–</div><div class="area">全国</div></div>
+    </div>
+    <p class="tl-foot reveal">空中写真・地形図は国土地理院の地理院タイル、ベース地図は OpenStreetMap を利用しています。</p>
+  </div>
+</section>
+
+<!-- 使い方 -->
+<section class="block" id="howto">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-tag">HOW TO USE</div>
+      <h2>はじめ方は、3ステップ。</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="step-no">壱</div><h3>地図をひらく</h3><p>インストール不要。ボタンを押すだけで地図が立ち上がります。</p></div>
+      <div class="step reveal"><div class="step-no">弐</div><h3>場所へ移動する</h3><p>地名や住所で検索するか、ドラッグで見たい街へ移動します。</p></div>
+      <div class="step reveal"><div class="step-no">参</div><h3>時代を重ねる</h3><p>年代や古地図を切り替え、透明度を調整して見比べます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="block faq" id="faq">
+  <div class="wrap" style="max-width:820px">
+    <div class="sec-head reveal">
+      <div class="sec-tag">FAQ</div>
+      <h2>よくある質問</h2>
+    </div>
+    <div class="reveal">
+      <details><summary>ImmersaMapは無料で使えますか？</summary><p>はい。会員登録もアプリのインストールも不要で、Webブラウザから無料でご利用いただけます。</p></details>
+      <details><summary>スマートフォンでも使えますか？</summary><p>はい。スマートフォン・タブレット・パソコンのいずれのブラウザでも動作します。</p></details>
+      <details><summary>どの年代の空中写真が見られますか？</summary><p>1930年代（1936〜1942年）から現在（2004年〜）までを年代別に切り替えて閲覧できます。古い年代は東京・大阪など対応地域が限られ、1960年代以降は全国を広くカバーしています。</p></details>
+      <details><summary>地図や空中写真のデータはどこのものですか？</summary><p>ベース地図に OpenStreetMap、空中写真・地形図に国土地理院の地理院タイルを利用しています。</p></details>
+      <details><summary>古地図を自分の調べたい場所に重ねられますか？</summary><p>はい。古地図と現代地図を重ね、透明度を調整しながら見比べられます。対応する古地図は順次追加しています。</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- 運営者情報（E-E-A-T） -->
+<section class="about" id="about">
+  <div class="wrap">
+    <div class="sec-tag">ABOUT</div>
+    <h2>ImmersaMapについて</h2>
+    <p>ImmersaMapは、誰もが手軽に「街の記憶」をたどれる場所をつくりたい、という思いから生まれた個人運営のWeb地図プロジェクトです。古地図や空中写真という一次資料を、専門知識がなくても楽しめる形で届けることを目指しています。</p>
+    <div class="todo">【要編集】運営者名・運営開始時期・連絡先（メール/SNS）・サイト開設の背景を、ここに実名または屋号で記載してください。運営者情報の明示はGoogleおよびAI検索の信頼性評価（E-E-A-T）で重要です。</div>
+  </div>
+</section>
+
+<!-- 末尾CTA -->
+<section class="endcta">
+  <div class="wrap">
+    <h2 class="reveal">さあ、街の時間を旅しよう。</h2>
+    <p class="reveal">見慣れた街にも、知らない過去があります。</p>
+    <a class="btn btn-primary reveal" href="/map/" style="font-size:1rem;padding:15px 34px">地図をひらく →</a>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer>
+  <div class="wrap foot">
+    <div class="brand" style="font-size:1rem">ImmersaMap</div>
+    <div class="foot-links">
+      <a href="#features">できること</a>
+      <a href="#data">収録データ</a>
+      <a href="#faq">よくある質問</a>
+      <a href="/map/">地図をひらく</a>
+    </div>
+    <div>© <span id="yr"></span> ImmersaMap</div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  // スクロールで要素をふわっと表示
+  const io = new IntersectionObserver((es)=>{
+    es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.14});
+  document.querySelectorAll('.reveal').forEach((el,i)=>{
+    el.style.transitionDelay = (i % 3 * 0.08) + 's';
+    io.observe(el);
+  });
+</script>
 </body>
 </html>
