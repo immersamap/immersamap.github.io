@@ -770,7 +770,8 @@
       aerial: {
         label: '空中写真', icon: 'ti-plane', listHeader: '年代を選ぶ',
         items: [
-          { id:'seamless', name:'最新',         era:'2004年〜現在',  tile:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxZoom:18, coverage:'full',    coverageLabel:'全国',     desc:'国土地理院シームレス空中写真' },
+          { id:'seamless', name:'最新（地理院）', era:'2004年〜現在',  tile:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxZoom:18, coverage:'full',    coverageLabel:'全国',     desc:'国土地理院シームレス空中写真' },
+          { id:'esri_world', name:'最新（Esri）', era:'近年・随時更新', tile:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom:19, maxZoom:19, coverage:'full', coverageLabel:'全世界', desc:'Esri World Imagery（Maxar 他）。場所により地理院より新しく高精細', attribution:'Tiles © <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> — Maxar, Earthstar Geographics 他' },
           { id:'gazo4',    name:'1980年代後半', era:'1987〜1990年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo4/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第4回撮影' },
           { id:'gazo3',    name:'1980年代中頃', era:'1984〜1986年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第3回撮影' },
           { id:'gazo2',    name:'1980年代前半', era:'1979〜1983年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第2回撮影' },
