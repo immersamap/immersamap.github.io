@@ -6,7 +6,7 @@
 
 <!-- ===== 基本SEO ===== -->
 <title>ImmersaMap｜古地図・空中写真を現代地図に重ねて見る無料Web地図</title>
-<meta name="description" content="ImmersaMap（イマーサマップ）は、古地図・地形図・年代別の空中写真を現代の地図に重ね合わせて閲覧できる無料のWeb地図です。1930年代から現在までの航空写真を切り替え、街の移り変わりを直感的にたどれます。" />
+<meta name="description" content="ImmersaMap（イマーサマップ）は、明治時代の古地図から現在の空中写真までを現代の地図に重ね合わせて閲覧できる無料のWeb地図です。首都圏では明治後期（1896年）の地形図まで、空中写真は1930年代から現在まで切り替え、街の移り変わりを直感的にたどれます。" />
 <meta name="robots" content="index,follow,max-image-preview:large" />
 <meta name="theme-color" content="#16263F" />
 <link rel="canonical" href="https://immersamap.github.io/" />
@@ -46,7 +46,7 @@
       "operatingSystem": "Web",
       "browserRequirements": "Requires JavaScript. 最新のWebブラウザに対応。",
       "inLanguage": "ja",
-      "description": "古地図・地形図・年代別の空中写真を現代地図に重ね合わせて閲覧できる無料のWeb地図サービス。1930年代から現在までの航空写真を切り替え、街の移り変わりをたどれます。",
+      "description": "明治時代の古地図から現在の空中写真までを現代地図に重ね合わせて閲覧できる無料のWeb地図サービス。首都圏では明治後期（1896年）の古地図、空中写真は1930年代から現在までを切り替え、街の移り変わりをたどれます。",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
       "isAccessibleForFree": true
     },
@@ -62,7 +62,7 @@
         {
           "@type": "Question",
           "name": "ImmersaMapとは何ですか？",
-          "acceptedAnswer": { "@type": "Answer", "text": "ImmersaMap（イマーサマップ）は、古地図・地形図・年代別の空中写真を現代の地図に重ね合わせて閲覧できる無料のWeb地図サービスです。1930年代から現在までの航空写真を切り替えながら、街の移り変わりを直感的にたどれます。" }
+          "acceptedAnswer": { "@type": "Answer", "text": "ImmersaMap（イマーサマップ）は、明治時代の古地図から現在の空中写真までを現代の地図に重ね合わせて閲覧できる無料のWeb地図サービスです。古地図と年代別の空中写真を切り替えながら、街の移り変わりを直感的にたどれます。" }
         },
         {
           "@type": "Question",
@@ -81,8 +81,13 @@
         },
         {
           "@type": "Question",
+          "name": "古地図はどの時代・地域が見られますか？",
+          "acceptedAnswer": { "@type": "Answer", "text": "首都圏を対象に、明治後期（1896〜1909年）・大正期（1917〜1924年）・昭和戦前（1927〜1939年）・戦後復興期（1944〜1954年）の地形図を閲覧できます。これらの古地図は『今昔マップ on the web』（埼玉大学 谷謙二 氏作成）のタイルを利用しています。" }
+        },
+        {
+          "@type": "Question",
           "name": "地図や空中写真のデータはどこのものですか？",
-          "acceptedAnswer": { "@type": "Answer", "text": "ベース地図にOpenStreetMap、空中写真・地形図に国土地理院の地理院タイルを利用しています。" }
+          "acceptedAnswer": { "@type": "Answer", "text": "ベース地図にOpenStreetMap、空中写真・地形図に国土地理院の地理院タイル、明治〜戦後の古地図に『今昔マップ on the web』（埼玉大学 谷謙二 氏作成）を利用しています。" }
         }
       ]
     }
@@ -194,6 +199,11 @@
   .tl .rng{font-size:.8rem;color:var(--sepia-deep);font-weight:700;margin:4px 0 10px}
   .tl .area{font-size:.86rem;color:var(--ink-soft)}
   .tl-foot{margin-top:26px;font-size:.86rem;color:var(--ink-soft)}
+  .tl.cols-4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:820px){.tl.cols-4{grid-template-columns:1fr}}
+  .tl-label{font-family:var(--serif);font-weight:700;font-size:1.06rem;display:flex;align-items:baseline;gap:12px;margin:0 0 16px}
+  .tl-label.second{margin-top:46px}
+  .tl-label small{font-family:var(--sans);font-weight:500;font-size:.8rem;color:var(--ink-soft);letter-spacing:.02em}
 
   /* 使い方 */
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
@@ -218,6 +228,11 @@
   .about h2{color:var(--paper)}
   .about p{color:rgba(247,242,230,.82);max-width:680px;margin-top:16px}
   .about .todo{margin-top:22px;font-size:.82rem;color:#E8C892;border:1px dashed rgba(232,200,146,.5);border-radius:10px;padding:14px 18px;max-width:680px}
+  .about-meta{margin-top:28px;display:grid;grid-template-columns:auto 1fr;gap:10px 24px;max-width:560px;font-size:.94rem}
+  .about-meta dt{color:#E8C892;font-weight:700;font-family:var(--serif)}
+  .about-meta dd{color:rgba(247,242,230,.9)}
+  .about-meta a{color:#fff;text-decoration:underline;text-underline-offset:3px}
+  .about-meta a:hover{color:#E8C892}
 
   /* 末尾CTA */
   .endcta{text-align:center;padding:96px 0}
@@ -270,7 +285,7 @@
   <div class="wrap">
     <span class="eyebrow reveal">古地図 × 現代地図 × 空中写真</span>
     <h1 class="reveal">街の<span class="accent">むかし</span>を、<br>地図の上で旅する。</h1>
-    <p class="lead reveal">ImmersaMap（イマーサマップ）は、古地図や年代別の空中写真を現代の地図に重ね合わせ、あなたの街がかつてどんな姿だったかを直感的にたどれる、無料のWeb地図です。</p>
+    <p class="lead reveal">ImmersaMap（イマーサマップ）は、明治時代の古地図や年代別の空中写真を現代の地図に重ね合わせ、あなたの街がかつてどんな姿だったかを直感的にたどれる、無料のWeb地図です。</p>
     <div class="hero-cta reveal">
       <a class="btn btn-primary" href="/map/">地図をひらく →</a>
       <a class="btn btn-ghost" href="#features">できることを見る</a>
@@ -282,7 +297,7 @@
 <!-- 定義（アンサーカプセル：AIに引用されやすい一文） -->
 <div class="capsule">
   <div class="wrap">
-    <p><span class="kw">ImmersaMap</span> は、<span class="kw">古地図・地形図・年代別の空中写真</span>を現代地図に重ねて閲覧できる無料のWeb地図サービスです。<span class="kw">1930年代から現在まで</span>の航空写真を切り替えながら、街の移り変わりを直感的にたどれます。</p>
+    <p><span class="kw">ImmersaMap</span> は、<span class="kw">明治時代の古地図から現在の空中写真まで</span>を現代地図に重ねて閲覧できる無料のWeb地図サービスです。首都圏では<span class="kw">明治後期（1896年）</span>の地形図まで、空中写真は1930年代から現在までさかのぼり、街の移り変わりを直感的にたどれます。</p>
   </div>
 </div>
 
@@ -305,7 +320,7 @@
         <div class="num">02</div>
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         <h3>時代を切り替える</h3>
-        <p>1930年代から現在までの空中写真をワンタップで行き来。同じ場所が数十年でどう変わったかが一目でわかります。</p>
+        <p>明治の古地図から現在の空中写真までをワンタップで行き来。同じ場所が百年あまりでどう変わったかが一目でわかります。</p>
       </div>
       <div class="card reveal">
         <div class="num">03</div>
@@ -322,9 +337,19 @@
   <div class="wrap">
     <div class="sec-head reveal">
       <div class="sec-tag">ARCHIVE</div>
-      <h2>1930年代から現在まで。</h2>
-      <p>年代別の空中写真と古地図・地形図を収録。年代が古いほど対応地域は限られます。</p>
+      <h2>明治の古地図から、現在まで。</h2>
+      <p>首都圏では明治後期の古地図から、空中写真は1930年代から。年代が古いほど対応地域は限られます。</p>
     </div>
+
+    <div class="tl-label reveal">古地図 <small>首都圏／1:50000地形図</small></div>
+    <div class="tl cols-4 reveal">
+      <div class="era"><div class="yr">明治後期</div><div class="rng">1896–1909</div><div class="area">首都圏</div></div>
+      <div class="era"><div class="yr">大正期</div><div class="rng">1917–1924</div><div class="area">首都圏</div></div>
+      <div class="era"><div class="yr">昭和戦前</div><div class="rng">1927–1939</div><div class="area">首都圏</div></div>
+      <div class="era"><div class="yr">戦後復興</div><div class="rng">1944–1954</div><div class="area">首都圏</div></div>
+    </div>
+
+    <div class="tl-label second reveal">空中写真 <small>地域により対応範囲が異なります</small></div>
     <div class="tl reveal">
       <div class="era"><div class="yr">1930s</div><div class="rng">1936–1942</div><div class="area">東京・大阪</div></div>
       <div class="era"><div class="yr">1940s</div><div class="rng">1945–1950</div><div class="area">主要都市</div></div>
@@ -333,7 +358,7 @@
       <div class="era"><div class="yr">1980s</div><div class="rng">1979–1990</div><div class="area">大都市圏</div></div>
       <div class="era"><div class="yr">現在</div><div class="rng">2004–</div><div class="area">全国</div></div>
     </div>
-    <p class="tl-foot reveal">空中写真・地形図は国土地理院の地理院タイル、ベース地図は OpenStreetMap を利用しています。</p>
+    <p class="tl-foot reveal">空中写真・地形図は国土地理院の地理院タイル、古地図は「今昔マップ on the web」（埼玉大学 谷謙二 氏作成）、ベース地図は OpenStreetMap を利用しています。</p>
   </div>
 </section>
 
@@ -363,7 +388,8 @@
       <details><summary>ImmersaMapは無料で使えますか？</summary><p>はい。会員登録もアプリのインストールも不要で、Webブラウザから無料でご利用いただけます。</p></details>
       <details><summary>スマートフォンでも使えますか？</summary><p>はい。スマートフォン・タブレット・パソコンのいずれのブラウザでも動作します。</p></details>
       <details><summary>どの年代の空中写真が見られますか？</summary><p>1930年代（1936〜1942年）から現在（2004年〜）までを年代別に切り替えて閲覧できます。古い年代は東京・大阪など対応地域が限られ、1960年代以降は全国を広くカバーしています。</p></details>
-      <details><summary>地図や空中写真のデータはどこのものですか？</summary><p>ベース地図に OpenStreetMap、空中写真・地形図に国土地理院の地理院タイルを利用しています。</p></details>
+      <details><summary>古地図はどの時代・地域が見られますか？</summary><p>首都圏を対象に、明治後期（1896〜1909年）・大正期（1917〜1924年）・昭和戦前（1927〜1939年）・戦後復興期（1944〜1954年）の地形図を閲覧できます。現代地図に重ねて見比べられます。</p></details>
+      <details><summary>地図や空中写真のデータはどこのものですか？</summary><p>ベース地図に OpenStreetMap、空中写真・地形図に国土地理院の地理院タイル、明治〜戦後の古地図に「今昔マップ on the web」（埼玉大学 谷謙二 氏作成）を利用しています。</p></details>
       <details><summary>古地図を自分の調べたい場所に重ねられますか？</summary><p>はい。古地図と現代地図を重ね、透明度を調整しながら見比べられます。対応する古地図は順次追加しています。</p></details>
     </div>
   </div>
@@ -374,8 +400,12 @@
   <div class="wrap">
     <div class="sec-tag">ABOUT</div>
     <h2>ImmersaMapについて</h2>
-    <p>ImmersaMapは、誰もが手軽に「街の記憶」をたどれる場所をつくりたい、という思いから生まれた個人運営のWeb地図プロジェクトです。古地図や空中写真という一次資料を、専門知識がなくても楽しめる形で届けることを目指しています。</p>
-    <div class="todo">【要編集】運営者名・運営開始時期・連絡先（メール/SNS）・サイト開設の背景を、ここに実名または屋号で記載してください。運営者情報の明示はGoogleおよびAI検索の信頼性評価（E-E-A-T）で重要です。</div>
+    <p>ImmersaMapは、昔の景色と今の景色を、誰でも分かりやすく見比べたい——そんな思いから生まれた個人運営のWeb地図プロジェクトです。明治の古地図や年代別の空中写真という資料を、専門知識がなくても楽しめる形で届け、見慣れた街の「これまで」を身近に感じてもらうことを目指しています。</p>
+    <dl class="about-meta">
+      <dt>運営</dt><dd>個人運営</dd>
+      <dt>開設</dt><dd>2026年5月</dd>
+      <dt>お問い合わせ</dt><dd><a href="mailto:m.s.alpha0123@gmail.com">m.s.alpha0123@gmail.com</a></dd>
+    </dl>
   </div>
 </section>
 
