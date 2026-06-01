@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>坂本龍馬 三十三年の地図 ― 生誕から最期まで | ImmersaMap</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Shippori+Mincho:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110d; --bg-2:#1c1812; --panel:#221d16; --line:#3a3024;
+    --ink:#ece3d2; --ink-soft:#b9ac95; --ink-dim:#8a7d68;
+    --gold:#c9a44c; --gold-l:#e7c876; --gold-d:#9c7d33;
+    --extant:#7bbf8f; --gone:#b98a7a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 500px at 80% -10%, rgba(201,164,76,.10), transparent 60%), var(--bg);
+    color:var(--ink); font-family:"Shippori Mincho",serif; line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--gold-l);text-decoration:none}
+
+  .topbar{padding:15px 26px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px}
+  .topbar .nav-logo{font-family:"Cinzel",serif;font-size:22px;color:var(--gold-l);letter-spacing:.1em}
+  .topbar .nav-logo:hover{color:var(--gold)}
+  .topbar .mode{margin-left:auto;font-size:.78rem;color:var(--ink-dim);letter-spacing:.08em}
+
+  header{padding:30px 26px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg, rgba(0,0,0,.25), transparent)}
+  .eyebrow{font-family:"Cinzel",serif;letter-spacing:.32em;text-transform:uppercase;color:var(--gold);font-size:.72rem;display:flex;align-items:center;gap:.7em}
+  .eyebrow::before{content:"";flex:0 0 26px;height:1px;background:var(--gold-d);opacity:.7}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--gold-d);opacity:.4}
+  h1{font-weight:700;font-size:clamp(1.7rem,4.6vw,2.7rem);margin:.35em 0 .15em;letter-spacing:.04em}
+  h1 .by{font-size:.5em;color:var(--ink-soft);font-weight:400;letter-spacing:.12em}
+  .lede{color:var(--ink-soft);max-width:64ch;font-size:.98rem}
+
+  .wrap{display:flex;min-height:0}
+  @media (max-width:920px){ .wrap{flex-direction:column} }
+
+  #map{flex:1 1 auto;min-height:64vh;background:var(--bg-2);position:sticky;top:0;height:100vh}
+  @media (max-width:920px){ #map{min-height:46vh;height:46vh;position:static} }
+  .leaflet-container{background:#0d0b08;font-family:inherit}
+  .leaflet-popup-content-wrapper{background:var(--panel);color:var(--ink);border:1px solid var(--gold-d);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .leaflet-popup-tip{background:var(--panel);border:1px solid var(--gold-d)}
+  .leaflet-popup-content{margin:12px 14px;font-size:.92rem}
+  .pop-no{font-family:"Cinzel",serif;color:var(--gold-l);letter-spacing:.1em;font-size:.7rem}
+  .pop-name{font-weight:700;font-size:1.05rem;margin:.1em 0 .25em}
+
+  .pin{width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    background:radial-gradient(circle at 35% 30%, var(--gold-l), var(--gold-d));
+    border:1.5px solid #fff4d8;box-shadow:0 4px 10px rgba(0,0,0,.5);display:grid;place-items:center}
+  .pin.gone{background:radial-gradient(circle at 35% 30%, #c9b6ad, #8c6a5c)}
+  .pin span{transform:rotate(45deg);font-family:"Cinzel",serif;font-weight:700;color:#1a1409;font-size:.85rem}
+
+  aside{flex:0 0 420px;max-width:420px;background:var(--bg-2);border-left:1px solid var(--line)}
+  @media (max-width:920px){ aside{flex:none;max-width:none;border-left:none;border-top:1px solid var(--line)} }
+
+  .stepper{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .stepper button{flex:1;padding:9px 6px;background:transparent;color:var(--ink-soft);border:1px solid var(--line);border-radius:6px;cursor:pointer;font-family:"Shippori Mincho",serif;font-size:.85rem;transition:.2s}
+  .stepper button:hover{border-color:var(--gold-d);color:var(--gold-l)}
+  .stepper #counter{flex:0 0 auto;font-family:"Cinzel",serif;color:var(--gold);font-size:.85rem;min-width:54px;text-align:center}
+  .hint{padding:10px 18px;color:var(--ink-dim);font-size:.78rem;border-bottom:1px solid var(--line)}
+
+  /* timeline */
+  .timeline{padding:6px 0 0}
+  .stop{position:relative;padding:16px 18px 16px 64px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .2s}
+  .stop:hover,.stop.active{background:var(--panel)}
+  .stop.active::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold-l)}
+  /* timeline rail */
+  .stop::before{content:"";position:absolute;left:31px;top:0;bottom:0;width:1px;background:var(--line)}
+  .stop:first-child::before{top:24px}
+  .stop:last-child::before{bottom:auto;height:24px}
+  .dot{position:absolute;left:24px;top:20px;width:15px;height:15px;border-radius:50%;background:var(--bg-2);border:2px solid var(--extant);z-index:2}
+  .dot.gone{border-color:var(--gone)}
+  .no{position:absolute;left:25px;top:21px;width:13px;height:13px;font-family:"Cinzel",serif;font-size:.6rem;color:var(--gold-l);display:grid;place-items:center;z-index:3}
+
+  .yr{font-family:"Cinzel",serif;color:var(--gold);font-size:.95rem;letter-spacing:.05em}
+  .yr .wa{font-family:"Shippori Mincho",serif;color:var(--ink-dim);font-size:.74rem;margin-left:.5em}
+  .stop-name{font-weight:700;font-size:1.16rem;margin:.12em 0 .1em}
+  .region{color:var(--ink-dim);font-size:.78rem}
+  .phase{display:inline-block;font-size:.66rem;letter-spacing:.08em;color:var(--gold-l);border:1px solid var(--gold-d);border-radius:999px;padding:1px 8px;margin-left:8px;vertical-align:1px}
+  .badge{display:inline-block;font-size:.68rem;padding:2px 9px;border-radius:999px;margin:9px 0 6px;letter-spacing:.06em;border:1px solid}
+  .badge.extant{color:var(--extant);border-color:rgba(123,191,143,.5);background:rgba(123,191,143,.08)}
+  .badge.gone{color:var(--gone);border-color:rgba(185,138,122,.5);background:rgba(185,138,122,.08)}
+  .stop p{font-size:.9rem;color:var(--ink-soft);margin:.2em 0}
+  .now{margin-top:9px;padding:10px 12px;background:rgba(201,164,76,.06);border:1px solid var(--line);border-radius:7px}
+  .now .lbl{font-family:"Cinzel",serif;font-size:.6rem;letter-spacing:.2em;color:var(--gold);display:block;margin-bottom:3px}
+  .now .info{font-size:.78rem;color:var(--ink-dim);margin-top:5px}
+
+  footer{padding:18px 20px;color:var(--ink-dim);font-size:.76rem;border-top:1px solid var(--line);background:var(--bg)}
+  footer code{color:var(--gold-l);background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px;font-size:.85em}
+</style>
+</head>
+<body>
+
+<nav class="topbar"><a href="/" class="nav-logo">ImmersaMap</a><span class="mode">物語追体験モード</span></nav>
+
+<header>
+  <div class="eyebrow">Sakamoto Ryoma &middot; 1835&ndash;1867</div>
+  <h1>坂本龍馬 三十三年の地図 <span class="by">― 生誕から最期まで</span></h1>
+  <p class="lede">高知に生まれ、江戸で剣を学び、土佐を脱藩し、神戸で海軍を、長崎で商社を立ち上げ、京都で時代を動かして散った。龍馬が日本中を駆けた足跡を、起きた順に十二の地でたどります。地図上の金色の線が、三十三年の旅路そのものです。今も残る場所、碑だけになった場所 ―― 順にたどってみてください。</p>
+</header>
+
+<div class="wrap">
+  <div id="map"></div>
+  <aside>
+    <div class="stepper">
+      <button id="prev">← 前の地</button>
+      <span id="counter">1 / 12</span>
+      <button id="next">次の地 →</button>
+    </div>
+    <div class="hint">「次の地」で龍馬の足跡を順にたどれます。地点をタップしても移動。緑＝現存／くすみ色＝碑・跡地のみ。</div>
+    <div id="tl" class="timeline"></div>
+    <footer>
+      ※プロトタイプ。座標は概算、現存・拝観情報は2026年時点の確認に基づきます（公開前に再確認推奨）。<br>
+      データは既存の <code>works / chapters / locations</code> 構造に対応。各地点に <code>year</code> / <code>phase</code> / <code>extant</code> / <code>now</code> / <code>info</code> を追加しています。
+    </footer>
+  </aside>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const stops = [
+  { n:1, yr:"1835", wa:"天保6", name:"坂本龍馬 誕生地", region:"高知県高知市 上町", phase:"土佐に生まる",
+    lat:33.5616, lng:133.5318, extant:true,
+    event:"11月15日、土佐藩郷士・坂本家の次男として高知城下本丁筋に生まれる。奇しくも命日も同じ11月15日。",
+    now:"上町病院前に誕生地碑。近くに「龍馬の生まれたまち記念館」(2004年開館)があり、少年期を映像や模型で紹介。",
+    info:"記念館 8:00–19:00(時期により変動) / 一般300–370円・高校生以下無料" },
+  { n:2, yr:"1853", wa:"嘉永6", name:"桶町千葉道場", region:"東京都中央区 八重洲", phase:"江戸で剣を学ぶ",
+    lat:35.6770, lng:139.7690, extant:false,
+    event:"剣術修行のため江戸へ。北辰一刀流・千葉定吉(子の重太郎)の道場で学ぶ。同年ペリー来航。後に長刀兵法の目録を授かる。",
+    now:"道場は現存せず、オフィス街に「千葉定吉道場跡」の説明板が立つのみ。",
+    info:"東京駅〜有楽町の中間 / 説明板・拝観自由" },
+  { n:3, yr:"1862", wa:"文久2", name:"維新の門（脱藩の道）", region:"高知県梼原町", phase:"脱藩",
+    lat:33.3895, lng:132.9270, extant:true,
+    event:"3月、沢村惣之丞とともに梼原から韮ヶ峠を越えて土佐を脱藩。ここから全国を駆ける龍馬の活躍が始まる。",
+    now:"龍馬ら八志士の群像「維新の門」が建つ。山中には今も「脱藩の道」が残り、ウォーキングで歩ける。",
+    info:"高知県高岡郡梼原町 / 群像・見学自由" },
+  { n:4, yr:"1864", wa:"元治元", name:"神戸海軍操練所 跡", region:"兵庫県神戸市 新港町", phase:"海軍を学ぶ",
+    lat:34.6880, lng:135.1940, extant:false,
+    event:"勝海舟の建言で開かれた幕府の海軍士官養成所。龍馬は勝に師事し、塾頭格として操船・航海術を学んだ。翌年閉鎖。",
+    now:"建物は残らず、京橋筋南詰に錨をかたどった「神戸海軍操練所跡碑」。一帯は神戸港の礎となった。",
+    info:"神戸市中央区新港町付近 / 碑・見学自由" },
+  { n:5, yr:"1865", wa:"慶応元", name:"亀山社中", region:"長崎県長崎市 伊良林", phase:"海援隊のはじまり",
+    lat:32.7503, lng:129.8838, extant:true,
+    event:"薩摩藩や長崎商人の援助で、日本初の商社とも言われる「亀山社中」を結成。海運・貿易を担い、後の海援隊へ。",
+    now:"跡地を復元した「亀山社中記念館」(2009年公開)。近くに龍馬のぶーつ像、風頭公園の龍馬像、龍馬通り。",
+    info:"長崎市伊良林2丁目 / 記念館は有料公開" },
+  { n:6, yr:"1866", wa:"慶応2・1月", name:"薩長同盟 締結地（御花畑屋敷）", region:"京都市上京区", phase:"時代を動かす",
+    lat:35.0388, lng:135.7570, extant:false,
+    event:"龍馬の仲介で、薩摩・西郷隆盛と長州・木戸孝允が同盟を締結。倒幕への大きな転換点となった。",
+    now:"近衛家別邸・小松帯刀寓居の跡。2016年に場所が判明し「薩長同盟所縁之地」碑が建つ(カフェの一画)。",
+    info:"上京区室町通鞍馬口下ル / 碑・見学自由" },
+  { n:7, yr:"1866", wa:"慶応2・1月", name:"寺田屋", region:"京都市伏見区", phase:"危機を脱す",
+    lat:34.9320, lng:135.7595, extant:true,
+    event:"定宿の船宿で伏見奉行所の捕り方に襲撃される。おりょうが危険を知らせ難を逃れた逸話で名高い。",
+    now:"旅館兼史跡博物館として見学可(現建物は鳥羽伏見の戦い後の再建)。",
+    info:"伏見区南浜町263 / 10:00–16:00(受付15:40)・大人400円" },
+  { n:8, yr:"1866", wa:"慶応2・3月", name:"塩浸温泉（霧島）", region:"鹿児島県霧島市", phase:"日本初の新婚旅行",
+    lat:33.5616, lng:130.7960, extant:true,
+    event:"寺田屋で負った傷を癒すため、妻お龍と霧島へ。高千穂峰に登り温泉に逗留したこの旅は「日本初の新婚旅行」とされる。",
+    now:"「塩浸温泉龍馬公園」として整備。今も入れる温泉・縁結びの足湯・新婚湯治碑・龍馬資料館がある。",
+    info:"霧島市牧園町宿窪田3606 / 入浴 大人約360円・資料館約200円(月曜休)" },
+  { n:9, yr:"1867", wa:"慶応3・4月", name:"いろは丸事件（鞆の浦）", region:"広島県福山市 鞆町", phase:"海の交渉人",
+    lat:34.3835, lng:133.3812, extant:true,
+    event:"海援隊の「いろは丸」が紀州藩船と瀬戸内で衝突・沈没。龍馬は鞆の浦に上陸し、賠償交渉を展開した。",
+    now:"江戸期の蔵を使う「いろは丸展示館」に引揚げ遺物を展示。龍馬が隠れた桝屋清右衛門宅の隠し部屋も現存。",
+    info:"福山市鞆町鞆843-1 / 金土日祝 開館・入館300円" },
+  { n:10, yr:"1867", wa:"慶応3", name:"酢屋（寓居・海援隊本部）", region:"京都市中京区", phase:"最期の京都",
+    lat:35.0068, lng:135.7706, extant:true,
+    event:"材木商「酢屋」に身を寄せ、ここに海援隊の京都本部を置いた。前の小路は今「龍馬通」と呼ばれる。",
+    now:"享保6年(1721)創業のまま今も「創作木工芸 酢屋」として営業。2階は「ギャラリー龍馬」として公開。",
+    info:"中京区龍馬通 / 1階店舗・2階ギャラリー有料" },
+  { n:11, yr:"1867", wa:"慶応3・11月", name:"近江屋跡（遭難の地）", region:"京都市中京区 河原町", phase:"暗殺",
+    lat:35.0052, lng:135.7684, extant:false,
+    event:"11月15日、醤油商・近江屋の2階で中岡慎太郎とともに凶刃に倒れる。奇しくも33歳の誕生日だった。",
+    now:"建物は現存せず「坂本龍馬・中岡慎太郎 遭難之地」碑が残るのみ。周囲は河原町の繁華街。",
+    info:"中京区河原町通蛸薬師下ル / 碑・拝観自由" },
+  { n:12, yr:"以後", wa:"埋葬の地", name:"京都霊山護国神社", region:"京都市東山区", phase:"眠りの地",
+    lat:34.9985, lng:135.7820, extant:true,
+    event:"維新に殉じた志士を祀る社。龍馬は中岡慎太郎とともにここに葬られ、二人の墓と銅像が京都市街を見下ろす。",
+    now:"墓・銅像を参拝できる。毎年11月15日に龍馬祭。",
+    info:"東山区清閑寺霊山町1 / 墓地拝観 大人300円" },
+];
+
+// ---- 地図 ----
+const map = L.map('map', {zoomControl:true, scrollWheelZoom:true});
+const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap contributors'});
+osm.addTo(map);
+
+const line = L.polyline(stops.map(s=>[s.lat,s.lng]), {color:'#c9a44c', weight:2.5, opacity:.7, dashArray:'2 8'}).addTo(map);
+
+const markers = {};
+stops.forEach(s=>{
+  const icon = L.divIcon({className:'', html:`<div class="pin ${s.extant?'':'gone'}"><span>${s.n}</span></div>`,
+    iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-30]});
+  const m = L.marker([s.lat,s.lng],{icon}).addTo(map);
+  m.bindPopup(`<div class="pop-no">No.${s.n} &middot; ${s.yr}年 &middot; ${s.region}</div>`+
+              `<div class="pop-name">${s.name}</div><div>${s.now}</div>`);
+  m.on('click',()=>select(s.n,false));
+  markers[s.n]=m;
+});
+map.fitBounds(line.getBounds().pad(0.12));
+
+// ---- タイムライン ----
+const tl = document.getElementById('tl');
+stops.forEach(s=>{
+  const el=document.createElement('div'); el.className='stop'; el.id='stop-'+s.n;
+  el.innerHTML =
+    `<span class="dot ${s.extant?'':'gone'}"></span><span class="no">${s.n}</span>`+
+    `<div class="yr">${s.yr}<span class="wa">${s.wa}</span></div>`+
+    `<div class="stop-name">${s.name}<span class="phase">${s.phase}</span></div>`+
+    `<div class="region">${s.region}</div>`+
+    `<span class="badge ${s.extant?'extant':'gone'}">${s.extant?'● 現存':'○ 碑・跡地のみ'}</span>`+
+    `<p>${s.event}</p>`+
+    `<div class="now"><span class="lbl">Now &mdash; 現在の姿</span>${s.now}<div class="info">${s.info}</div></div>`;
+  el.addEventListener('click',()=>select(s.n,true));
+  tl.appendChild(el);
+});
+
+let cur = 1;
+const counter=document.getElementById('counter');
+function select(n, fly){
+  cur=n;
+  document.querySelectorAll('.stop').forEach(e=>e.classList.remove('active'));
+  const el=document.getElementById('stop-'+n); el.classList.add('active');
+  counter.textContent = n + ' / ' + stops.length;
+  const ll=markers[n].getLatLng();
+  if(fly){ map.flyTo([ll.lat,ll.lng],15,{duration:.9}); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  markers[n].openPopup();
+}
+document.getElementById('prev').onclick=()=>select(cur>1?cur-1:stops.length, true);
+document.getElementById('next').onclick=()=>select(cur<stops.length?cur+1:1, true);
+</script>
+</body>
+</html>
