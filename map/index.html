@@ -387,6 +387,23 @@
       100% { width: 48px; height: 48px; opacity: 0; }
     }
 
+    /* 検索結果のピン */
+    .search-pin-icon {
+      font-size: 34px; color: #e23b3b; line-height: 1; display: block;
+      text-shadow: 0 2px 3px rgba(0,0,0,0.35);
+      animation: pin-drop .4s cubic-bezier(.2,.8,.3,1);
+    }
+    @keyframes pin-drop {
+      0%   { transform: translateY(-14px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    .search-pin-popup { font-size: 13px; line-height: 1.5; text-align: center; min-width: 120px; }
+    .search-pin-remove {
+      margin-top: 8px; padding: 5px 12px; border: none; border-radius: 6px;
+      background: #f0f0f0; color: var(--text); cursor: pointer; font-size: 12px;
+    }
+    .search-pin-remove:hover { background: #e23b3b; color: #fff; }
+
     .attribution {
       position: absolute; left: 16px; bottom: 8px; font-size: 10px;
       color: rgba(255,255,255,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.4);
@@ -561,6 +578,7 @@
     <div class="map-actions">
       <button class="map-action-btn" id="zoom-in" aria-label="拡大"><i class="ti ti-plus"></i></button>
       <button class="map-action-btn" id="zoom-out" aria-label="縮小"><i class="ti ti-minus"></i></button>
+      <button class="map-action-btn" id="clear-pin" aria-label="検索ピンを消す" title="検索ピンを消す" hidden><i class="ti ti-map-pin-off"></i></button>
       <button class="map-action-btn" id="locate" aria-label="現在地" aria-pressed="false"><i class="ti ti-current-location"></i></button>
     </div>
 
@@ -647,7 +665,7 @@
           <p>地図の右側にある縦のスライダーで、重ねた地図の濃さを調整できます。下にすると現代地図が透けて見え、過去と現在を比べられます。</p>
 
           <h3>地名・住所の検索</h3>
-          <p>画面上部の検索ボックスから地名や住所、施設名で場所に飛べます。国土地理院とOpenStreetMapの両方を検索します。</p>
+          <p>画面上部の検索ボックスから地名や住所、施設名で場所に飛べます。国土地理院とOpenStreetMapの両方を検索します。移動した場所には目印のピンが立ち、続けて検索すると新しい場所に立て直されます。ピンはピン自体のクリック、または地図右下の <i class="ti ti-map-pin-off" aria-hidden="true"></i> ボタンで消せます。</p>
 
           <h3>サイドバーの折りたたみ（PC）</h3>
           <p>ヘッダー左の <span class="info-keybox">☰</span> ボタンで、サイドバーを閉じて地図を広く表示できます。</p>
@@ -829,6 +847,8 @@
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
       $('locate').addEventListener('click', toggleCurrentLocation);
+      const clearPinBtn = $('clear-pin');
+      if (clearPinBtn) clearPinBtn.addEventListener('click', () => { removeSearchMarker(); toast('ピンを消しました'); });
 
       // ズーム変化に応じて zoomFade タイルの不透明度とフィルタを更新
       map.on('zoomend', () => { applyZoomFade(); applyZoomFilter(); });
@@ -836,6 +856,38 @@
 
     // ============ 現在地マーカー ============
     let currentLocationMarker = null;
+
+    // ============ 検索結果のピン ============
+    let searchMarker = null;
+
+    function setSearchMarker(lat, lng, name) {
+      removeSearchMarker(); // 以前のピンを消してから立て直す
+      const icon = L.divIcon({
+        className: '',
+        html: '<i class="ti ti-map-pin-filled search-pin-icon"></i>',
+        iconSize: [34, 34], iconAnchor: [17, 32], popupAnchor: [0, -28],
+      });
+      searchMarker = L.marker([lat, lng], { icon, zIndexOffset: 900 }).addTo(map);
+      searchMarker.bindPopup(
+        '<div class="search-pin-popup">' + escapeHtml(name || '') +
+        '<br><button type="button" class="search-pin-remove">ピンを消す</button></div>'
+      );
+      searchMarker.on('popupopen', (e) => {
+        const btn = e.popup.getElement().querySelector('.search-pin-remove');
+        if (btn) btn.addEventListener('click', () => removeSearchMarker());
+      });
+      const cp = $('clear-pin');
+      if (cp) cp.hidden = false;
+    }
+
+    function removeSearchMarker() {
+      if (searchMarker) {
+        map.removeLayer(searchMarker);
+        searchMarker = null;
+      }
+      const cp = $('clear-pin');
+      if (cp) cp.hidden = true;
+    }
 
     function toggleCurrentLocation() {
       const btn = $('locate');
@@ -1400,6 +1452,7 @@
       // ズームは現在のズームを尊重しつつ最低14に
       const targetZoom = Math.max(map.getZoom(), 14);
       map.flyTo([r.lat, r.lng], targetZoom, { duration: 1.2 });
+      setSearchMarker(r.lat, r.lng, r.name);
       toast(r.name + ' に移動');
     }
 
