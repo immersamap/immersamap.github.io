@@ -263,12 +263,15 @@
     .now-card-coverage.limit { color: var(--red-fg); }
 
     /* ============ 透明度スライダー（縦） ============ */
+    .right-stack {
+      position: absolute; right: 16px; bottom: 16px; z-index: 400;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
     .opacity-control {
-      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
       background: rgba(255,255,255,0.96); border-radius: 20px; padding: 12px 4px;
       width: 40px;
       display: flex; flex-direction: column; align-items: center; gap: 6px;
-      box-shadow: var(--shadow-strong); z-index: 400;
+      box-shadow: var(--shadow-strong);
     }
     .opacity-control i { font-size: 14px; color: var(--text-muted); }
     /* 回転トリック：スライダーは横向きで作って90度回す。
@@ -297,8 +300,7 @@
 
     /* ============ ズーム・現在地ボタン ============ */
     .map-actions {
-      position: absolute; right: 16px; bottom: 16px;
-      display: flex; flex-direction: column; gap: 6px; z-index: 400;
+      display: flex; flex-direction: column; gap: 6px;
     }
     .map-action-btn {
       width: 38px; height: 38px; border-radius: 8px; background: #fff; border: none;
@@ -397,12 +399,7 @@
       0%   { transform: translateY(-14px); opacity: 0; }
       100% { transform: translateY(0); opacity: 1; }
     }
-    .search-pin-popup { font-size: 13px; line-height: 1.5; text-align: center; min-width: 120px; }
-    .search-pin-remove {
-      margin-top: 8px; padding: 5px 12px; border: none; border-radius: 6px;
-      background: #f0f0f0; color: var(--text); cursor: pointer; font-size: 12px;
-    }
-    .search-pin-remove:hover { background: #e23b3b; color: #fff; }
+    .search-pin-popup { font-size: 13px; line-height: 1.5; text-align: center; min-width: 100px; font-weight: 500; }
 
     .attribution {
       position: absolute; left: 16px; bottom: 8px; font-size: 10px;
@@ -496,11 +493,11 @@
       .now-card { top: 12px; left: 12px; padding: 10px 12px; max-width: 220px; }
       .now-card-name { font-size: 14px; }
       .now-card-meta { font-size: 11px; }
-      .opacity-control { right: 8px; padding: 10px 4px; border-radius: 18px; width: 36px; gap: 4px; }
+      .right-stack { right: 8px; bottom: 12px; gap: 8px; }
+      .opacity-control { padding: 10px 4px; border-radius: 18px; width: 36px; gap: 4px; }
       .opacity-slider-wrap { width: 22px; height: 110px; }
       .opacity-slider-fallback { width: 110px; }
       .opacity-value { font-size: 10px; }
-      .map-actions { right: 8px; bottom: 12px; }
       .map-action-btn { width: 36px; height: 36px; }
     }
 
@@ -567,19 +564,20 @@
       <div class="now-card-coverage" id="now-coverage"></div>
     </div>
 
-    <div class="opacity-control" title="表示の濃さ">
-      <i class="ti ti-eye" aria-hidden="true"></i>
-      <div class="opacity-slider-wrap">
-        <input type="range" id="opacity-slider" class="opacity-slider-fallback" min="0" max="100" value="70" step="1" aria-label="透明度">
+    <div class="right-stack">
+      <div class="opacity-control" title="表示の濃さ">
+        <i class="ti ti-eye" aria-hidden="true"></i>
+        <div class="opacity-slider-wrap">
+          <input type="range" id="opacity-slider" class="opacity-slider-fallback" min="0" max="100" value="70" step="1" aria-label="透明度">
+        </div>
+        <span class="opacity-value" id="opacity-value">70%</span>
       </div>
-      <span class="opacity-value" id="opacity-value">70%</span>
-    </div>
 
-    <div class="map-actions">
-      <button class="map-action-btn" id="zoom-in" aria-label="拡大"><i class="ti ti-plus"></i></button>
-      <button class="map-action-btn" id="zoom-out" aria-label="縮小"><i class="ti ti-minus"></i></button>
-      <button class="map-action-btn" id="clear-pin" aria-label="検索ピンを消す" title="検索ピンを消す" hidden><i class="ti ti-map-pin-off"></i></button>
-      <button class="map-action-btn" id="locate" aria-label="現在地" aria-pressed="false"><i class="ti ti-current-location"></i></button>
+      <div class="map-actions">
+        <button class="map-action-btn" id="zoom-in" aria-label="拡大"><i class="ti ti-plus"></i></button>
+        <button class="map-action-btn" id="zoom-out" aria-label="縮小"><i class="ti ti-minus"></i></button>
+        <button class="map-action-btn" id="locate" aria-label="現在地" aria-pressed="false"><i class="ti ti-current-location"></i></button>
+      </div>
     </div>
 
     <div class="attribution">
@@ -665,7 +663,7 @@
           <p>地図の右側にある縦のスライダーで、重ねた地図の濃さを調整できます。下にすると現代地図が透けて見え、過去と現在を比べられます。</p>
 
           <h3>地名・住所の検索</h3>
-          <p>画面上部の検索ボックスから地名や住所、施設名で場所に飛べます。国土地理院とOpenStreetMapの両方を検索します。移動した場所には目印のピンが立ち、続けて検索すると新しい場所に立て直されます。ピンはピン自体のクリック、または地図右下の <i class="ti ti-map-pin-off" aria-hidden="true"></i> ボタンで消せます。</p>
+          <p>画面上部の検索ボックスから地名や住所、施設名で場所に飛べます。国土地理院とOpenStreetMapの両方を検索します。移動した場所には目印のピンが立ち、続けて検索すると新しい場所に立て直されます。検索ボックス右側の <i class="ti ti-x" aria-hidden="true"></i> で入力を消すと、ピンも一緒に消えます。</p>
 
           <h3>サイドバーの折りたたみ（PC）</h3>
           <p>ヘッダー左の <span class="info-keybox">☰</span> ボタンで、サイドバーを閉じて地図を広く表示できます。</p>
@@ -847,8 +845,6 @@
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
       $('locate').addEventListener('click', toggleCurrentLocation);
-      const clearPinBtn = $('clear-pin');
-      if (clearPinBtn) clearPinBtn.addEventListener('click', () => { removeSearchMarker(); toast('ピンを消しました'); });
 
       // ズーム変化に応じて zoomFade タイルの不透明度とフィルタを更新
       map.on('zoomend', () => { applyZoomFade(); applyZoomFilter(); });
@@ -868,16 +864,7 @@
         iconSize: [34, 34], iconAnchor: [17, 32], popupAnchor: [0, -28],
       });
       searchMarker = L.marker([lat, lng], { icon, zIndexOffset: 900 }).addTo(map);
-      searchMarker.bindPopup(
-        '<div class="search-pin-popup">' + escapeHtml(name || '') +
-        '<br><button type="button" class="search-pin-remove">ピンを消す</button></div>'
-      );
-      searchMarker.on('popupopen', (e) => {
-        const btn = e.popup.getElement().querySelector('.search-pin-remove');
-        if (btn) btn.addEventListener('click', () => removeSearchMarker());
-      });
-      const cp = $('clear-pin');
-      if (cp) cp.hidden = false;
+      if (name) searchMarker.bindPopup('<div class="search-pin-popup">' + escapeHtml(name) + '</div>');
     }
 
     function removeSearchMarker() {
@@ -885,8 +872,6 @@
         map.removeLayer(searchMarker);
         searchMarker = null;
       }
-      const cp = $('clear-pin');
-      if (cp) cp.hidden = true;
     }
 
     function toggleCurrentLocation() {
@@ -1290,7 +1275,7 @@
       const q = search.input.value.trim();
       search.wrap.classList.toggle('has-value', q.length > 0);
       clearTimeout(search.timer);
-      if (q.length === 0) { hideResults(); return; }
+      if (q.length === 0) { hideResults(); removeSearchMarker(); return; }
       if (q.length < 2) return; // 1文字では検索しない
       search.timer = setTimeout(() => runSearch(q), 300);
     }
@@ -1334,6 +1319,7 @@
       search.input.value = '';
       search.wrap.classList.remove('has-value');
       hideResults();
+      removeSearchMarker();
       search.input.focus();
     }
 
@@ -1448,7 +1434,7 @@
       if (!r || r.lat == null || r.lng == null) return;
       hideResults();
       search.input.value = r.name;
-      search.wrap.classList.remove('has-value');
+      search.wrap.classList.add('has-value'); // ×ボタンを表示（ピンのクリア手段）
       // ズームは現在のズームを尊重しつつ最低14に
       const targetZoom = Math.max(map.getZoom(), 14);
       map.flyTo([r.lat, r.lng], targetZoom, { duration: 1.2 });
