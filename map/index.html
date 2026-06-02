@@ -64,6 +64,17 @@
     .header-info-btn:hover { background: #f0f0f0; color: var(--text); }
     .header-info-btn i { font-size: 20px; }
 
+    /* ===== シェアボタン ===== */
+    .share-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: none; background: var(--accent); color: var(--accent-on);
+      padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: opacity .15s; font-family: inherit;
+    }
+    .share-btn:hover { opacity: 0.75; }
+    .share-btn i { font-size: 16px; }
+    @media(max-width:640px){ .share-label { display: none; } }
+
     /* ============ Info Modal ============ */
     .info-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000;
@@ -538,6 +549,10 @@
       <div class="search-results" id="search-results" role="listbox"></div>
     </div>
     <div class="header-right">
+      <button class="share-btn" id="share-btn" aria-label="この地図を共有" title="この地図を共有">
+        <i class="ti ti-share"></i>
+        <span class="share-label">共有</span>
+      </button>
       <button class="header-info-btn" id="info-btn" aria-label="このサイトについて" title="このサイトについて">
         <i class="ti ti-info-circle"></i>
       </button>
@@ -835,7 +850,7 @@
 
     // ============ 地図初期化 ============
     function initMap() {
-      map = L.map('map', { center: [35.6812, 139.7671], zoom: 12, zoomControl: false });
+      map = L.map('map', { center: window._initCenter || [35.6812, 139.7671], zoom: window._initZoom || 12, zoomControl: false });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         updateWhenZooming: false,   // ズーム途中ではタイルを取りに行かない（無駄な取得を削減）
@@ -845,6 +860,9 @@
       $('zoom-in').addEventListener('click', () => map.zoomIn());
       $('zoom-out').addEventListener('click', () => map.zoomOut());
       $('locate').addEventListener('click', toggleCurrentLocation);
+
+      // 移動・ズーム後にURLを自動更新
+      map.on('moveend zoomend', pushStateFromMap);
 
       // ズーム変化に応じて zoomFade タイルの不透明度とフィルタを更新
       map.on('zoomend', () => { applyZoomFade(); applyZoomFilter(); });
@@ -1442,6 +1460,54 @@
       toast(r.name + ' に移動');
     }
 
+    // ============ URL 状態共有 ============
+    function buildShareUrl() {
+      const center = map.getCenter();
+      const params = new URLSearchParams({
+        lat: center.lat.toFixed(5),
+        lng: center.lng.toFixed(5),
+        z: map.getZoom(),
+        cat: state.category,
+        layer: state.activeId,
+        op: state.opacity,
+      });
+      return location.origin + location.pathname + '?' + params.toString();
+    }
+
+    function pushStateFromMap() {
+      if (!map) return;
+      history.replaceState(null, '', buildShareUrl());
+    }
+
+    function restoreStateFromUrl() {
+      const p = new URLSearchParams(location.search);
+      return {
+        lat: parseFloat(p.get('lat')),
+        lng: parseFloat(p.get('lng')),
+        z:   parseInt(p.get('z'), 10),
+        cat: p.get('cat'),
+        layer: p.get('layer'),
+        op:  parseInt(p.get('op'), 10),
+      };
+    }
+
+    function initShare() {
+      const btn = $('share-btn');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const url = buildShareUrl();
+        history.replaceState(null, '', url);
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(
+            () => toast('URLをコピーしました。SNSやメッセージで共有できます 📋'),
+            () => prompt('このURLをコピーしてください', url)
+          );
+        } else {
+          prompt('このURLをコピーしてください', url);
+        }
+      });
+    }
+
     // ============ 「このサイトについて」モーダル ============
     function initInfoModal() {
       const overlay = $('info-overlay');
@@ -1544,14 +1610,50 @@
     }
 
     // ============ 起動 ============
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
+      const urlState = restoreStateFromUrl();
+
+      // 地図初期位置をURL優先で設定
+      const initLat = isNaN(urlState.lat) ? 35.6812 : urlState.lat;
+      const initLng = isNaN(urlState.lng) ? 139.7671 : urlState.lng;
+      const initZ   = isNaN(urlState.z)   ? 12 : urlState.z;
+
+      // initMap に渡すため一時的に変数を上書き
+      window._initCenter = [initLat, initLng];
+      window._initZoom   = initZ;
+
       initMap();
       applySidebarState();
-      selectCategory('aerial');
-      loadHistoricalMaps();
+
+      // カテゴリ復元
+      const cat = (urlState.cat && LAYERS[urlState.cat]) ? urlState.cat : 'aerial';
+      selectCategory(cat);
+
+      // レイヤー復元（aerial / terrain は即座に選択可能）
+      if (urlState.layer && cat !== 'historical') {
+        const exists = LAYERS[cat].items.some(i => i.id === urlState.layer);
+        if (exists) selectItem(urlState.layer);
+      }
+
+      // 透明度復元
+      if (!isNaN(urlState.op)) {
+        state.opacity = urlState.op;
+        const slider = $('opacity-slider');
+        if (slider) { slider.value = urlState.op; $('opacity-value').textContent = urlState.op + '%'; }
+        if (state.overlay) state.overlay.setOpacity(urlState.op / 100);
+      }
+
+      // 古地図は非同期取得後に復元
+      await loadHistoricalMaps();
+      if (cat === 'historical' && urlState.layer) {
+        const exists = LAYERS.historical.items.some(i => i.id === urlState.layer);
+        if (exists) selectItem(urlState.layer);
+      }
+
       initSearch();
       initInfoModal();
       initFilterDebugPanel();
+      initShare();
     });
 
     // リサイズで地図を再計算
