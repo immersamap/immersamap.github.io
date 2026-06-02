@@ -3,9 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="古い空中写真・古地図・地形図を現代地図と重ね合わせて、時を遡る地図体験">
-  <title>ImmersaMap — 時を遡る地図体験</title>
+  <meta name="description" content="ImmersaMap — 明治の古地図・年代別の空中写真を現代地図に重ねて見られる無料のWeb地図。ズーム・透明度調整・地名検索に対応。スマホでも動作します。">
+  <meta name="theme-color" content="#ffffff">
+  <title>ImmersaMap 地図 — 古地図・空中写真を現代地図に重ねる</title>
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ImmersaMap — 古地図・空中写真を現代地図に重ねる" />
+  <meta property="og:description" content="明治の古地図・年代別の空中写真を現代地図に重ねて見られる無料のWeb地図。" />
+  <meta property="og:url" content="https://immersamap.github.io/map/" />
+  <meta property="og:image" content="https://immersamap.github.io/ogp.png" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://cyberjapandata.gsi.go.jp" />
+  <link rel="preconnect" href="https://kgafuinoddiapaaljkkw.supabase.co" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css">
   <style>
     :root {
@@ -15,7 +26,7 @@
       --border-strong: #d0d0d0;
       --text: #1a1a1a;
       --text-muted: #555;
-      --text-faint: #888;
+      --text-faint: #666;  /* #888→#666: WCAG AA対応（コントラスト比5.74:1） */
       --accent: #1a1a1a;
       --accent-on: #ffffff;
       --green-bg: #e8f5ee;
@@ -32,6 +43,7 @@
       --mobile-list-h: 112px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 2px solid #1a6dca; outline-offset: 2px; border-radius: 3px; }
     html, body { height: 100%; overflow: hidden; }
     body { font-family: 'Noto Sans JP', 'Segoe UI', system-ui, sans-serif; color: var(--text); background: var(--bg); }
     button { font-family: inherit; cursor: pointer; }
@@ -186,7 +198,7 @@
     .search-result-text { flex: 1; line-height: 1.4; min-width: 0; }
     .search-result-name { font-weight: 500; color: var(--text); }
     .search-result-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-    .search-result-source { font-size: 10px; color: var(--text-faint); flex-shrink: 0; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; }
+    .search-result-source { font-size: 10px; color: #555; flex-shrink: 0; padding: 2px 6px; background: #e8e8e8; border-radius: 4px; }
     .search-empty, .search-error, .search-loading {
       padding: 14px; text-align: center; font-size: 13px; color: var(--text-faint);
     }
@@ -530,6 +542,7 @@
       overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
   </style>
+  <link rel="canonical" href="https://immersamap.github.io/map/" />
 </head>
 <body>
   <header class="header">

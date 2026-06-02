@@ -110,6 +110,7 @@
     --maxw:1120px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  :focus-visible{outline:2px solid #1a6dca;outline-offset:2px;border-radius:3px}
   html{scroll-behavior:smooth}
   body{
     font-family:var(--sans);
@@ -131,7 +132,8 @@
   .serif{font-family:var(--serif)}
 
   /* ===== ヘッダー ===== */
-  header{position:sticky;top:0;z-index:50;background:rgba(247,242,230,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  header{position:sticky;top:0;z-index:50;background:rgba(247,242,230,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  @supports(backdrop-filter:blur(1px)){header{background:rgba(247,242,230,.82)}}
   .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
   .brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:800;font-size:1.18rem;letter-spacing:.02em}
   .brand .mark{width:30px;height:30px}
