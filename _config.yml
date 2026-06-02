@@ -1,0 +1,22 @@
+# GitHub Pages (Jekyll) ビルド設定
+# ここに挙げたファイル/フォルダは公開サイト（https://immersamap.github.io/...）に
+# 配信されなくなります（URLでアクセスすると 404）。
+# ただしリポジトリ内には残るため、git / Claude Code からは引き続き編集・参照できます。
+exclude:
+  # 内部仕様書
+  - SPEC.md
+  - SPECIFICATION.md
+  # バックアップ
+  - index.full.html.bak
+  # SQL（DBスキーマ・セットアップ）
+  - aerial_update.sql
+  - category_update.sql
+  - category_v2.sql
+  - fix_categories.sql
+  - historical_maps_setup.sql
+  - schema_v2.sql
+  # テスト・デモ用ページ
+  - aerial-test.html
+  - old-map-demo.html
+  # 管理用ツール
+  - admin/
