@@ -24,8 +24,10 @@
 <meta name="twitter:description" content="古地図や年代別の空中写真を現代地図に重ねて、街のむかしを直感的にたどれる無料のWeb地図。" />
 <meta name="twitter:image" content="https://immersamap.github.io/ogp.png" />
 
-<!-- ===== favicon（インラインSVG） ===== -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2316263F'/%3E%3Cg fill='none' stroke='%23B07C42' stroke-width='2.4'%3E%3Cpath d='M32 12c10 0 16 7 16 14s-7 14-16 14-16-7-16-14 6-14 16-14z'/%3E%3Cpath d='M32 20c6 0 9 4 9 8s-4 8-9 8-9-3-9-8 3-8 9-8z'/%3E%3C/g%3E%3Ccircle cx='32' cy='28' r='3' fill='%23C0392B'/%3E%3C/svg%3E" />
+<!-- ===== favicon（実ファイル：検索エンジンが取得できるURL） ===== -->
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/favicon.png" />
 
 <!-- ===== フォント ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -37,6 +39,12 @@
 {
   "@context": "https://schema.org",
   "@graph": [
+    {
+      "@type": "WebSite",
+      "name": "ImmersaMap",
+      "alternateName": "イマーサマップ",
+      "url": "https://immersamap.github.io/"
+    },
     {
       "@type": "WebApplication",
       "name": "ImmersaMap",
