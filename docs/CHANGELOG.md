@@ -83,7 +83,7 @@
 
 ## ドキュメント
 
-- [SPECIFICATION.md](./SPECIFICATION.md) - 完全な設計仕様書
+- [SPECIFICATION.md](./spec/SPECIFICATION.md) - 完全な設計仕様書
 - [docs/DESIGN_REVIEW.md](./docs/DESIGN_REVIEW.md) - Alex Zhang のレビュー
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 技術アーキテクチャ
 - [docs/API.md](./docs/API.md) - Supabase API 仕様

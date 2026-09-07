@@ -1,0 +1,19 @@
+# 機密情報（絶対にコミットしない）
+.env
+.env.local
+*.key
+*.pem
+secrets/
+
+# 依存・ビルド成果物
+node_modules/
+_site/
+.jekyll-cache/
+
+# E2Eテスト
+test-results/
+playwright-report/
+
+# OS / エディタ
+.DS_Store
+*.swp
