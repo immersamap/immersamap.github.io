@@ -286,6 +286,12 @@
     .now-card-coverage.ok { color: var(--green-fg); }
     .now-card-coverage.warn { color: var(--amber-fg); }
     .now-card-coverage.limit { color: var(--red-fg); }
+    /* 元データの解像度を超えて引き伸ばし表示しているときの注記 */
+    .now-card-upscale {
+      font-size: 11px; margin-top: 4px; display: none;
+      align-items: center; gap: 4px; color: var(--text-faint);
+    }
+    .now-card-upscale.show { display: flex; }
 
     /* ============ 透明度スライダー（縦） ============ */
     .right-stack {
@@ -593,6 +599,7 @@
       <div class="now-card-name" id="now-name">読み込み中…</div>
       <div class="now-card-meta" id="now-meta"></div>
       <div class="now-card-coverage" id="now-coverage"></div>
+      <div class="now-card-upscale" id="now-upscale"></div>
     </div>
 
     <div class="right-stack">
@@ -788,17 +795,22 @@
     const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
     // ============ レイヤー定義 ============
-    // 各 item: { id, name, era, tile, maxZoom, coverage('full'|'partial'|'limited'), coverageLabel, desc, centerLat?, centerLng? }
+    // 地図全体の最大ズーム。全オーバーレイはここまで表示し続ける
+    // （元データを持たない領域は maxNativeZoom のタイルを引き伸ばして描画）
+    const MAP_MAX_ZOOM = 19;
+
+    // 各 item: { id, name, era, tile, maxNativeZoom, coverage('full'|'partial'|'limited'), coverageLabel, desc, centerLat?, centerLng? }
+    // maxNativeZoom … 配信元が実際に持っている最大ズーム。これを超えると引き伸ばし表示になる
     // 今昔マップ on the web（埼玉大学 谷謙二 氏）首都圏データ。TMS配信のため tms:true。
     // 出典表記必須／一般公開時は作成者への連絡が必要。
     const KJ_BASE = 'https://ktgis.net/kjmapw/kjtilemap/tokyo50';
     const KJ_ATTR = '<a href="https://ktgis.net/kjmapw/" target="_blank" rel="noopener">今昔マップ on the web</a>（埼玉大学 谷謙二）';
     const KJ_DESC = '今昔マップ on the web（埼玉大学 谷謙二 氏作成）／ 1:50000地形図';
     const BUILTIN_HISTORICAL = [
-      { id:'kj_tokyo_02',   name:'戦後復興期', era:'1944〜1954年', tile:KJ_BASE+'/02/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
-      { id:'kj_tokyo_01',   name:'昭和戦前',   era:'1927〜1939年', tile:KJ_BASE+'/01/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
-      { id:'kj_tokyo_00',   name:'大正期',     era:'1917〜1924年', tile:KJ_BASE+'/00/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
-      { id:'kj_tokyo_2man', name:'明治後期',   era:'1896〜1909年', tile:KJ_BASE+'/2man/{z}/{x}/{y}.png', tms:true, maxNativeZoom:16, maxZoom:18, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_02',   name:'戦後復興期', era:'1944〜1954年', tile:KJ_BASE+'/02/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:MAP_MAX_ZOOM, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_01',   name:'昭和戦前',   era:'1927〜1939年', tile:KJ_BASE+'/01/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:MAP_MAX_ZOOM, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_00',   name:'大正期',     era:'1917〜1924年', tile:KJ_BASE+'/00/{z}/{x}/{y}.png',   tms:true, maxNativeZoom:16, maxZoom:MAP_MAX_ZOOM, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
+      { id:'kj_tokyo_2man', name:'明治後期',   era:'1896〜1909年', tile:KJ_BASE+'/2man/{z}/{x}/{y}.png', tms:true, maxNativeZoom:16, maxZoom:MAP_MAX_ZOOM, coverage:'limited', coverageLabel:'首都圏', desc:KJ_DESC, attribution:KJ_ATTR },
     ];
 
     // 古地図リストを「新しい年代ほど左(先頭)」に並べる。era から先頭の西暦を抽出して降順。
@@ -814,16 +826,16 @@
       aerial: {
         label: '空中写真', icon: 'ti-plane', listHeader: '年代を選ぶ',
         items: [
-          { id:'esri_world', name:'最新（Esri）', era:'近年・随時更新', tile:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom:19, maxZoom:19, coverage:'full', coverageLabel:'全世界', desc:'Esri World Imagery（Maxar 他）の衛星写真。場所により地理院より新しく高精細', attribution:'Tiles © <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> — Maxar, Earthstar Geographics 他' },
-          { id:'seamless', name:'最新（地理院）', era:'2004年〜現在',  tile:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxZoom:18, coverage:'full',    coverageLabel:'全国',     desc:'国土地理院シームレス空中写真（最新の航空写真）' },
-          { id:'gazo4',    name:'1980年代後半', era:'1987〜1990年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo4/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第4回撮影' },
-          { id:'gazo3',    name:'1980年代中頃', era:'1984〜1986年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第3回撮影' },
-          { id:'gazo2',    name:'1980年代前半', era:'1979〜1983年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第2回撮影' },
-          { id:'gazo1',    name:'1970年代',     era:'1974〜1978年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'国土画像情報 第1回撮影' },
-          { id:'ort_old10',name:'1960年代',     era:'1961〜1969年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'full',    coverageLabel:'全国',     desc:'高度経済成長期の空中写真', zoomFade:true },
-          { id:'ort_USA10',name:'1940年代',     era:'1945〜1950年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxZoom:17, coverage:'partial', coverageLabel:'主要都市', desc:'米軍撮影の戦後空中写真', filter:'unify-pink' },
-          { id:'ort_riku10',name:'1930年代',    era:'1936〜1942年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxZoom:17, coverage:'limited', coverageLabel:'東京・大阪', desc:'陸軍撮影の戦前空中写真', filter:'unify-pink' },
-          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxZoom:18, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真', filter:'unify-pink' },
+          { id:'esri_world', name:'最新（Esri）', era:'近年・随時更新', tile:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom:19, maxZoom:MAP_MAX_ZOOM, coverage:'full', coverageLabel:'全世界', desc:'Esri World Imagery（Maxar 他）の衛星写真。場所により地理院より新しく高精細', attribution:'Tiles © <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> — Maxar, Earthstar Geographics 他' },
+          { id:'seamless', name:'最新（地理院）', era:'2004年〜現在',  tile:'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxNativeZoom:18, maxZoom:MAP_MAX_ZOOM, coverage:'full',    coverageLabel:'全国',     desc:'国土地理院シームレス空中写真（最新の航空写真）' },
+          { id:'gazo4',    name:'1980年代後半', era:'1987〜1990年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo4/{z}/{x}/{y}.jpg',         maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第4回撮影' },
+          { id:'gazo3',    name:'1980年代中頃', era:'1984〜1986年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo3/{z}/{x}/{y}.jpg',         maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第3回撮影' },
+          { id:'gazo2',    name:'1980年代前半', era:'1979〜1983年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo2/{z}/{x}/{y}.jpg',         maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'partial', coverageLabel:'大都市圏', desc:'国土画像情報 第2回撮影' },
+          { id:'gazo1',    name:'1970年代',     era:'1974〜1978年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/gazo1/{z}/{x}/{y}.jpg',         maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'full',    coverageLabel:'全国',     desc:'国土画像情報 第1回撮影' },
+          { id:'ort_old10',name:'1960年代',     era:'1961〜1969年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_old10/{z}/{x}/{y}.png',     maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'full',    coverageLabel:'全国',     desc:'高度経済成長期の空中写真', zoomFade:true },
+          { id:'ort_USA10',name:'1940年代',     era:'1945〜1950年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_USA10/{z}/{x}/{y}.png',     maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'partial', coverageLabel:'主要都市', desc:'米軍撮影の戦後空中写真', filter:'unify-pink' },
+          { id:'ort_riku10',name:'1930年代',    era:'1936〜1942年',  tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_riku10/{z}/{x}/{y}.png',    maxNativeZoom:17, maxZoom:MAP_MAX_ZOOM, coverage:'limited', coverageLabel:'東京・大阪', desc:'陸軍撮影の戦前空中写真', filter:'unify-pink' },
+          { id:'ort_1928', name:'1928年頃',     era:'1928年',        tile:'https://cyberjapandata.gsi.go.jp/xyz/ort_1928/{z}/{x}/{y}.png',      maxNativeZoom:18, maxZoom:MAP_MAX_ZOOM, coverage:'limited', coverageLabel:'大阪のみ',   desc:'大阪市域の最古級空中写真', filter:'unify-pink' },
         ]
       },
       historical: {
@@ -833,8 +845,8 @@
       terrain: {
         label: '地形', icon: 'ti-mountain', listHeader: '表示方法を選ぶ',
         items: [
-          { id:'relief',      name:'色別標高図', era:'現代', tile:'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',       maxZoom:15, coverage:'full', coverageLabel:'全国', desc:'標高を色で表現した地形図' },
-          { id:'hillshade',   name:'陰影起伏図', era:'現代', tile:'https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png', maxZoom:16, coverage:'full', coverageLabel:'全国', desc:'立体感のある起伏表現' },
+          { id:'relief',      name:'色別標高図', era:'現代', tile:'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',       maxNativeZoom:15, maxZoom:MAP_MAX_ZOOM, coverage:'full', coverageLabel:'全国', desc:'標高を色で表現した地形図' },
+          { id:'hillshade',   name:'陰影起伏図', era:'現代', tile:'https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png', maxNativeZoom:16, maxZoom:MAP_MAX_ZOOM, coverage:'full', coverageLabel:'全国', desc:'立体感のある起伏表現' },
         ]
       }
     };
@@ -868,7 +880,8 @@
     function initMap() {
       map = L.map('map', { center: window._initCenter || [35.6812, 139.7671], zoom: window._initZoom || 12, zoomControl: false });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
+        maxZoom: MAP_MAX_ZOOM,
+        maxNativeZoom: 19,
         updateWhenZooming: false,   // ズーム途中ではタイルを取りに行かない（無駄な取得を削減）
         keepBuffer: 2,
       }).addTo(map);
@@ -881,7 +894,7 @@
       map.on('moveend zoomend', pushStateFromMap);
 
       // ズーム変化に応じて zoomFade タイルの不透明度とフィルタを更新
-      map.on('zoomend', () => { applyZoomFade(); applyZoomFilter(); });
+      map.on('zoomend', () => { applyZoomFade(); applyZoomFilter(); updateUpscaleNotice(); });
     }
 
     // ============ 現在地マーカー ============
@@ -1055,7 +1068,7 @@
         // 通常：XYZタイル（item.tms=true なら今昔マップ等のTMS=y反転に対応）
         state.currentTileItem = item;
         const tileOpts = {
-          maxZoom: item.maxZoom || 18,
+          maxZoom: item.maxZoom || MAP_MAX_ZOOM,
           opacity: computeEffectiveOpacity(item),
           className: '',
           tms: !!item.tms,
@@ -1082,6 +1095,7 @@
       cov.className = 'now-card-coverage ' + (item.coverage === 'full' ? 'ok' : item.coverage === 'partial' ? 'warn' : 'limit');
       const icon = item.coverage === 'full' ? 'ti-circle-check' : 'ti-alert-circle';
       cov.innerHTML = `<i class="ti ${icon}"></i>カバー範囲：${escapeHtml(item.coverageLabel)}`;
+      updateUpscaleNotice();
 
       // 古地図で中心座標 or boundsがあれば移動
       if (state.category === 'historical') {
@@ -1097,6 +1111,7 @@
       if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
       state.currentTileItem = null;
       updateLiveAttribution(null);
+      updateUpscaleNotice();
       tpHide();
     }
 
@@ -1170,6 +1185,21 @@
       else if (z >= 12) factor = 1.0;
       else factor = 0.5 + (z - 9) * (0.5 / 3);
       return userOpa * factor;
+    }
+
+    // ============ 引き伸ばし表示の注記 ============
+    // 配信元が持つ最大ズーム(maxNativeZoom)を超えた領域では、
+    // Leaflet が既存タイルを拡大して描画する（＝画像は粗くなるが、消えない）
+    function updateUpscaleNotice() {
+      const el = $('now-upscale');
+      if (!el) return;
+      const item = state.currentTileItem;
+      const native = item && item.maxNativeZoom;
+      if (!item || native == null || !map) { el.classList.remove('show'); return; }
+      const over = map.getZoom() - native;
+      if (over <= 0) { el.classList.remove('show'); return; }
+      el.innerHTML = `<i class="ti ti-zoom-in"></i>元データより${Math.pow(2, over)}倍に拡大表示中（画像は粗くなります）`;
+      el.classList.add('show');
     }
 
     function applyZoomFade() {
@@ -1254,7 +1284,8 @@
               imageUrl: m.image_url || null,
               imageBounds: bounds,
               imageRotation: m.image_rotation || 0,
-              maxZoom: m.zoom_max || 18,
+              maxNativeZoom: m.zoom_max || 18,
+              maxZoom: MAP_MAX_ZOOM,
               coverage: 'limited',
               // バッジは coverage_label を優先、無ければ era、それも無ければ「部分」
               coverageLabel: m.coverage_label || m.era || '部分',
