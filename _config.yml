@@ -3,9 +3,11 @@
 # 配信されなくなります（URLでアクセスすると 404）。
 # ただしリポジトリ内には残るため、git / Claude Code からは引き続き編集・参照できます。
 exclude:
-  # 内部仕様書
-  - SPEC.md
-  - SPECIFICATION.md
+  # 内部ドキュメント一式（docs/ 配下はすべて非公開）
+  - docs/
+  # ローカル管理用ファイル
+  - CLAUDE.md
+  - .env.example
   # バックアップ
   - index.full.html.bak
   # SQL（DBスキーマ・セットアップ）
