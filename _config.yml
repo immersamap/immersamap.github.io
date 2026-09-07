@@ -22,3 +22,8 @@ exclude:
   - old-map-demo.html
   # 管理用ツール
   - admin/
+  # 制作途中のため非公開（「地図上で旅をする」構想の試作。内容が固まるまで公開しない）
+  - ryoma/
+  - okunohosomichi/
+  - kawagoe.html
+  - kawagoe.jpg
