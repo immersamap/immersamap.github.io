@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>トップページ案B（プレビュー）｜ImmersaMap</title>
+<meta name="robots" content="noindex,nofollow,noarchive" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  /* 案B「エディトリアル」：上質な写真集・雑誌の見開きのような、生成りの紙面＋額装した写真 */
+  :root{
+    --paper:#F3EEE4;
+    --paper-2:#E9E2D4;
+    --ink:#1C1B19;
+    --ink-soft:#5A564E;
+    --ink-faint:#8F897D;
+    --line:rgba(28,27,25,.16);
+    --accent:#8C3A2B;
+    --serif:'Shippori Mincho B1',serif;
+    --sans:'Noto Sans JP',sans-serif;
+    --latin:'Cormorant Garamond',serif;
+  }
+  [hidden]{display:none !important}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.85;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  .stage{height:100vh;height:100svh;min-height:640px;display:grid;grid-template-rows:auto 1fr auto;padding:0 clamp(20px,3.6vw,56px)}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:24px 0 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:12px;font-family:var(--serif);font-weight:700;font-size:1.1rem;letter-spacing:.06em}
+  .brand svg{width:26px;height:26px}
+  nav{display:flex;align-items:center;gap:30px;font-size:.84rem;letter-spacing:.08em}
+  nav .lk{color:var(--ink-soft)}
+  nav .lk:hover{color:var(--ink)}
+  .cta{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--ink);padding:10px 22px;font-size:.84rem;letter-spacing:.14em;transition:background .25s,color .25s}
+  .cta:hover{background:var(--ink);color:var(--paper)}
+  .cta.solid{background:var(--ink);color:var(--paper)}
+  .cta.solid:hover{background:var(--accent);border-color:var(--accent)}
+
+  /* 見開き：左に文、右に額装写真 */
+  .spread{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,4vw,72px);align-items:center;min-height:0;padding:clamp(18px,3vh,40px) 0}
+  .index{font-family:var(--latin);font-size:.95rem;letter-spacing:.3em;color:var(--ink-faint);display:flex;gap:14px;align-items:center}
+  .index::after{content:"";flex:0 0 48px;height:1px;background:var(--ink-faint)}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(1.9rem,3.2vw,2.9rem);line-height:1.5;letter-spacing:.04em;margin:22px 0 20px}
+  h1 .ln{display:inline-block}
+  h1 em{font-style:normal;color:var(--accent)}
+  .lead{color:var(--ink-soft);font-size:.94rem;max-width:30em}
+  .actions{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+
+  figure{position:relative;height:100%;max-height:calc(100svh - 230px);min-height:320px;display:flex;flex-direction:column}
+  .frame{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--paper-2);box-shadow:0 30px 60px -40px rgba(28,27,25,.55);outline:1px solid var(--line);outline-offset:10px;user-select:none;touch-action:pan-y}
+  .frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:58% 52%;pointer-events:none}
+  .frame .now{filter:saturate(.7) contrast(1.02)}
+  .frame .old{filter:sepia(.32) contrast(1.08);clip-path:inset(0 calc(100% - var(--x,50%)) 0 0)}
+  .divider{position:absolute;top:0;bottom:0;left:var(--x,50%);width:0;pointer-events:none}
+  .divider::before{content:"";position:absolute;top:0;bottom:0;left:-1px;width:2px;background:var(--paper)}
+  .handle{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:var(--paper);color:var(--ink);display:grid;place-items:center;pointer-events:auto;cursor:ew-resize;box-shadow:0 6px 18px -6px rgba(0,0,0,.45)}
+  .handle svg{width:20px;height:20px}
+  .yr{position:absolute;top:14px;font-family:var(--latin);font-size:.95rem;letter-spacing:.22em;background:rgba(243,238,228,.88);padding:2px 10px;pointer-events:none}
+  .yr.l{left:14px}
+  .yr.r{right:14px}
+  figcaption{margin-top:20px;display:flex;justify-content:space-between;gap:16px;font-size:.72rem;color:var(--ink-faint);letter-spacing:.04em}
+  figcaption a{text-decoration:underline;text-underline-offset:3px}
+
+  .base{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:0;border-top:1px solid var(--line)}
+  .fact{padding:16px 22px 22px 0;margin-right:22px;border-right:1px solid var(--line)}
+  .fact b{display:block;font-family:var(--latin);font-weight:500;font-size:1.6rem;line-height:1.15}
+  .fact span{font-size:.74rem;color:var(--ink-soft);letter-spacing:.06em}
+  .base .links{display:flex;align-items:center;gap:22px;font-size:.78rem;color:var(--ink-soft);padding-left:4px}
+  .base .links button,.base .links a{text-decoration:underline;text-underline-offset:3px}
+
+  /* 詳細パネル */
+  dialog.panel{position:fixed;inset:0 0 0 auto;margin:0;height:100%;max-height:none;width:min(560px,100%);background:var(--paper);color:var(--ink);border:none;border-left:1px solid var(--line);padding:0;overflow:auto}
+  dialog.panel::backdrop{background:rgba(28,27,25,.35)}
+  .panel-in{padding:34px 38px 48px}
+  .panel-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+  .tabs{display:flex;gap:20px;font-size:.84rem;letter-spacing:.08em}
+  .tabs button{color:var(--ink-faint);padding-bottom:4px;border-bottom:1px solid transparent}
+  .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
+  .close{width:36px;height:36px;display:grid;place-items:center}
+  .panel h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;margin:6px 0 18px}
+  .panel p{color:var(--ink-soft);font-size:.92rem}
+  .era{display:grid;grid-template-columns:96px 1fr;gap:4px 18px;border-top:1px solid var(--line);padding:12px 0;font-size:.88rem}
+  .era b{font-family:var(--latin);font-size:1.15rem;font-weight:500;color:var(--accent)}
+  .era span{color:var(--ink-soft)}
+  details{border-top:1px solid var(--line)}
+  details:last-of-type{border-bottom:1px solid var(--line)}
+  summary{list-style:none;cursor:pointer;padding:16px 28px 16px 0;font-family:var(--serif);position:relative}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--accent)}
+  details[open] summary::after{content:"−"}
+  details p{padding:0 0 16px}
+
+  .preview-note{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:10;font-size:.72rem;background:#FBE7A1;color:#5B4A12;padding:3px 12px;border-radius:999px}
+
+  @media (max-width:860px){
+    .stage{height:auto;min-height:0;padding:0 16px}
+    nav .lk{display:none}
+    header{padding:18px 0 14px}
+    .spread{grid-template-columns:1fr;padding:28px 0}
+    figure{max-height:none;height:auto}
+    .frame{flex:none;aspect-ratio:4/3}
+    .base{grid-template-columns:repeat(3,1fr)}
+    .fact{padding:14px 10px 18px 0;margin-right:10px}
+    .fact b{font-size:1.25rem}
+    .base .links{grid-column:1/-1;padding:16px 0 24px;flex-wrap:wrap;border-top:1px solid var(--line)}
+    .panel-in{padding:24px 20px 40px}
+  }
+</style>
+</head>
+<body>
+<div class="preview-note">案B（プレビュー）</div>
+
+<div class="stage">
+  <header>
+    <a class="brand" href="/">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#1C1B19"/><g fill="none" stroke="#B9925A" stroke-width="2.4"><path d="M32 12c10 0 16 7 16 14s-7 14-16 14-16-7-16-14 6-14 16-14z"/><path d="M32 20c6 0 9 4 9 8s-4 8-9 8-9-3-9-8 3-8 9-8z"/></g><circle cx="32" cy="28" r="3" fill="#C0392B"/></svg>
+      ImmersaMap
+    </a>
+    <nav>
+      <button class="lk" data-open="data">収録データ</button>
+      <button class="lk" data-open="faq">よくある質問</button>
+      <button class="lk" data-open="about">運営・応援</button>
+      <a class="cta" href="/map/">地図をひらく</a>
+    </nav>
+  </header>
+
+  <main class="spread">
+    <div>
+      <div class="index">No. 1936 — NOW</div>
+      <h1><span class="ln">昔の地図と航空写真を、</span><br><span class="ln">今の地図に<em>重ねて見る</em>。</span></h1>
+      <p class="lead">現在の地図の上に、昔の地図や過去の航空写真を重ねて表示できる無料のWeb地図。見たい場所を開くだけで、そこが昔どんな姿だったかを見比べられます。</p>
+      <div class="actions">
+        <a class="cta solid" href="/map/">地図をひらく　→</a>
+        <button class="cta" data-open="data">収録データを見る</button>
+      </div>
+    </div>
+
+    <figure>
+      <div class="frame" id="photo" style="--x:50%">
+        <img class="now" src="../images/hero/marunouchi_now.jpg" alt="東京・丸の内と皇居周辺の現在の航空写真" />
+        <img class="old" src="../images/hero/marunouchi_1936.jpg" alt="東京・丸の内と皇居周辺の1936年頃の航空写真" />
+        <div class="divider"><button class="handle" id="handle" aria-label="昔と今の境目を動かす（左右キーでも操作できます）" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+        </button></div>
+        <span class="yr l">1936</span>
+        <span class="yr r">NOW</span>
+      </div>
+      <figcaption><span>東京・丸の内と皇居 ── 境目を左右に動かして見比べられます</span><span>出典：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a></span></figcaption>
+    </figure>
+  </main>
+
+  <div class="base">
+    <div class="fact"><b>1936 —</b><span>航空写真 8世代</span></div>
+    <div class="fact"><b>1896 —</b><span>明治後期の地形図</span></div>
+    <div class="fact"><b>Free</b><span>登録不要・スマホ対応</span></div>
+    <div class="links"><button data-open="about">運営者</button><a href="/legal.html">利用規約</a><span>© 2026 ImmersaMap</span></div>
+  </div>
+</div>
+
+<dialog class="panel" id="panel" aria-label="ImmersaMap について">
+  <div class="panel-in">
+    <div class="panel-top">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="data">収録データ</button>
+        <button role="tab" data-tab="faq">よくある質問</button>
+        <button role="tab" data-tab="about">運営・応援</button>
+      </div>
+      <button class="close" id="close" aria-label="閉じる"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <section data-pane="data">
+      <h2>収録データ</h2>
+      <div class="era"><b>1936–42</b><span>東京・大阪の航空写真</span></div>
+      <div class="era"><b>1945–50</b><span>米軍撮影の航空写真（全国の主要都市）</span></div>
+      <div class="era"><b>1961–</b><span>全国をカバーする航空写真（年代別）</span></div>
+      <div class="era"><b>2004–</b><span>最新の航空写真・衛星写真</span></div>
+      <div class="era"><b>1896–1954</b><span>首都圏の地形図（明治後期・大正・昭和戦前・戦後復興期）</span></div>
+      <p style="margin-top:14px">※（実装時は現行トップの年表・説明文をそのまま移します）</p>
+    </section>
+    <section data-pane="faq" hidden>
+      <h2>よくある質問</h2>
+      <details><summary>ImmersaMapとは何ですか？</summary><p>現在の地図に、昔の地図や過去の航空写真（空中写真）を重ねて表示できる無料のWeb地図サービスです。</p></details>
+      <details><summary>無料で見られますか？</summary><p>はい。会員登録もアプリのインストールも不要です。</p></details>
+      <details><summary>どの年代の航空写真が見られますか？</summary><p>1930年代から現在までを年代別に切り替えられます。</p></details>
+      <p style="margin-top:14px">※（実装時は現行の質問7件をすべて移します）</p>
+    </section>
+    <section data-pane="about" hidden>
+      <h2>運営・応援</h2>
+      <p>ImmersaMapは、「あの場所は昔どうなっていたんだろう」を誰でもすぐ確かめられるようにしたい——そんな思いから生まれた個人運営のWeb地図プロジェクトです。</p>
+      <p style="margin-top:12px">運営者：ImmersaMap（個人運営）／<a href="/legal.html" style="text-decoration:underline">利用規約・プライバシーポリシー</a></p>
+      <a class="cta solid" style="margin-top:20px" href="https://ofuse.me/immersamap" target="_blank" rel="noopener">OFUSE で応援する</a>
+    </section>
+  </div>
+</dialog>
+
+<script>
+  const photo = document.getElementById('photo');
+  const handle = document.getElementById('handle');
+  const setX = (p) => {
+    p = Math.max(4, Math.min(96, p));
+    photo.style.setProperty('--x', p + '%');
+    handle.setAttribute('aria-valuenow', Math.round(p));
+  };
+  const fromEvent = (e) => (e.clientX - photo.getBoundingClientRect().left) / photo.clientWidth * 100;
+  let dragging = false;
+  handle.addEventListener('pointerdown', (e) => { dragging = true; handle.setPointerCapture(e.pointerId); stopIntro(); });
+  handle.addEventListener('pointermove', (e) => { if (dragging) setX(fromEvent(e)); });
+  handle.addEventListener('pointerup', () => { dragging = false; });
+  handle.addEventListener('keydown', (e) => {
+    const now = parseFloat(photo.style.getPropertyValue('--x'));
+    if (e.key === 'ArrowLeft')  { setX(now - 4); stopIntro(); }
+    if (e.key === 'ArrowRight') { setX(now + 4); stopIntro(); }
+  });
+  let introTimer = null;
+  const stopIntro = () => { if (introTimer) { cancelAnimationFrame(introTimer); introTimer = null; } };
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const t0 = performance.now();
+    const step = (t) => {
+      const k = (t - t0) / 2600;
+      if (k >= 1) { setX(50); introTimer = null; return; }
+      setX(50 + Math.sin(k * Math.PI * 2) * 16 * (1 - k));
+      introTimer = requestAnimationFrame(step);
+    };
+    setTimeout(() => { introTimer = requestAnimationFrame(step); }, 700);
+  }
+  const panel = document.getElementById('panel');
+  const showTab = (name) => {
+    panel.querySelectorAll('[data-pane]').forEach(s => s.hidden = s.dataset.pane !== name);
+    panel.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  };
+  document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.open); panel.showModal(); }));
+  panel.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  document.getElementById('close').addEventListener('click', () => panel.close());
+  panel.addEventListener('click', (e) => { if (e.target === panel) panel.close(); });
+</script>
+</body>
+</html>
