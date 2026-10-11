@@ -254,6 +254,16 @@
   .endcta h2{font-size:clamp(1.9rem,4.6vw,2.8rem)}
   .endcta p{color:var(--ink-soft);margin:18px auto 34px;max-width:520px}
 
+  /* 応援（OFUSE / GitHub Sponsors） */
+  .support{background:var(--paper-2);text-align:center;padding:72px 0}
+  .support h2{font-size:clamp(1.5rem,3.6vw,2rem)}
+  .support p{color:var(--ink-soft);margin:14px auto 28px;max-width:540px;font-size:.96rem}
+  .support-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .support .btn{color:#fff;padding:13px 26px}
+  .support .btn:hover{transform:translateY(-2px)}
+  .btn-ofuse{background:#E8762C;box-shadow:0 8px 22px -10px #E8762C}
+  .btn-sponsor{background:#BF3989;box-shadow:0 8px 22px -10px #BF3989}
+
   /* フッター */
   footer{border-top:1px solid var(--line);padding:40px 0;font-size:.86rem;color:var(--ink-soft)}
   .foot{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center}
@@ -417,6 +427,10 @@
     <div class="sec-tag">ABOUT</div>
     <h2>ImmersaMapについて</h2>
     <p>ImmersaMapは、「あの場所は昔どうなっていたんだろう」を誰でもすぐ確かめられるようにしたい——そんな思いから生まれた個人運営のWeb地図プロジェクトです。国土地理院の航空写真や明治期の地形図といった資料を、専門知識がなくても扱える形にまとめ、見慣れた街の「これまで」を身近に感じてもらうことを目指しています。</p>
+    <dl class="about-meta">
+      <dt>運営者</dt><dd>ImmersaMap（個人運営）</dd>
+      <dt>お問い合わせ</dt><dd><a href="https://github.com/immersamap/immersamap.github.io/issues" target="_blank" rel="noopener">GitHub Issues</a></dd>
+    </dl>
   </div>
 </section>
 
@@ -426,6 +440,21 @@
     <h2 class="reveal">あの場所は、昔どうなっていた？</h2>
     <p class="reveal">見慣れた街にも、知らない過去があります。</p>
     <a class="btn btn-primary reveal" href="/map/" style="font-size:1rem;padding:15px 34px">地図をひらく →</a>
+  </div>
+</section>
+
+<!-- 応援（OFUSE / GitHub Sponsors） -->
+<section class="support" id="support">
+  <div class="wrap">
+    <div class="sec-tag reveal">SUPPORT</div>
+    <h2 class="reveal">ImmersaMap を応援する</h2>
+    <p class="reveal">ImmersaMapは個人が無料・広告なしで運営しています。気に入っていただけたら、応援していただけると励みになります。いただいた応援は、見られる地域・年代を増やすことや新しい機能づくりに使わせていただきます。</p>
+    <div class="support-row reveal">
+      <a class="btn btn-ofuse" href="https://ofuse.me/immersamap" target="_blank" rel="noopener">OFUSE で応援</a>
+      <!-- GitHub Sponsors は登録・審査が済んだら有効にする
+      <a class="btn btn-sponsor" href="https://github.com/sponsors/immersamap" target="_blank" rel="noopener">GitHub Sponsors</a>
+      -->
+    </div>
   </div>
 </section>
 
