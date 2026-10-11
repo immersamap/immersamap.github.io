@@ -105,7 +105,7 @@
   details p{padding:0 0 16px}
   .ofuse{display:inline-flex;margin-top:20px}
 
-  .preview-note{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:10;font-size:.72rem;background:#FBE7A1;color:#5B4A12;padding:3px 12px;border-radius:999px}
+  .preview-note{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:10;font-size:.72rem;background:#FBE7A1;color:#5B4A12;padding:3px 12px;border-radius:999px}
 
   /* ===== スマホ：1画面に収めず、縦に流す ===== */
   @media (max-width:760px){
@@ -124,6 +124,31 @@
   }
   @media (max-height:700px) and (min-width:761px){
     h1{margin:16px 0 14px}.actions{margin-top:22px}
+  }
+  /* 応援 */
+  .support-btn{display:inline-flex;align-items:center;gap:7px;font-size:.84rem;letter-spacing:.08em;color:var(--gold);padding:6px 2px}
+  .support-btn svg{width:15px;height:15px}
+  .support-btn:hover{opacity:.8}
+  .support-line{display:inline-flex;align-items:center;gap:8px;color:var(--gold);font-size:.8rem;letter-spacing:.06em;border-bottom:1px solid currentColor;padding-bottom:2px;margin-top:22px}
+  .support-line svg{width:13px;height:13px}
+  .sp-list{list-style:none;margin:16px 0 0;display:grid;gap:10px}
+  .sp-list li{font-size:.9rem;opacity:.9;display:grid;grid-template-columns:4.5em 1fr;gap:10px}
+  .sp-list b{color:var(--gold);font-weight:500}
+  .sp-cta{margin-top:22px;width:100%;justify-content:center;padding:14px 22px}
+  .sp-cta svg{width:16px;height:16px}
+  .sp-note{font-size:.76rem !important;margin-top:8px;text-align:center;opacity:.7}
+  .sp-h3{font-family:var(--serif);font-weight:600;font-size:1.05rem;margin:30px 0 8px}
+  @media (max-width:860px){ .support-btn span{font-size:.8rem} nav{gap:16px} }
+  @media (max-width:760px){
+    .brand{font-size:1rem;gap:8px}
+    .brand svg{width:22px;height:22px}
+    nav{gap:14px}
+    nav .cta{padding:8px 14px;font-size:.78rem;letter-spacing:.08em;white-space:nowrap}
+    .support-btn{white-space:nowrap}
+    .pc-only{display:none}
+    .panel-top .tabs{gap:14px;font-size:.78rem;white-space:nowrap;overflow-x:auto}
+    .handle{top:150px}
+    .support-line{font-size:.78rem}
   }
 </style>
 </head>
@@ -149,7 +174,8 @@
     <nav>
       <button class="lk" data-open="data">収録データ</button>
       <button class="lk" data-open="faq">よくある質問</button>
-      <button class="lk" data-open="about">運営・応援</button>
+      <button class="lk" data-open="about">運営者</button>
+      <button class="support-btn" data-open="support"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span>応援<span class="pc-only">する</span></span></button>
       <a class="cta" href="/map/">地図をひらく</a>
     </nav>
   </header>
@@ -162,6 +188,7 @@
       <a class="cta solid" href="/map/">地図をひらく　→</a>
       <button class="cta" data-open="data">収録データを見る</button>
     </div>
+    <button class="support-line" data-open="support"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>個人運営・広告なし ─ 応援はこちら</button>
   </main>
 
   <div class="base">
@@ -180,7 +207,8 @@
       <div class="tabs" role="tablist">
         <button role="tab" data-tab="data">収録データ</button>
         <button role="tab" data-tab="faq">よくある質問</button>
-        <button role="tab" data-tab="about">運営・応援</button>
+        <button role="tab" data-tab="about">運営者</button>
+        <button role="tab" data-tab="support">応援する</button>
       </div>
       <button class="close" id="close" aria-label="閉じる"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
@@ -204,10 +232,21 @@
     </section>
 
     <section data-pane="about" hidden>
-      <h2>運営・応援</h2>
+      <h2>運営者</h2>
       <p>ImmersaMapは、「あの場所は昔どうなっていたんだろう」を誰でもすぐ確かめられるようにしたい——そんな思いから生まれた個人運営のWeb地図プロジェクトです。</p>
       <p style="margin-top:12px">運営者：ImmersaMap（個人運営）／<a href="/legal.html" style="text-decoration:underline">利用規約・プライバシーポリシー</a></p>
-      <a class="cta solid ofuse" href="https://ofuse.me/immersamap" target="_blank" rel="noopener">OFUSE で応援する</a>
+    </section>
+    <section data-pane="support" hidden>
+      <h2>ImmersaMap を応援する</h2>
+      <p>ImmersaMapは、個人が<strong>無料・広告なし</strong>で運営しています。気に入っていただけたら、応援していただけると励みになります。</p>
+      <ul class="sp-list">
+        <li><b>使い道</b>見られる地域・年代を増やすこと、新しい機能づくり、運営費</li>
+        <li><b>方法</b>OFUSE（オフセ）から、応援金にメッセージを添えて送れます</li>
+      </ul>
+      <a class="cta solid sp-cta" href="https://ofuse.me/immersamap" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>OFUSE で応援する</a>
+      <p class="sp-note">OFUSE のページが新しいタブで開きます</p>
+      <h3 class="sp-h3">お金以外の応援も嬉しいです</h3>
+      <p>地図画面の「共有」ボタンで見つけた場所を紹介していただくこと、「この地域も見たい」などの感想も大きな励みになります。</p>
     </section>
   </div>
 </dialog>
