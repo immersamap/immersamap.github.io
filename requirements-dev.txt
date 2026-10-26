@@ -1,0 +1,3 @@
+# E2E テスト用（Python 3.14.4 で動作確認 2026-10-27）
+# 入れたあと .venv/bin/python -m playwright install chromium を1回実行する（ブラウザの登録）
+playwright==1.64.1

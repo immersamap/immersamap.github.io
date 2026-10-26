@@ -19,7 +19,11 @@ exclude:
   - schema_v2.sql
   # テスト・デモ用ページ
   - aerial-test.html
+  - overseas-test.html   # 海外の空中写真の試作（2026-10-27）
   - old-map-demo.html
+  # テストコードと、その依存の一覧
+  - tests/
+  - requirements-dev.txt
   # 管理用ツール
   - admin/
   # 制作途中のため非公開（「地図上で旅をする」構想の試作。内容が固まるまで公開しない）
