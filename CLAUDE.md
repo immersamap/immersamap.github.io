@@ -76,14 +76,10 @@ GitHub 上ではソースが誰にでも見える。秘密にすべき値を置�
 ## 作業ルール
 
 1. 作業は必ず feature ブランチで行う（`feature/xxx` / `fix/xxx` / `docs/xxx`）
-2. ビルド工程が無いので、**ローカル確認は静的サーバで行う**
-
-   ```bash
-   cd /home/manabu/projects/immersamap
-   python3 -m http.server 8080     # → http://localhost:8080/map/
-   ```
-
-   ※ Jekyll の `exclude` はこの方法では効かないため、ローカルでは docs/ も見える。公開時の挙動とは異なる。
+2. **ローカルで Web サーバーは立てない**（2026-10-27 ユーザー指示）。
+   自動テストは HTML を `file://` で直接開いて流す（`tests/e2e/*.py`）。
+   ユーザーが画面で確かめるものは、**どこからもリンクしないページ（`noindex`）として公開サイトに置き、直アドレスで見てもらう**
+   （例: https://immersamap.github.io/overseas-test.html）。置く前に、既存ページ・`sitemap.xml` を変えていないことを確かめる
 3. 地図の描画崩れは目視でしか分からないため、変更後は**スクリーンショットを取り**
    `docs/test_results/` に残す
 4. マージ後は**必ず公開サイトを開いて確認する**（Pages のビルドに数十秒かかる）
