@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>ImmersaMap ｜ 海外の空中写真（試作）</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -31,23 +31,80 @@
   .label{font-size:11px;color:var(--muted);margin-bottom:6px;}
   .row{display:flex;gap:6px;flex-wrap:wrap;}
   button.chip{
-    flex:1;min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:8px;
-    background:var(--bg-alt);color:var(--text);font:inherit;font-size:12px;cursor:pointer;
+    flex:1 1 auto;min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:8px;
+    background:var(--bg-alt);color:var(--text);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;
   }
   button.chip[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+  button.chip:disabled{color:var(--off);cursor:default;}
   .now{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
   .now strong{font-size:20px;}
   .now span{font-size:12px;color:var(--muted);}
+  .stepper{display:flex;align-items:center;gap:8px;}
+  .stepper input{flex:1;min-width:0;}
+  button.step{
+    flex:none;width:36px;height:36px;border:1px solid var(--border);border-radius:50%;
+    background:var(--bg-alt);color:var(--text);font-size:14px;cursor:pointer;
+  }
+  button.step:disabled{color:var(--off);cursor:default;}
   input[type=range]{width:100%;}
-  .ticks{position:relative;height:14px;margin:0 8px;}
+  .ticks{position:relative;height:14px;margin:0 52px;}
   .ticks i{position:absolute;top:2px;width:2px;height:8px;margin-left:-1px;background:var(--text);}
   .ticks i.off{background:var(--off);}
-  .ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);}
+  .ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin:0 44px;}
+  /* 年のチップ: 横に流して、選んだ年を真ん中へ送る */
+  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
+  .chips button.chip{flex:none;}
   .msg{margin-top:8px;padding:8px 10px;border-radius:8px;font-size:12px;background:var(--warn-bg);color:var(--warn);}
+  button#compare{
+    width:100%;margin-top:10px;padding:9px 8px;border:1px solid var(--accent);border-radius:8px;
+    background:var(--bg);color:var(--text);font:inherit;font-size:13px;cursor:pointer;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;
+  }
+  button#compare[aria-pressed="true"]{background:var(--accent);color:#fff;}
+  button#compare:disabled{border-color:var(--border);color:var(--off);cursor:default;}
   .src{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.5;}
   .src a{color:inherit;}
+  #sheet-toggle{display:none;}
+
+  /* ===== スマホ（縦・横）: 下（横画面は左）に寄せた畳めるシート ===== */
+  body.compact #panel{padding:0 16px calc(12px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;}
+  body.compact #sheet-toggle{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;
+    border:0;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;
+  }
+  body.compact #sheet-toggle::before{content:"";width:36px;height:4px;border-radius:2px;background:var(--off);}
+  body.compact #panel:not(.open) .more{display:none;}
+  body.compact .group.era{margin-top:0;}
+  body.compact button.chip{min-height:40px;}
+  body.compact button.step{width:44px;height:44px;}
+  body.compact .ticks{margin:0 60px;}
+  body.compact .ends{margin:0 52px;}
+  body.compact #compare{position:absolute;right:12px;top:-56px;width:auto;height:44px;padding:0 16px;margin:0;
+    border-radius:22px;box-shadow:0 4px 12px rgba(0,0,0,.18);}
+  body.compact #panel.open #compare{position:static;width:100%;height:auto;padding:9px 8px;margin-top:10px;border-radius:8px;box-shadow:none;}
+  /* 開いたシートでは見出しを一番下へ（小さい画面でも並べ方・濃さが先に見えるように） */
+  body.compact #panel{display:flex;flex-direction:column;}
+  body.compact .intro{order:8;margin-top:14px;}
+  body.compact .src{order:9;}
+  body.compact .src{margin-top:8px;padding-top:6px;}
+  /* 場所は画面の上の1行（横に流す） */
+  body.compact #places-group{
+    position:fixed;top:8px;left:0;right:64px;z-index:1001;margin:0;padding:0 8px;
+  }
+  body.compact #places-group .label{display:none;}
+  body.compact #places{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
+  body.compact #places button.chip{flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15);background:var(--bg);}
+  body.compact #places button.chip[aria-pressed="true"]{background:var(--accent);}
+  body.compact .leaflet-touch .leaflet-bar a{width:44px;height:44px;line-height:44px;}
+
   @media (max-width:600px){
-    #panel{top:auto;bottom:12px;max-height:55vh;}
+    #panel{top:auto;left:0;right:0;bottom:0;width:auto;max-width:none;max-height:60vh;overflow:visible;}
+    #panel.open{overflow:auto;}
+  }
+  @media (max-height:500px) and (orientation:landscape){
+    #panel{top:0;left:0;bottom:0;width:300px;max-height:none;border-radius:0 !important;}
+    body.compact #compare{position:static;width:100%;margin-top:8px;}
+    body.compact #places-group{left:300px;}
   }
 </style>
 </head>
@@ -55,34 +112,50 @@
 <div id="map"></div>
 
 <div id="panel">
-  <h1>海外の空中写真<span class="badge">試作</span></h1>
-  <p class="lead">日本・スイス・フランスの昔の空中写真を、同じ画面で見比べる試作です。</p>
+  <button id="sheet-toggle" aria-expanded="false" aria-controls="panel">詳しい操作を開く</button>
 
-  <div class="group">
+  <div class="more intro">
+    <h1>海外の空中写真<span class="badge">試作</span></h1>
+    <p class="lead">日本とヨーロッパの昔の空中写真を、同じ画面で見比べる試作です。</p>
+  </div>
+
+  <div class="group" id="places-group">
     <div class="label">場所</div>
     <div class="row" id="places"></div>
   </div>
 
-  <div class="group">
-    <div class="label">年代の並べ方</div>
-    <div class="row">
-      <button class="chip" id="mode-a" data-mode="A" aria-pressed="true">A 国ごとの年</button>
-      <button class="chip" id="mode-b" data-mode="B" aria-pressed="false">B 年代でそろえる</button>
-    </div>
-  </div>
-
-  <div class="group">
+  <div class="group era">
     <div class="label" id="country-label">国</div>
     <div class="now"><strong id="era-name">—</strong><span id="era-sub"></span></div>
-    <input type="range" id="era" min="0" max="0" value="0" aria-label="年代">
+    <div class="stepper">
+      <button class="step" id="prev" aria-label="ひとつ前の年">◀</button>
+      <input type="range" id="era" min="0" max="0" value="0" aria-label="年代">
+      <button class="step" id="next" aria-label="ひとつ後の年">▶</button>
+    </div>
     <div class="ticks" id="ticks"></div>
     <div class="ends"><span id="end-old"></span><span id="end-new"></span></div>
     <div class="msg" id="msg" hidden></div>
+    <button id="compare" aria-pressed="false">今と比べる（押している間）</button>
   </div>
 
-  <div class="group">
-    <div class="label">写真の濃さ <span id="opacity-val">80%</span></div>
-    <input type="range" id="opacity" min="0" max="100" value="80" aria-label="写真の濃さ">
+  <div class="more">
+    <div class="group">
+      <div class="label">年を選ぶ</div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="group">
+      <div class="label">年代の並べ方</div>
+      <div class="row">
+        <button class="chip" id="mode-a" data-mode="A" aria-pressed="true">A 国ごとの年</button>
+        <button class="chip" id="mode-b" data-mode="B" aria-pressed="false">B 年代でそろえる</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="label">写真の濃さ <span id="opacity-val">80%</span></div>
+      <input type="range" id="opacity" min="0" max="100" value="80" aria-label="写真の濃さ">
+    </div>
   </div>
 
   <div class="src">
@@ -97,16 +170,23 @@
   const SWISS = (year) => `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/${year}/3857/{z}/{x}/{y}.jpeg`;
   const SWISS_1946 = 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product_1946/default/1946/3857/{z}/{x}/{y}.jpeg';
   const IGN = (layer, fmt) => `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=PM&FORMAT=${fmt}&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}`;
+  // ウィーンは {y}/{x} の順。昔の写真は grau（白黒）、最新は farbe（カラー）だけがある
+  const WIEN = (layer, style) => `https://mapsneu.wien.gv.at/wmts/${layer}/${style}/google3857/{z}/{y}/{x}.jpeg`;
+  const RUHR = (year) => ({ url:`https://geodaten.metropoleruhr.de/lubi/lubi_${year}`, layers:`lubi_${year}` });
+  const ES_HIST = (layers) => ({ url:'https://www.ign.es/wms/pnoa-historico', layers });
 
   const SRC_GSI   = '<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>';
   const SRC_SWISS = '© <a href="https://www.swisstopo.admin.ch/" target="_blank" rel="noopener">swisstopo</a>';
   const SRC_IGN   = '<a href="https://www.ign.fr/" target="_blank" rel="noopener">IGN</a>（Licence Ouverte 2.0）';
+  const SRC_WIEN  = '<a href="https://data.wien.gv.at/" target="_blank" rel="noopener">Stadt Wien – data.wien.gv.at</a>（CC BY 4.0）';
+  const SRC_RUHR  = '<a href="https://www.rvr.ruhr/" target="_blank" rel="noopener">Regionalverband Ruhr</a>（dl-de/by-2-0）、最新は <a href="https://www.bezreg-koeln.nrw.de/geobasis-nrw" target="_blank" rel="noopener">Geobasis NRW</a>（dl-de/zero-2-0）';
+  const SRC_ES    = 'PNOA © <a href="https://www.ign.es/" target="_blank" rel="noopener">IGN España</a>（scne.es・CC BY 4.0）';
 
-  // 国の判定は上から順に見る（スイスはフランスの枠と重なるので先に置く）
+  // 国（地域）の判定は上から順に見る。枠が重なるもの（スイス・ウィーン・ルール地方・スペイン）をフランスより先に置く
   const SWISS_YEARS = [1926,1927,...Array.from({length:2025-1929+1}, (_, i) => 1929 + i)];
   const COUNTRIES = [
     {
-      id:'ch', name:'スイス', bounds:[[45.398181,5.140242],[48.230651,11.47757]],
+      id:'ch', name:'スイス', boxes:[[[45.398181,5.140242],[48.230651,11.47757]]],
       eras:[
         ...SWISS_YEARS.map(y => y === 1946
           // 1946年は時系列の層だと低いズームが白くなるので、全域をつないだ専用の層を使う
@@ -117,7 +197,43 @@
       src:SRC_SWISS,
     },
     {
-      id:'fr', name:'フランス', bounds:[[41.3,-5.2],[51.1,9.6]],
+      // 配信はウィーン市内だけ（市外は 404）
+      id:'wien', name:'ウィーン', boxes:[[[48.118,16.182],[48.323,16.578]]],
+      eras:[
+        { id:'wien_1938', name:'1938年', sub:'白黒', start:1938, tile:WIEN('lb1938','grau'), maxNativeZoom:19 },
+        { id:'wien_1956', name:'1956年', sub:'白黒', start:1956, tile:WIEN('lb1956','grau'), maxNativeZoom:19 },
+        { id:'wien_1976', name:'1976年', sub:'白黒', start:1976, tile:WIEN('lb1976','grau'), maxNativeZoom:19 },
+        { id:'wien_1992', name:'1992年', sub:'白黒', start:1992, tile:WIEN('lb1992','grau'), maxNativeZoom:19 },
+        { id:'wien_current', name:'最新', sub:'カラー', start:2026, tile:WIEN('lb','farbe'), maxNativeZoom:19 },
+      ],
+      src:SRC_WIEN,
+    },
+    {
+      // 撮影範囲の外は透明な小さい PNG が返るので、白いタイルと同じく「写真なし」と数える
+      id:'ruhr', name:'ルール地方', boxes:[[[51.167,6.228],[51.861,8.055]]],
+      eras:[
+        ...[1926,1934,1952,1963,1969,1990,1998].map(y =>
+          ({ id:'ruhr_'+y, name:y+'年', sub:y < 1990 ? '白黒' : 'カラー', start:y, wms:RUHR(y), maxNativeZoom:19, blankBytes:1000 })),
+        { id:'ruhr_current', name:'最新', sub:'NRW州のカラー写真', start:2026,
+          wms:{ url:'https://www.wms.nrw.de/geobasis/wms_nw_dop', layers:'nw_dop_rgb' }, maxNativeZoom:19 },
+      ],
+      src:SRC_RUHR,
+    },
+    {
+      // 枠2つで本土・バレアレスを覆う（北側はピレネーより西だけにして、フランス南部を取らない）
+      id:'es', name:'スペイン', boxes:[[[35.9,-9.4],[42.3,4.4]], [[42.3,-9.4],[43.8,-1.8]]],
+      eras:[
+        { id:'es_1956', name:'1956〜57年', sub:'白黒・米軍の撮影・全国', start:1956, end:1957, wms:ES_HIST('AMS_1956-1957'), maxNativeZoom:18, blankBytes:1000 },
+        { id:'es_1973', name:'1973〜86年', sub:'一部の地域だけ', start:1973, end:1986, wms:ES_HIST('Interministerial_1973-1986'), maxNativeZoom:18, blankBytes:1000 },
+        { id:'es_1981', name:'1981〜86年', sub:'一部の地域だけ', start:1981, end:1986, wms:ES_HIST('Nacional_1981-1986'), maxNativeZoom:18, blankBytes:1000 },
+        { id:'es_1997', name:'1997〜2003年', sub:'カラー・全国', start:1997, end:2003, wms:ES_HIST('SIGPAC'), maxNativeZoom:19, blankBytes:1000 },
+        { id:'es_current', name:'最新', sub:'PNOA', start:2026,
+          wms:{ url:'https://www.ign.es/wms-inspire/pnoa-ma', layers:'OI.OrthoimageCoverage' }, maxNativeZoom:19 },
+      ],
+      src:SRC_ES,
+    },
+    {
+      id:'fr', name:'フランス', boxes:[[[41.3,-5.2],[51.1,9.6]]],
       eras:[
         { id:'fr_1950', name:'1950〜65年', sub:'白黒の空中写真', start:1950, end:1965, tile:IGN('ORTHOIMAGERY.ORTHOPHOTOS.1950-1965','image/png'), maxNativeZoom:18 },
         { id:'fr_current', name:'最新', sub:'BD ORTHO', start:2026, tile:IGN('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg'), maxNativeZoom:19 },
@@ -125,7 +241,7 @@
       src:SRC_IGN,
     },
     {
-      id:'jp', name:'日本', bounds:[[20,122],[46,154]],
+      id:'jp', name:'日本', boxes:[[[20,122],[46,154]]],
       eras:[
         { id:'ort_1928',   name:'1928年頃',     sub:'大阪のみ',   start:1928, tile:GSI+'ort_1928/{z}/{x}/{y}.png',   maxNativeZoom:18 },
         { id:'ort_riku10', name:'1936〜42年',   sub:'東京・大阪', start:1936, end:1942, tile:GSI+'ort_riku10/{z}/{x}/{y}.png', maxNativeZoom:17 },
@@ -140,11 +256,16 @@
       src:SRC_GSI,
     },
   ];
+  const AREA_NAMES = '日本・スイス・フランス・ウィーン・ルール地方・スペイン';
 
   const PLACES = [
     { name:'東京',       center:[35.6812,139.7671], zoom:15 },
     { name:'チューリッヒ', center:[47.3769,8.5417],   zoom:15 },
     { name:'パリ',       center:[48.8584,2.2945],   zoom:15 },
+    { name:'ウィーン',    center:[48.2085,16.3731],  zoom:15 },
+    { name:'エッセン',    center:[51.4556,7.0116],   zoom:15 },
+    { name:'マドリード',  center:[40.4169,-3.7035],  zoom:15 },
+    { name:'バルセロナ',  center:[41.3870,2.1700],   zoom:15 },
   ];
 
   // B: 共通の年代。その年代に入る写真のうち、いちばん新しいものを代表にする
@@ -159,8 +280,9 @@
   }
 
   // swisstopo は写真の無い所に、200 で真っ白な小さい JPEG を返す（透明にできない）。
-  // fetch で中身の大きさを見て、白いタイルは隠し、「写真が無い」と数える
-  const BlankAwareLayer = L.TileLayer.extend({
+  // ルール地方・スペインの WMS も、範囲外は 200 で中身の無い小さい PNG を返す。
+  // fetch で中身の大きさを見て、小さいタイルは隠し、「写真が無い」と数える
+  const blankAware = {
     createTile(coords, done) {
       const img = document.createElement('img');
       img.alt = '';
@@ -180,10 +302,15 @@
         .catch(err => done(err, img));
       return img;
     },
-  });
+  };
+  const BlankAwareLayer = L.TileLayer.extend(blankAware);
+  const BlankAwareWMS = L.TileLayer.WMS.extend(blankAware);
 
   // ============ 状態 ============
-  const state = { mode:'A', country:null, stops:[], index:0, opacity:80, overlay:null, tiles:{ok:0, err:0, blank:0} };
+  const state = {
+    mode:'A', country:null, stops:[], index:0, opacity:80, comparing:false,
+    overlay:null, retiring:[], tiles:{ok:0, err:0, blank:0},
+  };
   const $ = (id) => document.getElementById(id);
 
   const map = L.map('map', { center:PLACES[0].center, zoom:PLACES[0].zoom, maxZoom:19, zoomControl:false });
@@ -191,8 +318,20 @@
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
   map.attributionControl.setPrefix(false);
 
+  // スマホ（縦は幅600px以下・横は高さ500px以下）では操作板を畳めるシートにする
+  const compactQuery = matchMedia('(max-width:600px), (max-height:500px) and (orientation:landscape)');
+  function applyCompact() {
+    document.body.classList.toggle('compact', compactQuery.matches);
+    map.invalidateSize();
+  }
+  compactQuery.addEventListener('change', applyCompact);
+  applyCompact();
+
   function countryAt(latlng) {
-    return COUNTRIES.find(c => L.latLngBounds(c.bounds).contains(latlng)) || null;
+    return COUNTRIES.find(c => c.boxes.some(b => L.latLngBounds(b).contains(latlng))) || null;
+  }
+  function boundsOf(country) {
+    return country.boxes.reduce((acc, b) => acc.extend(L.latLngBounds(b)), L.latLngBounds(country.boxes[0]));
   }
 
   function buildStops() {
@@ -214,6 +353,17 @@
       `<i class="${s.era ? '' : 'off'}" style="left:${n > 1 ? i / (n - 1) * 100 : 0}%"></i>`).join('');
     $('end-old').textContent = n ? state.stops[0].label : '';
     $('end-new').textContent = n ? state.stops[n - 1].label : '';
+    $('chips').innerHTML = '';
+    state.stops.forEach((s, i) => {
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = s.label;
+      b.disabled = !s.era;
+      b.addEventListener('click', () => select(i));
+      $('chips').appendChild(b);
+    });
+    document.querySelectorAll('#places button').forEach(b =>
+      b.setAttribute('aria-pressed', String(!!state.country && countryAt(L.latLng(b._center)) === state.country)));
 
     let idx = n - 1;
     if (prevYear !== null && n) {
@@ -225,7 +375,6 @@
       });
     }
     state.index = Math.max(idx, 0);
-    $('era').value = state.index;
     show();
   }
 
@@ -234,46 +383,94 @@
     $('msg').textContent = text || '';
   }
 
-  function show() {
-    if (state.overlay) { map.removeLayer(state.overlay); state.overlay = null; }
-    state.tiles = { ok:0, err:0, blank:0 };
-    const stop = state.stops[state.index];
+  // 年の表示だけを変える（スライダーを動かしている最中は、写真は読みに行かない）
+  function updateLabel() {
+    const n = state.stops.length;
+    $('era').value = state.index;
+    $('prev').disabled = !n || state.index <= 0;
+    $('next').disabled = !n || state.index >= n - 1;
+    // 写真が無いとき（対象外・写真の無い年代）は、比べる相手が無いので押せなくする
+    $('compare').disabled = !state.country || !state.stops[state.index]?.era;
+    if ($('compare').disabled && state.comparing) setComparing(false);
+    [...$('chips').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === state.index)));
+    const chip = $('chips').children[state.index];
+    if (chip) chip.scrollIntoView({ block:'nearest', inline:'center' });
 
     if (!state.country) {
       $('era-name').textContent = '—';
       $('era-sub').textContent = '';
-      $('src-layer').textContent = '—';
-      setMessage('この試作は日本・スイス・フランスの写真だけです。上の「場所」から移動してください。');
       return;
     }
+    const stop = state.stops[state.index];
     $('era-name').textContent = stop.label;
+    const e = stop.era;
+    $('era-sub').textContent = !e ? '' : state.mode === 'B' && e.name !== stop.label ? `${e.name}の写真・${e.sub}` : e.sub;
+  }
+
+  function overlayOpacity() {
+    return state.comparing ? 0 : state.opacity / 100;
+  }
+
+  function dropRetiring() {
+    state.retiring.forEach(l => map.removeLayer(l));
+    state.retiring = [];
+  }
+
+  function select(i) {
+    state.index = Math.min(Math.max(i, 0), state.stops.length - 1);
+    show();
+  }
+
+  function show() {
+    clearTimeout(show.timer);
+    updateLabel();
+    // 前の写真は、新しい写真が読み終わるまで残す（背景の地図がちらつかないように）
+    if (state.overlay) { state.retiring.push(state.overlay); state.overlay = null; }
+    state.tiles = { ok:0, err:0, blank:0 };
+    const stop = state.stops[state.index];
+
+    if (!state.country) {
+      dropRetiring();
+      $('src-layer').textContent = '—';
+      setMessage(`この試作の対象は${AREA_NAMES}だけです。上の「場所」から移動してください。`);
+      return;
+    }
     if (!stop.era) {
-      $('era-sub').textContent = '';
+      dropRetiring();
       $('src-layer').textContent = '—';
       setMessage(`${state.country.name}には、この年代の写真がありません。`);
       return;
     }
     const e = stop.era;
-    $('era-sub').textContent = state.mode === 'B' && e.name !== stop.label ? `${e.name}の写真・${e.sub}` : e.sub;
     $('src-layer').innerHTML = state.country.src;
     setMessage('');
 
     const opts = {
       maxZoom:19, maxNativeZoom:Math.min(e.maxNativeZoom, 19),
-      bounds:state.country.bounds, opacity:state.opacity / 100,
+      bounds:boundsOf(state.country), opacity:overlayOpacity(),
     };
-    const layer = e.blankBytes ? new BlankAwareLayer(e.tile, { ...opts, blankBytes:e.blankBytes }) : L.tileLayer(e.tile, opts);
-    layer.on('tileblank', () => { state.tiles.blank++; });
+    if (e.blankBytes) opts.blankBytes = e.blankBytes;
+    let layer;
+    if (e.wms) {
+      const wmsOpts = { ...opts, layers:e.wms.layers, format:'image/png', transparent:true, version:'1.1.1' };
+      layer = e.blankBytes ? new BlankAwareWMS(e.wms.url, wmsOpts) : L.tileLayer.wms(e.wms.url, wmsOpts);
+    } else {
+      layer = e.blankBytes ? new BlankAwareLayer(e.tile, opts) : L.tileLayer(e.tile, opts);
+    }
+    // 数えるのは表示中の層だけ（読み終わりを待って残している前の層は数えない）
+    const mine = (fn) => () => { if (state.overlay === layer) fn(); };
+    layer.on('tileblank', mine(() => { state.tiles.blank++; }));
     // 動かすたびに数え直す（前の場所の結果でお知らせを出さない）
-    layer.on('loading', () => {
+    layer.on('loading', mine(() => {
       state.tiles = { ok:0, err:0, blank:0 };
-      if (state.overlay === layer) setMessage('');
-    });
-    layer.on('tileload', () => { state.tiles.ok++; });
-    layer.on('tileerror', () => { state.tiles.err++; });
+      setMessage('');
+    }));
+    layer.on('tileload', mine(() => { state.tiles.ok++; }));
+    layer.on('tileerror', mine(() => { state.tiles.err++; }));
     // 表示中のタイルが1枚も読めなかったときだけ知らせる（一部の欠けは撮影範囲外のことが多い）
     layer.on('load', () => {
       if (state.overlay !== layer) return;
+      dropRetiring();
       const t = state.tiles;
       if (t.err > 0 && t.ok === 0) {
         setMessage('写真を読み込めませんでした。配信元が混んでいるか、止まっている可能性があります。');
@@ -281,8 +478,8 @@
         setMessage('この場所には、この年の写真がありません。別の年を選ぶか、ズームを変えてみてください。');
       }
     });
-    layer.addTo(map);
     state.overlay = layer;
+    layer.addTo(map);
   }
 
   function onMove() {
@@ -295,6 +492,8 @@
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = p.name;
+    b._center = p.center;
+    b.setAttribute('aria-pressed', 'false');
     b.addEventListener('click', () => map.setView(p.center, p.zoom));
     $('places').appendChild(b);
   });
@@ -305,12 +504,44 @@
     rebuild();
   }));
 
-  $('era').addEventListener('input', (ev) => { state.index = Number(ev.target.value); show(); });
+  // 指で動かしている間は年の表示だけ変え、離したとき（change）か、止まって 250ms 後に写真を読む
+  $('era').addEventListener('input', (ev) => {
+    state.index = Number(ev.target.value);
+    updateLabel();
+    clearTimeout(show.timer);
+    show.timer = setTimeout(show, 250);
+  });
+  $('era').addEventListener('change', (ev) => { state.index = Number(ev.target.value); show(); });
+  $('prev').addEventListener('click', () => select(state.index - 1));
+  $('next').addEventListener('click', () => select(state.index + 1));
 
+  function setOpacityAll() {
+    [state.overlay, ...state.retiring].forEach(l => l && l.setOpacity(overlayOpacity()));
+  }
   $('opacity').addEventListener('input', (ev) => {
     state.opacity = Number(ev.target.value);
     $('opacity-val').textContent = state.opacity + '%';
-    if (state.overlay) state.overlay.setOpacity(state.opacity / 100);
+    setOpacityAll();
+  });
+
+  // 「今と比べる」: 押している間だけ昔の写真を消して、下の今の地図を見せる
+  function setComparing(on) {
+    state.comparing = on;
+    $('compare').setAttribute('aria-pressed', String(on));
+    setOpacityAll();
+  }
+  $('compare').addEventListener('pointerdown', (ev) => { ev.preventDefault(); setComparing(true); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => $('compare').addEventListener(t, () => setComparing(false)));
+  $('compare').addEventListener('keydown', (ev) => { if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); setComparing(true); } });
+  $('compare').addEventListener('keyup', () => setComparing(false));
+  $('compare').addEventListener('contextmenu', (ev) => ev.preventDefault());
+
+  $('sheet-toggle').addEventListener('click', () => {
+    const open = !$('panel').classList.contains('open');
+    $('panel').classList.toggle('open', open);
+    $('sheet-toggle').setAttribute('aria-expanded', String(open));
+    $('sheet-toggle').textContent = open ? '詳しい操作を閉じる' : '詳しい操作を開く';
+    if (open) updateLabel();   // 選んだ年のチップを真ん中へ
   });
 
   map.on('moveend', onMove);
@@ -322,6 +553,8 @@
     mode:state.mode, country:state.country?.id ?? null,
     stops:state.stops.map(s => s.era ? s.era.id : null), index:state.index,
     layer:state.stops[state.index]?.era?.id ?? null, tiles:{ ...state.tiles },
+    loadedLayers:(state.overlay ? 1 : 0) + state.retiring.length, comparing:state.comparing,
+    loading:state.overlay ? state.overlay.isLoading() : false,
   });
 </script>
 </body>

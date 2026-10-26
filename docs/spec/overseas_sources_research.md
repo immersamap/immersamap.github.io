@@ -141,7 +141,7 @@ WMS（地図を範囲指定で切り出して返す方式）は、Leaflet の `L
 
 | 地域 | 中身 | 年代 | 方式 | 確認 | ライセンス |
 |---|---|---|---|---|---|
-| **ウィーン** | 空中写真 8世代 | 1938・1956・1961・1971・1976・1981・1986・1992 | XYZ `https://mapsneu.wien.gv.at/wmts/lb1938/grau/google3857/{z}/{y}/{x}.jpeg`（**{y}/{x} の順**） | ★ | CC BY 4.0（Stadt Wien – data.wien.gv.at） |
+| **ウィーン** | 空中写真 4世代＋2014〜2021年・最新（※1） | 1938・1956・1976・1992 | XYZ `https://mapsneu.wien.gv.at/wmts/lb1938/grau/google3857/{z}/{y}/{x}.jpeg`（**{y}/{x} の順**。昔は `grau`、2014年以降と最新 `lb` は `farbe`。市外は 404） | ★ | CC BY 4.0（Stadt Wien – data.wien.gv.at） |
 | **ルール地方**（エッセン・ドルトムントなど） | 空中写真 | **1926**・1934・1952・1963・1969・1990・1998 | WMS `https://geodaten.metropoleruhr.de/lubi/lubi_1926`（layers=`lubi_1926`） | ★ | dl-de/by-2-0（Regionalverband Ruhr） |
 | **スペイン全国** | 米軍撮影の空中写真、ほか 1973〜2024 | 1956〜57 ほか | WMS `https://www.ign.es/wms/pnoa-historico`（layers=`AMS_1956-1957`） | ★ | CC BY 4.0（scne.es） |
 | **カタルーニャ**（バルセロナ） | 空中写真 | 1945〜46・1956〜57・1970〜77・1983〜毎年 | WMS `https://geoserveis.icgc.cat/servei/catalunya/orto-territorial/wms` | ★ | CC BY 4.0（ICGC） |
@@ -176,7 +176,17 @@ WMS（地図を範囲指定で切り出して返す方式）は、Leaflet の `L
 | ニュージーランド | APIキーが必要（無期限のキーは問い合わせ） |
 | フィンランド（ヘルシンキ） | 調査環境から接続できず未検証 |
 
+※1（2026-10-27 追記・試作に入れるときに確認）: 最初の調査で「8世代（1961・1971・1981・1986 を含む）」と書いたが、
+配信元の一覧（`https://mapsneu.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml`）にある昔の写真は **1938・1956・1976・1992 の4つだけ**だった。
+1961・1971・1981・1986 は、少なくともこのタイル配信には無い。
+
+同じときに確かめたこと（試作 `overseas-test.html` に入れた）:
+- ルール地方は `lubi_1926`〜`lubi_1998` の7つの WMS がそれぞれ別の URL。範囲外は 200 で空の PNG。CORS は `*`
+- ルール地方の「最新」には NRW 州の今の写真 `https://www.wms.nrw.de/geobasis/wms_nw_dop`（`nw_dop_rgb`・dl-de/zero-2-0）を使う
+- スペインの `pnoa-historico` には `AMS_1956-1957`・`Interministerial_1973-1986`・`Nacional_1981-1986`・`SIGPAC`（1997〜2003）・`OLISTAT`・`PNOA2004`〜`PNOA2024` がある。
+  1973〜86・1981〜86 はマドリード・バルセロナとも**写っていない**（334 バイトの空の PNG）。最新は `https://www.ign.es/wms-inspire/pnoa-ma`（`OI.OrthoimageCoverage`）
+
 ### 6.4 2回目のまとめ
 
-- **商用可で年代も厚いのは、ウィーン（1938〜1992の8世代）・ルール地方（1926〜）・スペイン（全国1956〜）・カタルーニャ（1945〜）**
+- **商用可で年代も厚いのは、ウィーン（1938〜1992の4世代）・ルール地方（1926〜）・スペイン（全国1956〜）・カタルーニャ（1945〜）**
 - WMS 方式は、今の試作のタイル方式（`L.tileLayer`）とは別の部品（`L.tileLayer.wms`）を使う。仕組みの追加は小さい
