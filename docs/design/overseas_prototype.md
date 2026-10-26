@@ -15,15 +15,16 @@
 
 ```mermaid
 flowchart LR
-    F[feature/overseas-prototype] -->|push のみ| G[GitHub 上のブランチ]
-    G -.->|マージしない| M[main]
-    M -->|GitHub Pages が配信| S[immersamap.github.io]
+    T[overseas-test.html<br/>新しいファイル] --> M[main]
+    M -->|GitHub Pages が配信| S[immersamap.github.io/overseas-test.html]
+    S -.->|リンクなし・noindex| X[トップ・地図・サイトマップからは辿れない]
 ```
 
-- GitHub Pages の配信元は `main` の直下（`gh api .../pages` で確認: `source.branch = main`）。**ブランチは配信されない**
-- 変更は**新しいファイルだけ**。既存の HTML・SQL・画像には触れていない（`git diff main --stat` で確認）
-- さらに `_config.yml` の `exclude` に `overseas-test.html` を入れた。**誤って `main` に入っても配信されない**（`aerial-test.html` と同じ扱い）
-- ページには `noindex, nofollow` を付け、どこからもリンクしない
+- 2026-10-27 ユーザー指示により、**公開サイトにリンクを張らずに置く**（直アドレスで確認するため）。
+  確認用 URL: https://immersamap.github.io/overseas-test.html
+- 既存のページ・SQL・画像は変えていない。どのページからもリンクせず、`sitemap.xml` にも入れない
+- ページには `noindex, nofollow` を付け、検索に出ないようにする
+- テストコードと `requirements-dev.txt` は `_config.yml` の `exclude` で配信しない
 
 ## 3. 画面
 

@@ -34,4 +34,5 @@
 |---|---|---|
 | P1 | 既存のファイルを変えていない | `git diff main --stat` に既存の HTML が出ない |
 | P2 | 既存のトップページが壊れていない | `tests/e2e/top_page_check.py` が全件 PASS |
-| P3 | ブランチは配信されない | `gh api repos/immersamap/immersamap.github.io/pages` の配信元が `main` |
+| P3 | 直アドレスで開ける | マージ後、`tests/e2e/overseas_prototype_check.py https://immersamap.github.io/overseas-test.html` が全件 PASS |
+| P4 | どこからも辿れない | 公開中のトップ・地図・`sitemap.xml` に `overseas-test` が出てこない。ページに `noindex` がある |
