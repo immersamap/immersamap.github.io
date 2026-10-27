@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ImmersaMap ｜ 海外の空中写真・古地図（試作）</title>
+<meta name="description" content="スイス・フランス・スペイン・ドイツ・ベルギー・ウィーンの昔の空中写真と古地図を、今の地図に重ねて見比べる試作版。日本の空中写真も同じ画面で見られます。登録不要・無料。">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://immersamap.github.io/overseas/">
+<link rel="alternate" hreflang="ja" href="https://immersamap.github.io/overseas/">
+<link rel="alternate" hreflang="en" href="https://immersamap.github.io/en/overseas/">
+<link rel="alternate" hreflang="x-default" href="https://immersamap.github.io/overseas/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ImmersaMap">
+<meta property="og:title" content="ImmersaMap ｜ 海外の空中写真・古地図（試作）">
+<meta property="og:description" content="スイス・フランス・スペイン・ドイツ・ベルギー・ウィーンの昔の空中写真と古地図を、今の地図に重ねて見比べる試作版。日本の空中写真も同じ画面で見られます。登録不要・無料。">
+<meta property="og:url" content="https://immersamap.github.io/overseas/">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:image" content="https://immersamap.github.io/ogp.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://immersamap.github.io/favicon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="overseas.css">
+</head>
+<body>
+<div id="map"></div>
+
+<a id="lang" href="../en/overseas/" hreflang="en" lang="en" aria-label="Switch to English">English</a>
+<noscript><p style="position:absolute;top:60px;left:12px;z-index:2000;background:#fff;padding:8px">この地図を使うには JavaScript を有効にしてください。</p></noscript>
+
+<div class="opacity-control" id="opacity-control">
+  <span class="eye" aria-hidden="true" id="opacity-eye"></span>
+  <div class="opacity-slider-wrap">
+    <input type="range" id="opacity" min="0" max="100" value="80">
+  </div>
+  <span class="opacity-value" id="opacity-val">80%</span>
+</div>
+
+<div id="panel">
+  <button id="sheet-toggle" aria-expanded="false" aria-controls="panel"></button>
+
+  <div class="more intro">
+    <h1><span id="h1-text">海外の空中写真・古地図</span><span class="badge" id="badge">試作</span></h1>
+    <p class="lead" id="lead">日本とヨーロッパの昔の空中写真と古地図を、同じ画面で見比べる試作です。</p>
+  </div>
+
+  <div class="group" id="places-group">
+    <div class="label" id="place-label"></div>
+    <div id="where-wrap">
+      <button id="where" aria-expanded="false" aria-controls="place-list"><span id="where-flag"></span><span id="where-name">—</span><span class="caret"><span id="where-caret"></span> ▾</span></button>
+      <div id="place-list" role="menu" hidden></div>
+    </div>
+  </div>
+
+  <div class="group era">
+    <div class="label" id="country-label"></div>
+    <div class="now"><strong id="era-name">—</strong><span id="era-sub"></span>
+      <div class="kind" id="kind" role="group" hidden><button type="button" id="kind-photo" data-kind="photo"></button><button type="button" id="kind-map" data-kind="map"></button></div>
+    </div>
+    <div class="stepper">
+      <button class="step" id="prev">◀</button>
+      <input type="range" id="era" min="0" max="0" value="0">
+      <button class="step" id="next">▶</button>
+    </div>
+    <div class="ticks" id="ticks"></div>
+    <div class="ends"><span id="end-old"></span><span id="end-new"></span></div>
+    <div class="msg" id="msg" hidden></div>
+  </div>
+
+  <div class="more">
+    <div class="group">
+      <div class="label" id="chips-label"></div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <div class="src">
+    <span id="src-label"></span>: <span id="src-layer">—</span><br>
+    <span id="base-label"></span>: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+  </div>
+</div>
+
+<script src="overseas.js"></script>
+</body>
+</html>

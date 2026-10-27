@@ -4,6 +4,7 @@
 配信元（国土地理院・swisstopo・IGN）に実際につないで確かめるので、ネットにつながっている必要がある。
 
     .venv/bin/python tests/e2e/overseas_prototype_check.py
+    .venv/bin/python tests/e2e/overseas_prototype_check.py https://immersamap.github.io/   # 公開サイト
     .venv/bin/python tests/e2e/overseas_prototype_check.py --shots docs/test_results/xxx   # 画面写真も保存
 """
 import re
@@ -19,7 +20,10 @@ if "--shots" in argv:
     i = argv.index("--shots")
     SHOTS = argv[i + 1]
     del argv[i:i + 2]
-URL = argv[0] if argv else (ROOT / "overseas-test.html").as_uri()
+# 引数はサイトの一番上（例 https://immersamap.github.io/）。無ければ手元のファイル
+BASE = argv[0].rstrip("/") + "/" if argv else ROOT.as_uri() + "/"
+URL_JA = BASE + "overseas/index.html"
+URL_EN = BASE + "en/overseas/index.html"
 
 results = []
 
@@ -78,13 +82,13 @@ def go_to(page, lat, lon, zoom=15):
     page.wait_for_timeout(500)
 
 
-def new_page(browser, query="", **kw):
+def new_page(browser, query="", en=False, **kw):
     # 言葉はブラウザの設定で決まるので、指定が無ければ日本語のブラウザとして開く
     kw.setdefault("locale", "ja-JP")
     page = browser.new_page(viewport=kw.pop("viewport", {"width": 1366, "height": 800}), **kw)
     page.errors = []
     page.on("pageerror", lambda e: page.errors.append(str(e)))
-    page.goto(URL + query)
+    page.goto((URL_EN if en else URL_JA) + query)
     page.wait_for_function("typeof window.__overseas === 'function'")
     page.wait_for_timeout(500)
     return page
@@ -220,7 +224,7 @@ with sync_playwright() as p:
     s = st(page)
     check("N12 古地図にすると古地図の年だけになる（スイス 1844〜2021年の178）",
           s["kind"] == "map" and len(s["stops"]) == 178 and s["stops"][0] == "ch_map_1844", str(len(s["stops"])))
-    for place, lid, zoom in [("チューリッヒ", "ch_map_1900", None), ("パリ", "fr_map_etatmajor", None), ("パリ", "fr_map_cassini", 14),
+    for place, lid, zoom in [("チューリッヒ", "ch_map_1900", None),
                              ("ケルン", "nrw_map_1891", None), ("ミュンヘン", "by_map_1817", 14), ("マドリード", "es_plan_1656", None),
                              ("マドリード", "es_map_minutas", None), ("バルセロナ", "es_map_minutas", None)]:
         go(page, place)
@@ -234,8 +238,11 @@ with sync_playwright() as p:
     # 種類ごとに選んだ年を覚える。古地図の無い国では空中写真を出し、戻ると古地図に戻る
     go(page, "チューリッヒ")
     pick(page, "ch_map_1900")
+    go(page, "ケルン")
+    check("N12 スイス 1900年の地図 → ケルンは近い 1891〜1912年の地図", st(page)["layer"] == "nrw_map_1891", st(page)["layer"])
     go(page, "パリ")
-    check("N12 スイス 1900年の地図 → パリは近い参謀本部図（1820〜66年）", st(page)["layer"] == "fr_map_etatmajor", st(page)["layer"])
+    check("N12 フランスの古地図は外した（利用条件の確認待ち）。切り替えも出さない",
+          not st(page)["hasMaps"] and page.is_hidden("#kind") and st(page)["kind"] == "photo", str(st(page)))
     go(page, "東京")
     # 年は空中写真で最後に選んだ年に近いもの（前の確認で選んだ年による）なので、種類と「日本の写真の層」だけを見る
     s = st(page)
@@ -486,13 +493,33 @@ with sync_playwright() as p:
         text = page.inner_text("#panel") + page.inner_text(".opacity-control")
         return JA.findall(text)
 
-    page = new_page(browser, locale="en-US")
+    def follow_lang(page):
+        """言葉の切り替えリンクの行き先を開く。file:// ではフォルダに index.html が補われないので、足してから開く（仕様 R1）。"""
+        href = page.evaluate("document.getElementById('lang').href")
+        path, _, frag = href.partition("#")
+        if path.endswith("/"):
+            path += "index.html"
+        page.goto(path + ("#" + frag if frag else ""))
+        page.wait_for_function("typeof window.__overseas === 'function'")
+        page.wait_for_timeout(800)
+        return href
+
+    # 英語のページは、英語のブラウザでなくても英語。日本語のページは、英語のブラウザでも日本語（自動で切り替えない）
+    page = new_page(browser, en=True)
     s = st(page)
-    check("L1 英語のブラウザでは英語で開く", s["lang"] == "en" and page.evaluate("document.documentElement.lang") == "en", str(s))
+    check("L1 英語のページは英語（日本語のブラウザでも）", s["lang"] == "en" and page.evaluate("document.documentElement.lang") == "en", str(s))
+    page.close()
+    page = new_page(browser, locale="en-US")
+    check("L1 日本語のページは英語のブラウザでも日本語（検索エンジンに英語として読まれないように）", st(page)["lang"] == "ja")
+    page.close()
+
+    page = new_page(browser, en=True, locale="en-US")
+    s = st(page)
     check("L1 場所・年・題名が英語", "Japan" in page.inner_text("#where") and page.inner_text("#era-name") == "Latest"
           and "Historical aerial photos" in page.title(), page.inner_text("#where"))
     check("L1 画面に日本語が残っていない", not japanese_left(page), "".join(japanese_left(page)))
-    check("L1 言葉のボタンは「日本語」", page.inner_text("#lang") == "日本語")
+    check("L1 言葉のボタンは「日本語」で、日本語のページへのリンク",
+          page.inner_text("#lang") == "日本語" and page.get_attribute("#lang", "hreflang") == "ja", page.get_attribute("#lang", "href"))
     eye = page.evaluate("(() => { const e = document.getElementById('opacity-eye').getBoundingClientRect(),"
                         " c = document.getElementById('opacity-control').getBoundingClientRect();"
                         " return [e.left, e.right, c.left, c.right]; })()")
@@ -520,31 +547,79 @@ with sync_playwright() as p:
     go_to(page, 40.7128, -74.006, 14)
     check("L3 対象外のお知らせも英語", "This prototype covers only" in page.inner_text("#msg")
           and "Outside coverage" in page.inner_text("#where"), page.inner_text("#msg"))
-    go(page, "Vienna")
-    before = st(page)
-    page.click("#lang")
-    page.wait_for_timeout(300)
-    after = st(page)
-    check("L4 「日本語」を押すと日本語になる", after["lang"] == "ja" and "ウィーン" in page.inner_text("#where")
-          and page.inner_text("#lang") == "English", page.inner_text("#where"))
-    check("L4 切り替えても場所と年はそのまま（写真を読み直さない）",
-          after["layer"] == before["layer"] and after["loadedLayers"] == 1, f"{before['layer']} {after}")
-    check("L4 切り替えた言葉をアドレスに残す（file:// で残せなくても止まらない）",
-          "lang=ja" in page.url or page.url.startswith("file:"), page.url)
     check("L 英語の画面でスクリプトエラーが無い", not page.errors, "; ".join(page.errors))
+
+    # L4 動かしてから切り替える: 場所・種類・年を引き継いで、もう一方の言葉のページが開く（仕様 R6）
+    go(page, "Vienna")
+    pick(page, "wien_1956")
+    page.evaluate("window.__overseasMap.setView([48.2, 16.36], 14)")
+    page.wait_for_timeout(500)
+    href = follow_lang(page)
+    s = st(page)
+    c = page.evaluate("(() => { const m = window.__overseasMap, c = m.getCenter(); return [m.getZoom(), c.lat, c.lng]; })()")
+    check("L4 「日本語」で日本語のページへ。動かしたあとの場所・ズーム・年を引き継ぐ",
+          s["lang"] == "ja" and s["layer"] == "wien_1956" and c[0] == 14 and abs(c[1] - 48.2) < 0.001 and abs(c[2] - 16.36) < 0.001,
+          f"{href} {c} {s['layer']}")
+    go(page, "チューリッヒ")
+    page.click("[data-kind=map]")
+    pick(page, "ch_map_1900")
+    href = follow_lang(page)
+    s = st(page)
+    check("L4 「English」で英語のページへ。古地図の 1900年を引き継ぐ", s["lang"] == "en" and s["kind"] == "map" and s["layer"] == "ch_map_1900", f"{href} {s['layer']}")
+    check("L4 切り替えのあとでスクリプトエラーが無い", not page.errors, "; ".join(page.errors))
     page.close()
 
-    page = new_page(browser, query="?lang=en")
-    check("L5 日本語のブラウザでも ?lang=en なら英語", st(page)["lang"] == "en")
+    # L5 アドレスの # の異常系（仕様 §6・R5）
+    for frag, want_country, want_layer, name in [
+            ("#abc", "jp", "seamless", "おかしな値は無視して初期表示（東京・最新）"),
+            ("#15/95.0/8.5/map/1900", "jp", "seamless", "範囲外の緯度は無視"),
+            ("#15/47.37690/8.54170/sketch/1900", "jp", "seamless", "知らない種類は無視"),
+            ("#15/47.37690/8.54170/map/1900", "ch", "ch_map_1900", "正しい値なら、その場所・種類・年で開く"),
+            ("#15/48.85840/2.29450/map/1880", "fr", "fr_1950", "外したフランスの古地図の共有リンクは、場所を残して空中写真の近い年（1950〜65年）")]:
+        page = new_page(browser, query=frag)
+        s = st(page)
+        check(f"L5 {frag}: {name}", s["country"] == want_country and s["layer"] == want_layer and not page.errors, f"{s['country']} {s['layer']}")
+        page.close()
+
+    # L5 書いた # を読み直せる（実装後レビュー P1・P2）
+    page = new_page(browser)
+    page.evaluate("window.__overseasMap.setZoom(1)")
+    page.wait_for_timeout(500)
+    check("L5 ズーム1までは引けない（# に書いた値を読み直せる範囲 2〜19）", page.evaluate("window.__overseasMap.getZoom()") == 2)
+    page.evaluate("window.__overseasMap.setView([47.3769, 8.5417 + 360], 13)")   # 地球を1周した先のチューリッヒ
+    page.wait_for_timeout(600)
+    h = page.evaluate("location.hash")
+    check("L5 地球を1周しても、国はスイスで、# の経度は -180〜180", st(page)["country"] == "ch" and "/8.54" in h, h)
+    page.evaluate("location.hash = '#14/52.51630/13.37770/photo/1953'")
+    page.wait_for_timeout(800)
+    check("L5 開いたまま別の共有リンク（# だけ違う）を開くと、その場所・年へ動く", st(page)["layer"] == "ber_1953", str(st(page)["layer"]))
     page.close()
-    page = new_page(browser, query="?lang=xx", locale="en-US")
-    check("L5 ?lang= の値がおかしければブラウザの言葉（英語）", st(page)["lang"] == "en" and not page.errors)
-    page.close()
+
+    # L7 日英のページは、地図と操作の部分（id の組）が同じ（仕様 §4・R4）。見出し・説明・切り替えリンクは静的に書く
+    ids = {}
+    for en in (False, True):
+        page = new_page(browser, en=en)
+        ids[en] = page.evaluate("[...document.querySelectorAll('[id]')].map(e => e.id).sort()")
+        html = page.content()
+        static_title = re.search(r"<title>([^<]+)</title>", (ROOT / ("en/overseas/index.html" if en else "overseas/index.html")).read_text(encoding="utf-8")).group(1)
+        check(f"L7 {'英語' if en else '日本語'}のページ: 描画後の題名が HTML の題名と同じ（実装後レビュー P3）",
+              page.title() == static_title.replace("&amp;", "&"), page.title())
+        check(f"L7 {'英語' if en else '日本語'}のページ: index・canonical・hreflang（ja・en・x-default）",
+              'content="index,follow"' in html and 'rel="canonical"' in html
+              and all(f'hreflang="{h}"' in html for h in ("ja", "en", "x-default")))
+        page.close()
+    check("L7 日英のページの id の組が同じ", ids[False] == ids[True], str(set(ids[False]) ^ set(ids[True])))
+    for en, word in ((False, "海外の空中写真・古地図"), (True, "Historical aerial photos")):
+        page = browser.new_page(java_script_enabled=False)   # JS が無いので、準備の待ち（new_page）は使えない
+        page.goto(URL_EN if en else URL_JA)
+        check(f"L7 JavaScript が無くても{'英語' if en else '日本語'}の見出しと切り替えリンクが見える",
+              word in page.inner_text("h1") and page.locator("#lang[href]").count() == 1)
+        page.close()
 
     # 英語・スマホ: いちばん長い国名（Austria · Vienna）でも、場所のボタンが言葉のボタンにかからない
     for loc, place, w in [("en-US", "Vienna", 390), ("ja-JP", "ウィーン", 390), ("en-US", "Vienna", 360), ("ja-JP", "ウィーン", 360),
                           ("en-US", "Bilbao", 360), ("ja-JP", "バルセロナ", 360), ("en-US", "Antwerp", 360), ("ja-JP", "ミュンヘン", 360)]:
-        page = new_page(browser, locale=loc, viewport={"width": w, "height": 740}, is_mobile=True, has_touch=True)
+        page = new_page(browser, en=loc == "en-US", locale=loc, viewport={"width": w, "height": 740}, is_mobile=True, has_touch=True)
         go(page, place)
         wait_tiles(page)
         wb = page.locator("#where").bounding_box()
