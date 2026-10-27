@@ -10,6 +10,9 @@
 <meta name="robots" content="index,follow,max-image-preview:large" />
 <meta name="theme-color" content="#0D1015" />
 <link rel="canonical" href="https://immersamap.github.io/" />
+<link rel="alternate" hreflang="ja" href="https://immersamap.github.io/" />
+<link rel="alternate" hreflang="en" href="https://immersamap.github.io/en/" />
+<link rel="alternate" hreflang="x-default" href="https://immersamap.github.io/" />
 
 <!-- ===== OGP / SNS ===== -->
 <meta property="og:type" content="website" />
@@ -262,6 +265,28 @@
   @media (max-height:700px) and (min-width:761px){
     h1{margin:16px 0 14px}.actions{margin-top:22px}.support-line{margin-top:16px}
   }
+  /* ===== 英語版・海外のページへの入口（docs/spec/release_overseas_en.md。試作トップ docs/design/top_test_prototype.md から） ===== */
+  .lang-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:6px 12px;font-size:.8rem;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;flex:none}
+  .lang-btn:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .lang-btn svg{width:15px;height:15px}
+  .lang-btn .short{display:none}
+  .cta .proto{font-size:.66rem;letter-spacing:.08em;border:1px solid currentColor;padding:0 6px;opacity:.8}
+  /* パネルの中の言葉ボタンは短い表示（EN／日本語）にして、タブの幅を取らない */
+  .panel-top .lang-btn{margin-left:auto;padding:6px 10px}
+  .panel-top .lang-btn .long{display:none}
+  .panel-top .lang-btn .short{display:inline}
+  @media (max-width:760px){
+    /* ヘッダーに入りきらないので「地図をひらく」は外す（本文のすぐ下に同じボタンがある） */
+    nav .cta.hdr{display:none}
+    nav{gap:10px}   /* 360px の英語（Support と 日本語）でも入りきるように */
+    /* パネルは画面いっぱいにし、タブは2行目に1行まるごと使う（言葉ボタンと閉じるは上の行） */
+    dialog.panel{max-width:none}
+    .panel-top{flex-wrap:wrap;row-gap:8px}
+    .panel-top .tabs{order:2;flex-basis:100%;gap:12px;font-size:.76rem}   /* 「♡ 応援」は短くして、5つが 360px に収まる */
+    .lang-btn{padding:6px 10px}
+    .lang-btn .long{display:none}
+    .lang-btn .short{display:inline}
+  }
 </style>
 </head>
 <body>
@@ -287,7 +312,8 @@
       <a class="lk" href="#data" data-open="data">収録データ</a>
       <a class="lk" href="#faq" data-open="faq">よくある質問</a>
       <a class="support-btn" href="#support" data-open="support"><svg class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span>応援<span class="pc-only">する</span></span></a>
-      <a class="cta" href="/map/">地図をひらく</a>
+      <a class="lang-btn" href="en/" hreflang="en" lang="en" aria-label="Switch to English"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3.2-3 14.8 0 18M12 3c3 3.2 3 14.8 0 18"/></svg><span class="long">English</span><span class="short">EN</span></a>
+      <a class="cta hdr" href="/map/">地図をひらく</a>
     </nav>
   </header>
 
@@ -297,6 +323,7 @@
     <p class="lead">ImmersaMap（イマーサマップ）は、現在の地図の上に、昔の地図や過去の航空写真（空中写真）を重ねて表示できる無料のWeb地図です。見たい場所を開くだけで、そこが昔どんな姿だったかを見比べられます。</p>
     <div class="actions">
       <a class="cta solid" href="/map/">地図をひらく　→</a>
+      <a class="cta" href="overseas/">海外の空中写真・古地図<span class="proto">試作</span></a>
       <a class="cta" href="#data" data-open="data">収録データを見る</a>
     </div>
     <a class="support-line" href="#support" data-open="support"><svg class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>個人運営・広告なし ─ 応援はこちら</a>
@@ -323,8 +350,9 @@
       <button type="button" role="tab" data-tab="data">収録データ</button>
       <button type="button" role="tab" data-tab="faq">よくある質問</button>
       <button type="button" role="tab" data-tab="about">運営者</button>
-      <button type="button" role="tab" data-tab="support">♡ 応援する</button>
+      <button type="button" role="tab" data-tab="support">♡ 応援<span class="pc-only">する</span></button>
     </div>
+    <a class="lang-btn" id="panel-lang" href="en/" hreflang="en" lang="en" aria-label="Switch to English"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3.2-3 14.8 0 18M12 3c3 3.2 3 14.8 0 18"/></svg><span class="long">English</span><span class="short">EN</span></a>
     <button type="button" class="close" id="close" aria-label="閉じる"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 
@@ -459,6 +487,8 @@
     showTab(name);
     if (!panel.open) panel.showModal();
     history.replaceState(null, '', '#' + name);
+    // 英語に切り替えても同じタブが開くように
+    document.getElementById('panel-lang').href = 'en/#' + name;
   };
   const closePanel = () => { if (panel.open) panel.close(); };
   panel.addEventListener('close', () => history.replaceState(null, '', location.pathname + location.search));

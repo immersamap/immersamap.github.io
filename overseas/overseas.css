@@ -1,0 +1,153 @@
+/* 海外の空中写真・古地図（/overseas/・/en/overseas/ で共有） */
+  [hidden]{display:none !important;}
+  :root{
+    --bg:#ffffff; --bg-alt:#fafafa; --border:#e5e5e5; --text:#1a1a1a; --muted:#666;
+    --accent:#1a1a1a; --warn-bg:#fff6e5; --warn:#8a5a00; --off:#c8c8c8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:var(--text);background:var(--bg);}
+  #map{position:absolute;inset:0;background:#e8e8e8;}
+
+  #panel{
+    position:absolute;top:12px;left:12px;z-index:1000;width:340px;max-width:calc(100vw - 24px);
+    max-height:calc(100vh - 24px);overflow:auto;
+    background:var(--bg);border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12);padding:14px 16px;
+  }
+  h1{margin:0;font-size:15px;}
+  .intro a{color:inherit;}
+  .badge{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#1a1a1a;color:#fff;font-size:10px;vertical-align:2px;}
+  .lead{margin:4px 0 0;font-size:12px;color:var(--muted);}
+  .group{margin-top:14px;}
+  .label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .row{display:flex;gap:6px;flex-wrap:wrap;}
+  button.chip{
+    flex:1 1 auto;min-width:0;padding:7px 8px;border:1px solid var(--border);border-radius:8px;
+    background:var(--bg-alt);color:var(--text);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;
+  }
+  button.chip[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+  button.chip:disabled{color:var(--off);cursor:default;}
+  .now{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+  .now strong{font-size:20px;}
+  .now span{font-size:12px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .now strong{flex:none;}
+  /* 空中写真と古地図の切り替え（年の行の右端）。古地図のある地域だけ出す */
+  .kind{margin-left:auto;flex:none;display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;align-self:center;}
+  .kind button{border:0;background:var(--bg-alt);color:var(--muted);font:inherit;font-size:12px;padding:0 10px;height:32px;cursor:pointer;white-space:nowrap;}
+  .kind button[aria-pressed="true"]{background:var(--accent);color:#fff;}
+  .stepper{display:flex;align-items:center;gap:8px;}
+  .stepper input{flex:1;min-width:0;}
+  button.step{
+    flex:none;width:36px;height:36px;border:1px solid var(--border);border-radius:50%;
+    background:var(--bg-alt);color:var(--text);font-size:14px;cursor:pointer;
+  }
+  button.step:disabled{color:var(--off);cursor:default;}
+  input[type=range]{width:100%;}
+  .ticks{position:relative;height:14px;margin:0 52px;}
+  .ticks i{position:absolute;top:2px;width:2px;height:8px;margin-left:-1px;background:var(--text);}
+  .ticks i.off{background:var(--off);}
+  .ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin:0 44px;}
+  /* 年のチップ: 横に流して、選んだ年を真ん中へ送る */
+  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
+  .chips button.chip{flex:none;}
+  .msg{margin-top:8px;padding:8px 10px;border-radius:8px;font-size:12px;background:var(--warn-bg);color:var(--warn);}
+  /* 場所: 今いる国の旗と名前のボタン。押すと国ごとの一覧が開く */
+  #where-wrap{position:relative;}
+  button#where{
+    display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 12px;
+    border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);
+    font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:left;
+  }
+  button#where .caret{margin-left:auto;color:var(--muted);font-size:11px;font-weight:400;}
+  .flag{flex:none;width:24px;height:16px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.15);display:block;}
+  .flag.sq{width:16px;}
+  #place-list{
+    position:absolute;top:calc(100% + 6px);left:0;z-index:1100;width:320px;max-width:calc(100vw - 16px);
+    max-height:min(60vh,420px);overflow:auto;background:var(--bg);border:1px solid var(--border);
+    border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px 0;
+  }
+  body:not(.compact) #place-list{position:static;width:auto;max-height:none;margin-top:6px;box-shadow:none;}
+  .pl-group{display:flex;align-items:center;gap:8px;padding:5px 12px;}
+  .pl-group + .pl-group{border-top:1px solid var(--border);}
+  .pl-group.here{background:var(--bg-alt);box-shadow:inset 3px 0 0 var(--accent);}
+  .pl-group.here .pl-country{color:var(--text);font-weight:600;}
+  .pl-country{display:flex;align-items:center;gap:8px;flex:none;width:104px;font-size:12px;color:var(--muted);}
+  .pl-cities{display:flex;flex-wrap:wrap;gap:6px;}
+  .pl-cities button.chip{flex:none;min-height:36px;}
+  /* 写真の濃さ: 公開中の地図探索と同じ、地図の右側の縦スライダー */
+  .opacity-control{
+    position:absolute;right:10px;top:142px;z-index:900;width:40px;padding:10px 0;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:rgba(255,255,255,.96);border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,.18);
+  }
+  /* 英語の「Opacity」も枠（幅 40px）に収まる大きさ */
+  .opacity-control .eye{font-size:10px;color:var(--muted);}
+  .opacity-slider-wrap{width:40px;height:140px;display:flex;align-items:center;justify-content:center;}
+  /* 回したスライダーの高さが、指の効く横幅になる。枠と同じ 40px にする */
+  .opacity-control input{width:140px;height:40px;flex-shrink:0;transform:rotate(-90deg);transform-origin:center;margin:0;}
+  .opacity-value{font-size:10px;color:var(--muted);min-width:28px;text-align:center;}
+  /* 言葉の切り替え: 地図の右上（ズームの上）。外国の人が最初に目にする場所に置く */
+  a#lang{
+    position:absolute;top:10px;right:10px;z-index:1000;height:40px;padding:0 12px;display:inline-flex;align-items:center;
+    border-radius:8px;background:var(--bg);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.2);
+    font-size:13px;font-weight:600;text-decoration:none;
+  }
+  .leaflet-top.leaflet-right{top:46px;}
+  .src{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.5;}
+  .src a{color:inherit;}
+  #sheet-toggle{display:none;}
+
+  /* ===== スマホ（縦・横）: 下（横画面は左）に寄せた畳めるシート ===== */
+  body.compact #panel{padding:0 16px calc(12px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;}
+  body.compact #sheet-toggle{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:28px;
+    border:0;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;
+  }
+  body.compact #sheet-toggle::before{content:"";width:36px;height:4px;border-radius:2px;background:var(--off);}
+  body.compact #panel:not(.open) .more{display:none;}
+  body.compact .group.era{margin-top:0;}
+  body.compact button.chip{min-height:40px;}
+  body.compact button.step{width:44px;height:44px;}
+  body.compact .ticks{margin:0 60px;}
+  body.compact .ends{margin:0 52px;}
+  /* 畳んだシートは「年・スライダー・出典」だけ（国名は上の場所ボタンに出ている） */
+  body.compact #country-label{display:none;}
+  body.compact .now{margin-bottom:2px;}
+  body.compact .now strong{font-size:18px;}
+  /* スマホの空中写真・古地図の切り替えは低めにして、畳んだシートを高くしない（幅は1つ 60px 以上ある） */
+  body.compact .kind button{height:28px;font-size:11px;}
+  body.compact .now{align-items:center;}
+  body.compact #panel:not(.open) .ends{font-size:10px;line-height:12px;margin-top:-3px;}
+  /* 開いたシートでは見出しを一番下へ（小さい画面でも並べ方・濃さが先に見えるように） */
+  body.compact #panel{display:flex;flex-direction:column;}
+  body.compact .intro{order:8;margin-top:14px;}
+  body.compact .src{order:9;}
+  body.compact .src{margin-top:6px;padding-top:4px;font-size:10px;line-height:1.4;}
+  body.compact .src br{display:none;}
+  /* 場所のボタンは画面の左上に浮かせる */
+  body.compact #places-group{position:fixed;top:8px;left:8px;z-index:1001;margin:0;}
+  body.compact #places-group .label{display:none;}
+  body.compact button#where{width:auto;box-shadow:0 2px 6px rgba(0,0,0,.15);border-color:transparent;}
+  /* 右上の言葉のボタンにかからないよう、幅に上限を付ける。収まらないときは「場所を変える」を ▾ だけにする（fitWhere） */
+  body.compact button#where{max-width:calc(100vw - 104px);white-space:nowrap;}
+  #where-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  button#where.tight #where-caret{display:none;}
+  body.compact .opacity-control{top:162px;}
+  body.compact .opacity-slider-wrap{height:120px;}
+  body.compact .opacity-control input{width:120px;}
+  body.compact .leaflet-touch .leaflet-bar a{width:44px;height:44px;line-height:44px;}
+
+  @media (max-width:600px){
+    #panel{top:auto;left:0;right:0;bottom:0;width:auto;max-width:none;max-height:60vh;overflow:visible;}
+    /* 開いたシートが右の濃さのスライダー（下端 344px）にかぶらないよう、高さに上限を付ける */
+    #panel.open{overflow:auto;max-height:min(60vh, calc(100vh - 354px));}
+  }
+  @media (max-height:500px) and (orientation:landscape){
+    /* 帯の高さは中身に合わせる（下の空白のぶん地図を広く見せる） */
+    #panel{top:0;left:0;bottom:auto;width:300px;max-height:100vh;border-radius:0 0 16px 0 !important;}
+    body.compact #places-group{left:308px;}
+    body.compact .opacity-control{top:auto;bottom:10px;}
+    body.compact .opacity-slider-wrap{height:90px;}
+    body.compact .opacity-control input{width:90px;}
+  }

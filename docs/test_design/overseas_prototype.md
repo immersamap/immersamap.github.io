@@ -1,8 +1,9 @@
 # 海外の空中写真 試作 テスト設計
 
-- 対象: `overseas-test.html`（設計: [`docs/design/overseas_prototype.md`](../design/overseas_prototype.md)）
+- 対象: `overseas/index.html`（日本語）・`en/overseas/index.html`（英語）。2026-10-27 に試作 `overseas-test.html` から公開（[仕様](../spec/release_overseas_en.md)・[公開のテスト設計](release_overseas_en.md)）
+- もとの対象: `overseas-test.html`（設計: [`docs/design/overseas_prototype.md`](../design/overseas_prototype.md)）
 - 自動テスト: `tests/e2e/overseas_prototype_check.py`（Playwright・Chromium）
-- 実行: `.venv/bin/python tests/e2e/overseas_prototype_check.py --shots docs/test_results/<日付>_overseas`
+- 実行: `.venv/bin/python tests/e2e/overseas_prototype_check.py --shots docs/test_results/<日付>_overseas`（公開サイトはサイトの一番上 `https://immersamap.github.io/` を渡す）
 - 写真のタイルは**表示中の分が読み終わるまで**待ってから判定・撮影する（遅い WMS で読みかけの画面写真にしない）
 - 配信元に実際につなぐ（モックにしないのは、**本当に重なるか・本当に読めるか**を見るのが試作の目的だから）。
   異常系だけ `page.route` で障害を注入する
@@ -45,6 +46,8 @@
 | E6 | 横画面 | 844×390 | 操作板は左の幅 300px で、高さは中身だけ（300px 未満）。年のスライダーが画面内。横にはみ出さない |
 
 ## 言葉（日本語・英語）
+
+公開（2026-10-27）で、言葉はページ（URL）で決まるようにした。L1・L4・L5・L7 は [公開のテスト設計](release_overseas_en.md) の表のとおりに変えた。下の表は試作のときのもの。
 
 | ID | 観点 | 確かめること |
 |---|---|---|
