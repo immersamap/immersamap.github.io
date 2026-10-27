@@ -178,7 +178,9 @@ with sync_playwright() as p:
         page.goto(BASE + src)
         page.wait_for_timeout(1500)
         got = page.url
-        ok = got.split("?")[0].endswith(want) or got.replace("index.html", "").endswith(want)
+        # 転送先の海外のページは、開いたあとに見ている場所を # に書く。期待に # が無いときは # より前で比べる
+        cmp = got if "#" in want else got.split("#")[0]
+        ok = cmp.split("?")[0].endswith(want) or cmp.replace("index.html", "").endswith(want)
         check(f"T1 {src} は {want} へ転送する", ok and "test" not in got, got)
         page.close()
     url = BASE + "overseas-test.html"
