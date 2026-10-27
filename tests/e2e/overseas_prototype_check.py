@@ -58,8 +58,12 @@ def pick_index(page, idx):
 
 def wait_tiles(page, timeout=15000):
     """表示中の写真のタイルが、読めるか失敗するまで待つ。"""
-    page.wait_for_function(
-        "() => { const t = window.__overseas().tiles; return t.ok + t.err > 0; }", timeout=timeout)
+    try:
+        page.wait_for_function(
+            "() => { const t = window.__overseas().tiles; return t.ok + t.err > 0; }", timeout=timeout)
+    except Exception:
+        # 配信元が1枚も返さないまま時間切れ。ここで止めずに、その時点の数（ok=0）を返して各 check で FAIL にする
+        return st(page)["tiles"]
     # 表示中のタイルが全部そろうまで待つ（遅い WMS でも、読みかけの画面写真にしない）
     try:
         page.wait_for_function("() => !window.__overseas().loading", timeout=timeout)
@@ -161,7 +165,7 @@ with sync_playwright() as p:
 
     # ---- N10 国の範囲（隣の国を取り込まない。UIレビュー4回目 R2）----
     for name, lat, lon, want in [
-        ("シュトゥットガルト", 48.78, 9.18, None), ("トリノ", 45.07, 7.69, None), ("ブリュッセル", 50.85, 4.35, None),
+        ("シュトゥットガルト", 48.78, 9.18, None), ("トリノ", 45.07, 7.69, None), ("ブリュッセル", 50.85, 4.35, "vl"),
         ("アンドラ", 42.51, 1.52, None), ("ミラノ", 45.46, 9.19, None), ("ルクセンブルク", 49.61, 6.13, None),
         ("ストラスブール", 48.58, 7.75, "fr"), ("リール", 50.63, 3.06, "fr"), ("ニース", 43.70, 7.27, "fr"),
         ("ブレスト", 48.39, -4.49, "fr"), ("アジャクシオ", 41.93, 8.74, "fr"), ("エビアン", 46.40, 6.59, "fr"),
@@ -171,6 +175,89 @@ with sync_playwright() as p:
         got = st(page)["country"]
         check(f"N10 {name} は {want or '対象外'}", got == want, str(got))
     go(page, "東京")
+
+    # ---- N11 足した地域（2026-10-27 5回目）: 判定・写真・古地図 ----
+    for name, lat, lon, want in [
+        ("バルセロナ", 41.387, 2.170, "cat"), ("ジローナ", 41.98, 2.82, "cat"), ("アンドラ", 42.51, 1.52, None),
+        ("ビルバオ", 43.263, -2.935, "eus"), ("アントワープ", 51.219, 4.403, "vl"), ("ヘント", 51.054, 3.717, "vl"),
+        ("マーストリヒト", 50.85, 5.69, None), ("リエージュ", 50.63, 5.57, None), ("ケルン", 50.941, 6.958, "nrw"),
+        ("ミュンスター", 51.96, 7.63, "nrw"), ("アーヘン", 50.78, 6.08, "nrw"), ("フェンロー", 51.37, 6.17, None),
+        ("フランクフルト", 50.11, 8.68, None), ("エッセン", 51.456, 7.012, "ruhr"), ("ベルリン", 52.516, 13.378, "berlin"),
+        ("ミュンヘン", 48.137, 11.576, "by"), ("ニュルンベルク", 49.452, 11.077, "by"), ("ザルツブルク", 47.80, 13.04, None),
+        ("ウルム", 48.40, 9.99, None), ("デュッセルドルフ", 51.2254, 6.7763, "nrw"), ("ヴッパータール", 51.26, 7.15, "nrw"),
+        ("クレーフェルト", 51.33, 6.56, "nrw"), ("デュイスブルク", 51.43, 6.76, "ruhr"), ("ドルトムント", 51.51, 7.47, "ruhr"),
+        ("ハム", 51.68, 7.82, "ruhr"), ("ハーゲン", 51.36, 7.47, "ruhr"), ("ヴェーゼル", 51.66, 6.62, "ruhr")]:
+        page.evaluate(f"window.__overseasMap.setView([{lat}, {lon}], 13)")
+        got = st(page)["country"]
+        check(f"N11 {name} は {want or '対象外'}", got == want, str(got))
+    for place, lid in [("バルセロナ", "cat_1945"), ("ビルバオ", "eus_1945"), ("アントワープ", "vl_1971"),
+                       ("ケルン", "nrw_1951"), ("ベルリン", "ber_1953"), ("ミュンヘン", "by_current")]:
+        go(page, place)
+        if st(page)["kind"] != "photo":
+            page.click("[data-kind=photo]")
+        pick(page, lid)
+        t = wait_tiles(page, 30000)
+        check(f"N11 {place} の写真 {lid} が読める", t["ok"] > 0 and t["err"] == 0 and t["blank"] < t["ok"], str(t))
+        shot(page, lid)
+    # ルール地方連合の範囲の外（デュッセルドルフ）は NRW 州として、NRW 州の 1952年が出る（UIレビュー5回目 S1）
+    go_to(page, 51.2254, 6.7763)
+    pick(page, "nrw_1952")
+    t = wait_tiles(page, 30000)
+    check("N11 デュッセルドルフは NRW 州の 1952年が写る", st(page)["country"] == "nrw" and t["ok"] > 0 and t["blank"] < t["ok"], str(t))
+    go(page, "エッセン")
+    s = st(page)
+    check("N11 ルール地方はルール地方連合の写真に NRW 州の写真を足す（76）",
+          len(s["stops"]) == 76 and "ruhr_1926" in s["stops"] and "nrw_1975" in s["stops"], str(len(s["stops"])))
+
+    # ---- N12 古地図（空中写真と古地図の切り替え）----
+    go(page, "東京")
+    check("N12 古地図の無い日本では切り替えを出さない", page.is_hidden("#kind") and not st(page)["hasMaps"])
+    go(page, "ウィーン")
+    check("N12 ウィーンにも切り替えを出さない", page.is_hidden("#kind"))
+    go(page, "チューリッヒ")
+    check("N12 スイスでは切り替えを出す", page.is_visible("#kind") and st(page)["hasMaps"])
+    page.click("[data-kind=map]")
+    s = st(page)
+    check("N12 古地図にすると古地図の年だけになる（スイス 1844〜2021年の178）",
+          s["kind"] == "map" and len(s["stops"]) == 178 and s["stops"][0] == "ch_map_1844", str(len(s["stops"])))
+    for place, lid, zoom in [("チューリッヒ", "ch_map_1900", None), ("パリ", "fr_map_etatmajor", None), ("パリ", "fr_map_cassini", 14),
+                             ("ケルン", "nrw_map_1891", None), ("ミュンヘン", "by_map_1817", 14), ("マドリード", "es_plan_1656", None),
+                             ("マドリード", "es_map_minutas", None), ("バルセロナ", "es_map_minutas", None)]:
+        go(page, place)
+        if zoom:
+            page.evaluate(f"window.__overseasMap.setZoom({zoom})")
+            page.wait_for_timeout(500)
+        pick(page, lid)
+        t = wait_tiles(page, 30000)
+        check(f"N12 {place} の古地図 {lid} が読める", st(page)["kind"] == "map" and t["ok"] > 0 and t["err"] == 0 and t["blank"] < t["ok"], str(t))
+        shot(page, lid)
+    # 種類ごとに選んだ年を覚える。古地図の無い国では空中写真を出し、戻ると古地図に戻る
+    go(page, "チューリッヒ")
+    pick(page, "ch_map_1900")
+    go(page, "パリ")
+    check("N12 スイス 1900年の地図 → パリは近い参謀本部図（1820〜66年）", st(page)["layer"] == "fr_map_etatmajor", st(page)["layer"])
+    go(page, "東京")
+    # 年は空中写真で最後に選んだ年に近いもの（前の確認で選んだ年による）なので、種類と「日本の写真の層」だけを見る
+    s = st(page)
+    check("N12 古地図の無い日本では空中写真を出す", s["kind"] == "photo" and s["layer"] in s["stops"] and s["country"] == "jp", str(s))
+    go(page, "チューリッヒ")
+    check("N12 スイスに戻ると古地図の 1900年に戻る", st(page)["kind"] == "map" and st(page)["layer"] == "ch_map_1900", st(page)["layer"])
+    check("N12 古地図の出典を出す", "swisstopo" in page.inner_text("#src-layer") and "の古地図" in page.inner_text("#country-label"))
+    # バイエルンの Uraufnahme はズーム16より引くと配信が無い → 地図が無いお知らせ
+    go(page, "ミュンヘン")
+    page.evaluate("window.__overseasMap.setZoom(14)")
+    page.wait_for_timeout(500)
+    pick(page, "by_map_1808")
+    wait_tiles(page, 30000)
+    check("N12 引いた画面で細かい古地図を選ぶと「ズーム16以上に寄ると出ます」（「無い」とは言わない。UIレビュー5回目 S2）",
+          "ズーム16以上に寄ると出ます" in page.inner_text("#msg"), page.inner_text("#msg"))
+    page.evaluate("window.__overseasMap.setZoom(16)")
+    page.wait_for_timeout(500)
+    t = wait_tiles(page, 30000)
+    check("N12 寄るとバイエルンの細かい古地図（1808〜53年）が出る", t["ok"] > 0 and t["blank"] < t["ok"] and page.is_hidden("#msg"), str(t))
+    page.click("[data-kind=photo]")
+    go(page, "東京")
+    check("N12 スクリプトエラーが無い", not page.errors, "; ".join(page.errors))
 
     # ---- N6 濃さ ----
     page.eval_on_selector("#opacity", "el => { el.value = 30; el.dispatchEvent(new Event('input')); }")
@@ -194,7 +281,8 @@ with sync_playwright() as p:
 
     go(page, "エッセン")
     s = st(page)
-    check("N8 エッセンでルール地方に切り替わる（7世代＋最新）", s["country"] == "ruhr" and len(s["stops"]) == 8, str(s))
+    # 5回目で NRW 州の写真を足したので、7世代＋最新の8から 76 になった
+    check("N8 エッセンでルール地方に切り替わる（ルール地方連合7世代＋NRW州＋最新）", s["country"] == "ruhr" and len(s["stops"]) == 76, str(len(s["stops"])))
     pick(page, "ruhr_1926")
     t = wait_tiles(page)
     check("N8 ルール地方 1926年のタイルが読める（WMS）", t["ok"] > 0 and t["err"] == 0 and t["blank"] < t["ok"], str(t))
@@ -214,11 +302,11 @@ with sync_playwright() as p:
           t["blank"] > 0 and t["blank"] == t["ok"] and "この年の写真がありません" in page.inner_text("#msg"), str(t))
 
     go(page, "バルセロナ")
-    check("N8 バルセロナはフランスではなくスペイン", st(page)["country"] == "es", st(page)["country"])
+    check("N8 バルセロナはフランスではなくカタルーニャ（スペイン）", st(page)["country"] == "cat", st(page)["country"])
     go_to(page, 42.6987, 2.8956)   # ペルピニャン（フランス）
     check("N8 ペルピニャンはフランス", st(page)["country"] == "fr", st(page)["country"])
     go_to(page, 43.3183, -1.9812)  # サン・セバスティアン（スペイン北部）
-    check("N8 サン・セバスティアンはスペイン", st(page)["country"] == "es", st(page)["country"])
+    check("N8 サン・セバスティアンはバスク州（スペイン）", st(page)["country"] == "eus", st(page)["country"])
     check("N8 スクリプトエラーが無い", not page.errors, "; ".join(page.errors))
     page.close()
 
@@ -323,8 +411,20 @@ with sync_playwright() as p:
     ends = page.locator(".ends").bounding_box()
     check("M6 畳んでいても両端の年が見える", page.is_visible("#end-old") and ends["y"] + ends["height"] <= 844, str(ends))
     shot(page, "sp_tokyo")
+    # 空中写真・古地図の切り替えが出る地域でも、畳んだシートで地図が8割以上見える（出典が1行のとき）
+    go(page, "チューリッヒ")
+    kb = page.locator("#kind").bounding_box()
+    pb = page.locator("#panel").bounding_box()
+    check("M8 切り替えが出ても、畳んだシートは低い（地図が8割以上）", page.is_visible("#kind") and pb["y"] >= 844 * 0.8, f"{pb}")
+    check("M8 切り替えのボタンは高さ 28px・幅 44px 以上で、画面内", kb["height"] >= 28 and kb["width"] / 2 >= 44 and kb["x"] + kb["width"] <= 390, str(kb))
+    page.click("[data-kind=map]")
+    page.wait_for_timeout(300)
+    check("M8 指で古地図に切り替えられる", st(page)["kind"] == "map")
+    shot(page, "sp_zurich_map")
+    page.click("[data-kind=photo]")
+    go(page, "東京")
     page.click("#where")
-    check("M3 一覧は国ごと（国旗付きで6か国）", page.locator("#place-list .pl-country svg.flag").count() == 6)
+    check("M3 一覧は国ごと（国旗付きで7か国）", page.locator("#place-list .pl-country svg.flag").count() == 7)
     check("M3 一覧で今いる国（日本）に印が付く",
           page.locator("#place-list .pl-group.here").count() == 1 and "日本" in page.inner_text("#place-list .pl-group.here"))
     lb = page.locator("#place-list").bounding_box()
@@ -407,11 +507,16 @@ with sync_playwright() as p:
     wait_tiles(page)
     check("L2 年の名前は数字だけ（1946）", page.inner_text("#era-name") == "1946", page.inner_text("#era-name"))
     go(page, "Essen")
-    check("L2 ルール地方の出典の言葉も英語", "latest:" in page.inner_text("#src-layer"), page.inner_text("#src-layer"))
+    check("L2 ルール地方の出典の言葉も英語", "1951–1969:" in page.inner_text("#src-layer"), page.inner_text("#src-layer"))
     go(page, "Madrid")
     pick(page, "es_1973")
     check("L2 期間は 1973–1986 の形", page.inner_text("#era-name") == "1973–1986", page.inner_text("#era-name"))
     check("L2 移動しても日本語が残っていない", not japanese_left(page), "".join(japanese_left(page)))
+    page.click("[data-kind=map]")
+    check("L2 古地図の切り替えも英語", page.inner_text("#kind") .replace("\n", " ").strip() in ("Photos Old maps", "PhotosOld maps")
+          and "Old maps of Spain" in page.inner_text("#country-label"), page.inner_text("#kind"))
+    check("L2 古地図に切り替えても日本語が残っていない", not japanese_left(page), "".join(japanese_left(page)))
+    page.click("[data-kind=photo]")
     go_to(page, 40.7128, -74.006, 14)
     check("L3 対象外のお知らせも英語", "This prototype covers only" in page.inner_text("#msg")
           and "Outside coverage" in page.inner_text("#where"), page.inner_text("#msg"))
@@ -437,7 +542,8 @@ with sync_playwright() as p:
     page.close()
 
     # 英語・スマホ: いちばん長い国名（Austria · Vienna）でも、場所のボタンが言葉のボタンにかからない
-    for loc, place, w in [("en-US", "Vienna", 390), ("ja-JP", "ウィーン", 390), ("en-US", "Vienna", 360), ("ja-JP", "ウィーン", 360)]:
+    for loc, place, w in [("en-US", "Vienna", 390), ("ja-JP", "ウィーン", 390), ("en-US", "Vienna", 360), ("ja-JP", "ウィーン", 360),
+                          ("en-US", "Bilbao", 360), ("ja-JP", "バルセロナ", 360), ("en-US", "Antwerp", 360), ("ja-JP", "ミュンヘン", 360)]:
         page = new_page(browser, locale=loc, viewport={"width": w, "height": 740}, is_mobile=True, has_touch=True)
         go(page, place)
         wait_tiles(page)

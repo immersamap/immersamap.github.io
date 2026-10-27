@@ -38,7 +38,12 @@
   button.chip:disabled{color:var(--off);cursor:default;}
   .now{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
   .now strong{font-size:20px;}
-  .now span{font-size:12px;color:var(--muted);}
+  .now span{font-size:12px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .now strong{flex:none;}
+  /* 空中写真と古地図の切り替え（年の行の右端）。古地図のある地域だけ出す */
+  .kind{margin-left:auto;flex:none;display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;align-self:center;}
+  .kind button{border:0;background:var(--bg-alt);color:var(--muted);font:inherit;font-size:12px;padding:0 10px;height:32px;cursor:pointer;white-space:nowrap;}
+  .kind button[aria-pressed="true"]{background:var(--accent);color:#fff;}
   .stepper{display:flex;align-items:center;gap:8px;}
   .stepper input{flex:1;min-width:0;}
   button.step{
@@ -118,6 +123,9 @@
   body.compact #country-label{display:none;}
   body.compact .now{margin-bottom:2px;}
   body.compact .now strong{font-size:18px;}
+  /* スマホの空中写真・古地図の切り替えは低めにして、畳んだシートを高くしない（幅は1つ 60px 以上ある） */
+  body.compact .kind button{height:28px;font-size:11px;}
+  body.compact .now{align-items:center;}
   body.compact #panel:not(.open) .ends{font-size:10px;line-height:12px;margin-top:-3px;}
   /* 開いたシートでは見出しを一番下へ（小さい画面でも並べ方・濃さが先に見えるように） */
   body.compact #panel{display:flex;flex-direction:column;}
@@ -184,7 +192,9 @@
 
   <div class="group era">
     <div class="label" id="country-label"></div>
-    <div class="now"><strong id="era-name">—</strong><span id="era-sub"></span></div>
+    <div class="now"><strong id="era-name">—</strong><span id="era-sub"></span>
+      <div class="kind" id="kind" role="group" hidden><button type="button" id="kind-photo" data-kind="photo"></button><button type="button" id="kind-map" data-kind="map"></button></div>
+    </div>
     <div class="stepper">
       <button class="step" id="prev">◀</button>
       <input type="range" id="era" min="0" max="0" value="0">
@@ -209,33 +219,53 @@
 </div>
 
 <script>
-  // ============ 配信元（調査結果: docs/spec/overseas_sources_research.md） ============
+  // ============ 配信元（調査結果: docs/spec/overseas_sources_research.md の 6・7 章） ============
   const GSI = 'https://cyberjapandata.gsi.go.jp/xyz/';
   const SWISS = (year) => `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/${year}/3857/{z}/{x}/{y}.jpeg`;
   const SWISS_1946 = 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product_1946/default/1946/3857/{z}/{x}/{y}.jpeg';
-  const IGN = (layer, fmt) => `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=PM&FORMAT=${fmt}&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}`;
+  const SWISS_MAP = (year) => `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.zeitreihen/default/${year}1231/3857/{z}/{x}/{y}.png`;
+  const IGN = (layer, fmt, tms = 'PM') => `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=${tms}&FORMAT=${fmt}&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}`;
   // ウィーンは {y}/{x} の順。昔の写真は grau（白黒）、最新は farbe（カラー）だけがある
   const WIEN = (layer, style) => `https://mapsneu.wien.gv.at/wmts/${layer}/${style}/google3857/{z}/{y}/{x}.jpeg`;
+  const VL = (service, layer) => `https://geo.api.vlaanderen.be/${service}/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=&TILEMATRIXSET=GoogleMapsVL&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png`;
+  // WMS は { url, layers } で持つ
+  const WMS = (url) => (layers) => ({ url, layers });
   const RUHR = (year) => ({ url:`https://geodaten.metropoleruhr.de/lubi/lubi_${year}`, layers:`lubi_${year}` });
-  const ES_HIST = (layers) => ({ url:'https://www.ign.es/wms/pnoa-historico', layers });
+  const ES_HIST = WMS('https://www.ign.es/wms/pnoa-historico');
+  const ICGC = WMS('https://geoserveis.icgc.cat/servei/catalunya/orto-territorial/wms');
+  const EUS = WMS('https://www.geo.euskadi.eus/WMS_ORTOARGAZKIAK');
+  const NRW_DOP = WMS('https://www.wms.nrw.de/geobasis/wms_nw_hist_dop');
+  const BY_HIST = WMS('https://geoservices.bayern.de/od/wms/hist/v1/histkarten');
 
   // 言葉で変わるものは [日本語, 英語] の組で持つ。tr() で今の言葉のほうを取り出す
-  const SRC_GSI   = ['<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>',
-                     '<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">GSI Japan</a>'];
-  const SRC_SWISS = '© <a href="https://www.swisstopo.admin.ch/" target="_blank" rel="noopener">swisstopo</a>';
-  const SRC_IGN   = '<a href="https://www.ign.fr/" target="_blank" rel="noopener">IGN</a> (Licence Ouverte 2.0)';
-  const SRC_WIEN  = '<a href="https://data.wien.gv.at/" target="_blank" rel="noopener">Stadt Wien – data.wien.gv.at</a> (CC BY 4.0)';
-  const RUHR_SRC  = '<a href="https://www.rvr.ruhr/" target="_blank" rel="noopener">Regionalverband Ruhr</a> (dl-de/by-2-0)';
-  const NRW_SRC   = '<a href="https://www.bezreg-koeln.nrw.de/geobasis-nrw" target="_blank" rel="noopener">Geobasis NRW</a> (dl-de/zero-2-0)';
-  const SRC_RUHR  = [`${RUHR_SRC}、最新は ${NRW_SRC}`, `${RUHR_SRC}; latest: ${NRW_SRC}`];
-  const SRC_ES    = 'PNOA © <a href="https://www.ign.es/" target="_blank" rel="noopener">IGN España</a> (scne.es, CC BY 4.0)';
+  const a = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+  const SRC_GSI   = [a('https://maps.gsi.go.jp/', '国土地理院'), a('https://maps.gsi.go.jp/', 'GSI Japan')];
+  const SRC_SWISS = '© ' + a('https://www.swisstopo.admin.ch/', 'swisstopo');
+  const SRC_IGN   = a('https://www.ign.fr/', 'IGN') + ' (Licence Ouverte 2.0)';
+  // 古地図の利用条件は、まだ一次資料で確かめられていない（本実装の前に確認する）
+  const SRC_IGN_MAP = a('https://www.ign.fr/', 'IGN') + ' / ' + a('https://www.bnf.fr/', 'BnF') + ' (Cassini)';
+  const SRC_WIEN  = a('https://data.wien.gv.at/', 'Stadt Wien – data.wien.gv.at') + ' (CC BY 4.0)';
+  const RUHR_SRC  = a('https://www.rvr.ruhr/', 'Regionalverband Ruhr') + ' (dl-de/by-2-0)';
+  // NRW の 1951〜1969年の写真は、撮影者・所有者・資料番号まで書くことが条件（dl-de/by-2-0）。1970年以降は dl-de/zero-2-0
+  const NRW_SRC   = a('https://www.bezreg-koeln.nrw.de/geobasis-nrw', 'Geobasis NRW') + ' (dl-de/zero-2-0)';
+  const NRW_OLD   = 'Geobasis NRW, Hansa Luftbild AG, Landesarchiv NRW, RW 0230 (dl-de/by-2-0)';
+  const SRC_NRW   = [`${NRW_SRC}。1951〜1969年は ${NRW_OLD}`, `${NRW_SRC}; 1951–1969: ${NRW_OLD}`];
+  const SRC_RUHR  = [`${RUHR_SRC}、${NRW_SRC}。1951〜1969年は ${NRW_OLD}`, `${RUHR_SRC}; ${NRW_SRC}; 1951–1969: ${NRW_OLD}`];
+  const SRC_ES    = 'PNOA © ' + a('https://www.ign.es/', 'IGN España') + ' (scne.es, CC BY 4.0)';
+  const SRC_ES_MAP = '© ' + a('https://www.ign.es/', 'Instituto Geográfico Nacional de España') + ' (CC BY 4.0)';
+  const SRC_ICGC  = a('https://www.icgc.cat/', 'Institut Cartogràfic i Geològic de Catalunya') + ' (CC BY 4.0)';
+  const SRC_EUS   = a('https://www.geo.euskadi.eus/', 'Eusko Jaurlaritza / Gobierno Vasco. geoEuskadi');
+  const SRC_VL    = a('https://www.vlaanderen.be/digitaal-vlaanderen', 'Digitaal Vlaanderen');
+  const SRC_BER   = a('https://gdi.berlin.de/', 'Geoportal Berlin') + ' (dl-de/zero-2-0)';
+  const SRC_BY    = a('https://www.ldbv.bayern.de/', 'Bayerische Vermessungsverwaltung') + ' (CC BY 4.0)';
 
   const BW = ['白黒', 'Black & white'];
   const COLOR = ['カラー', 'Color'];
+  const PATCHY = ['年ごとに写る範囲が違う', 'Coverage varies by year'];
 
   // 国（地域）の範囲は [緯度, 経度] の多角形の組。四角は box() で多角形にする
   const box = ([[s, w], [n, e]]) => [[s, w], [n, w], [n, e], [s, e]];
-  // スイス・フランスは四角だと隣の国（シュトゥットガルト・トリノ・ブリュッセル・ミラノ等）まで入るので、国境をおおまかになぞる
+  // 四角だと隣の国まで入るところは、境をおおまかになぞる（国境のすぐ近くは粗い）
   const CH_AREA = [[
     [47.81,8.60],[47.70,9.55],[47.25,9.65],[46.95,10.50],[46.60,10.50],[46.20,10.15],[46.00,9.05],[45.82,9.00],
     [46.05,8.45],[45.90,7.00],[46.10,6.85],[46.40,6.93],[46.45,6.60],[46.40,6.35],[46.30,6.24],[46.15,6.20],[46.13,5.95],[46.50,6.10],[47.00,6.75],
@@ -248,26 +278,94 @@
     [42.80,0.70],[43.00,-0.50],[43.35,-1.78],[43.40,-2.20],[46.00,-2.60],[47.50,-5.20],[48.90,-5.20],
     [49.80,-1.95],[50.20,1.50],[51.10,1.80],
   ], box([[41.3,8.5],[43.1,9.6]])];   // 後ろはコルシカ島
+  const NRW_AREA = [[
+    [51.85,6.05],[52.05,6.72],[52.22,7.05],[52.35,7.55],[52.15,8.00],[52.30,8.40],[52.53,8.65],[52.40,9.10],[52.10,9.45],
+    [51.60,9.45],[51.35,9.15],[51.10,8.70],[50.85,8.15],[50.65,7.60],[50.60,7.20],[50.45,6.95],[50.32,6.45],[50.60,6.00],
+    [50.76,6.02],[51.00,5.90],[51.25,6.10],[51.40,6.22],[51.65,6.05],
+  ]];
+  const BY_AREA = [[
+    [50.10,8.98],[50.35,9.75],[50.56,10.45],[50.45,11.30],[50.40,11.90],[50.25,12.25],[49.95,12.45],[49.60,12.45],
+    [49.30,12.75],[49.00,13.15],[48.75,13.50],[48.55,13.84],[48.57,13.43],[48.20,12.75],[47.95,12.95],[47.70,13.05],
+    [47.53,13.00],[47.70,12.50],[47.68,12.18],[47.50,11.60],[47.40,11.00],[47.27,10.20],[47.55,9.97],[47.55,9.68],
+    [47.80,10.05],[48.40,10.10],[48.70,10.40],[49.00,10.25],[49.30,10.10],[49.55,9.90],[49.65,9.40],[49.80,9.10],[49.95,9.05],
+  ]];
+  // ルール地方連合の配信範囲（デュイスブルク〜ハム、ヴェーゼル〜ハーゲン）。デュッセルドルフ・ヴッパータールは入れない（NRW州として扱う）
+  const RUHR_AREA = [[
+    [51.84,6.50],[51.85,6.95],[51.80,7.45],[51.78,7.95],[51.55,8.00],[51.45,7.75],[51.25,7.45],[51.29,7.27],[51.37,7.20],
+    [51.36,6.92],[51.33,6.70],[51.45,6.55],[51.56,6.40],
+  ]];
+  // フランドル（ベルギー北部）。南はおおまかな言語境界、北はオランダとの境
+  const VL_AREA = [[
+    [51.09,2.54],[51.37,3.37],[51.27,3.90],[51.38,4.40],[51.50,4.80],[51.45,5.10],[51.25,5.25],[51.27,5.60],[51.15,5.84],
+    [50.90,5.68],[50.75,5.70],[50.75,5.20],[50.70,4.40],[50.78,3.35],[50.72,2.90],[50.95,2.55],
+  ]];
+  // カタルーニャ。アンドラとフランス（ペルピニャン）を取らない
+  const CAT_AREA = [[
+    [40.52,0.52],[40.80,0.25],[41.30,0.35],[41.70,0.40],[42.10,0.65],[42.50,0.70],[42.85,0.75],[42.70,1.40],[42.43,1.44],
+    [42.43,1.78],[42.50,1.95],[42.45,2.60],[42.45,3.20],[42.00,3.35],[41.60,3.00],[41.20,2.30],[41.00,1.50],[40.60,0.90],
+  ]];
 
-  // 国（地域）の判定は上から順に見る。範囲が重なるもの（スイス・ウィーン・ルール地方・スペイン）をフランスより先に置く
   // 年の名前は日本語だけ持ち、英語は start・end から作る（eraName）
-  const SWISS_YEARS = [1926,1927,...Array.from({length:2025-1929+1}, (_, i) => 1929 + i)];
+  const range = (from, to) => Array.from({ length:to - from + 1 }, (_, i) => from + i);
+  const SWISS_YEARS = [1926, 1927, ...range(1929, 2025)];
+  // NRW の昔の写真（1965年は配信に無い）。ルール地方にも使う
+  const NRW_YEARS = [...range(1951, 1964), ...range(1966, 2024)];
+  const nrwPhoto = (y) => ({ id:'nrw_'+y, name:y+'年', sub:y < 1970 ? ['白黒・NRW州（年ごとに写る範囲が違う）', 'Black & white, NRW (coverage varies by year)'] : ['NRW州（年ごとに写る範囲が違う）', 'NRW (coverage varies by year)'],
+    start:y, wms:NRW_DOP('nw_hist_dop_'+y), maxNativeZoom:19, blankBytes:1000 });
+  const NRW_LATEST = { id:'nrw_current', name:'最新', sub:['NRW州のカラー写真', 'Color, state of NRW'], start:2026,
+    wms:{ url:'https://www.wms.nrw.de/geobasis/wms_nw_dop', layers:'nw_dop_rgb' }, maxNativeZoom:19 };
+  const NRW_MAPS = [
+    { id:'nrw_map_1836', name:'1836〜50年', sub:['プロイセンの最初の地形図（Uraufnahme）', 'First Prussian survey (Uraufnahme)'], start:1836, end:1850,
+      wms:WMS('https://www.wms.nrw.de/geobasis/wms_nw_uraufnahme')('nw_uraufnahme_rw'), maxNativeZoom:19, blankBytes:1000 },
+    { id:'nrw_map_1891', name:'1891〜1912年', sub:['地形図（Neuaufnahme）', 'Topographic map (Neuaufnahme)'], start:1891, end:1912,
+      wms:WMS('https://www.wms.nrw.de/geobasis/wms_nw_neuaufnahme')('nw_neuaufnahme'), maxNativeZoom:19, blankBytes:1000 },
+    { id:'nrw_map_1936', name:'1936〜45年', sub:['地形図 1:25,000', 'Topographic map 1:25,000'], start:1936, end:1945,
+      wms:WMS('https://www.wms.nrw.de/geobasis/wms_nw_tk25_1936-1945')('nw_tk25_1936-1945'), maxNativeZoom:19, blankBytes:1000 },
+  ];
+  // スペイン全国の古地図（カタルーニャ・バスクにも使う）と、マドリードの市街図。
+  // 地形図 1:50,000 の初版（primera-edicion-mtn の MTN50）は、どの場所でも 4〜12% のタイルで配信元が 500 を返し、穴が開くので入れていない
+  const ES_MAPS = [
+    { id:'es_map_minutas', name:'1870〜1950年', sub:['地形図の下書き（Minutas）', 'Survey drafts (Minutas)'], start:1870, end:1950,
+      wms:WMS('https://www.ign.es/wms/minutas-cartograficas')('Minutas'), maxNativeZoom:18, blankBytes:1000 },
+  ];
+  const MADRID_PLAN = (layer, year, ja, en) => ({ id:'es_plan_'+year, name:year+'年', sub:[`マドリード中心部だけ・${ja}`, `Central Madrid only, ${en}`],
+    start:year, wms:WMS('https://www.ign.es/wms/planos')(layer), maxNativeZoom:19, blankBytes:1000 });
+  const MADRID_PLANS = [
+    MADRID_PLAN('mancelliMadrid', 1622, 'マンチェッリの図', 'Mancelli plan'),
+    MADRID_PLAN('texeira', 1656, 'テイシェイラの図', 'Texeira plan'),
+    MADRID_PLAN('chalmadrierMadrid', 1761, 'シャルマンドリエの図', 'Chalmandrier plan'),
+    MADRID_PLAN('espinosaMadrid', 1769, 'エスピノサの図', 'Espinosa plan'),
+    MADRID_PLAN('geometricoMadrid', 1785, 'トマス・ロペスの図', 'Tomás López plan'),
+    MADRID_PLAN('madozMadrid', 1848, 'マドス・コエリョの図', 'Madoz and Coello plan'),
+    MADRID_PLAN('ibanezMadrid', 1875, 'イバニェス・イベロの地籍図', 'Ibáñez Íbero cadastral plan'),
+    MADRID_PLAN('facundoMadrid', 1900, 'ファクンド・カニャダの図', 'Facundo Cañada plan'),
+    MADRID_PLAN('nunezMadrid', 1910, 'ヌニェス・グラネスの図', 'Núñez Granés plan'),
+    MADRID_PLAN('ayuntamientoMadrid', 1929, '市の地籍図', 'City cadastral plan'),
+    { ...MADRID_PLAN('parcelarioMadrid', 1940, '地籍図', 'Cadastral plan'), id:'es_plan_1940', name:'1940〜60年', end:1960 },
+  ];
+  const byStart = (list) => [...list].sort((x, y) => x.start - y.start);
+
+  // 国（地域）の判定は上から順に見る。範囲が重なるもの（小さい地域）を、大きい国より先に置く
+  // photos: 空中写真、maps: 古地図（無い地域は持たない）
   const COUNTRIES = [
     {
       id:'ch', name:['スイス', 'Switzerland'], flag:'ch', area:CH_AREA,
-      eras:[
+      photos:[
         ...SWISS_YEARS.map(y => y === 1946
           // 1946年は時系列の層だと低いズームが白くなるので、全域をつないだ専用の層を使う
           ? { id:'ch_1946', name:'1946年', sub:['白黒・ほぼ全域', 'Black & white, almost nationwide'], start:1946, tile:SWISS_1946, maxNativeZoom:17, blankBytes:1000 }
-          : { id:'ch_'+y, name:y+'年', sub:['年ごとに写る範囲が違う', 'Coverage varies by year'], start:y, tile:SWISS(y), maxNativeZoom:20, blankBytes:1000 }),
+          : { id:'ch_'+y, name:y+'年', sub:PATCHY, start:y, tile:SWISS(y), maxNativeZoom:20, blankBytes:1000 }),
         { id:'ch_current', name:'最新', sub:'SWISSIMAGE', start:2026, tile:SWISS('current'), maxNativeZoom:20, blankBytes:1000 },
       ],
-      src:SRC_SWISS,
+      // 地図の時間旅行（Zeitreihen）: 1844〜2021年の毎年。古い年ほど写る範囲が狭い
+      maps:range(1844, 2021).map(y => ({ id:'ch_map_'+y, name:y+'年', sub:['地形図（年ごとに写る範囲が違う）', 'Topographic map (coverage varies by year)'],
+        start:y, tile:SWISS_MAP(y), maxNativeZoom:18, blankBytes:1000 })),
+      src:SRC_SWISS, mapSrc:SRC_SWISS,
     },
     {
       // 配信はウィーン市内だけ（市外は 404）
       id:'wien', name:['オーストリア・ウィーン', 'Austria · Vienna'], flag:'at', area:[box([[48.118,16.182],[48.323,16.578]])],
-      eras:[
+      photos:[
         { id:'wien_1938', name:'1938年', sub:BW, start:1938, tile:WIEN('lb1938','grau'), maxNativeZoom:19 },
         { id:'wien_1956', name:'1956年', sub:BW, start:1956, tile:WIEN('lb1956','grau'), maxNativeZoom:19 },
         { id:'wien_1976', name:'1976年', sub:BW, start:1976, tile:WIEN('lb1976','grau'), maxNativeZoom:19 },
@@ -277,20 +375,112 @@
       src:SRC_WIEN,
     },
     {
+      // ルール地方連合の写真に、NRW州の写真（同じ年はルール地方連合を使う）を足す。
       // 撮影範囲の外は透明な小さい PNG が返るので、白いタイルと同じく「写真なし」と数える
-      id:'ruhr', name:['ドイツ・ルール地方', 'Germany · Ruhr'], flag:'de', area:[box([[51.167,6.228],[51.861,8.055]])],
-      eras:[
+      id:'ruhr', name:['ドイツ・ルール地方', 'Germany · Ruhr'], flag:'de', area:RUHR_AREA,
+      photos:byStart([
         ...[1926,1934,1952,1963,1969,1990,1998].map(y =>
-          ({ id:'ruhr_'+y, name:y+'年', sub:y < 1990 ? BW : COLOR, start:y, wms:RUHR(y), maxNativeZoom:19, blankBytes:1000 })),
-        { id:'ruhr_current', name:'最新', sub:['NRW州のカラー写真', 'Color, state of NRW'], start:2026,
-          wms:{ url:'https://www.wms.nrw.de/geobasis/wms_nw_dop', layers:'nw_dop_rgb' }, maxNativeZoom:19 },
+          ({ id:'ruhr_'+y, name:y+'年', sub:y < 1990 ? ['白黒・ルール地方連合', 'Black & white, Ruhr Regional Association'] : ['カラー・ルール地方連合', 'Color, Ruhr Regional Association'],
+             start:y, wms:RUHR(y), maxNativeZoom:19, blankBytes:1000 })),
+        ...NRW_YEARS.filter(y => ![1952,1963,1969,1990,1998].includes(y)).map(nrwPhoto),
+        NRW_LATEST,
+      ]),
+      maps:NRW_MAPS,
+      src:SRC_RUHR, mapSrc:NRW_SRC,
+    },
+    {
+      id:'berlin', name:['ドイツ・ベルリン', 'Germany · Berlin'], flag:'de', area:[box([[52.33,13.08],[52.68,13.77]])],
+      photos:[
+        { id:'ber_1953', name:'1953年', sub:['白黒・解像度は粗め', 'Black & white, low resolution'], start:1953,
+          wms:WMS('https://gdi.berlin.de/services/wms/luftbild_1953_22')('c_luftbilder_1953_22_raster'), maxNativeZoom:18, blankBytes:2000 },
+        { id:'ber_current', name:'最新', sub:['2024年・カラー', '2024, color'], start:2026,
+          wms:WMS('https://gdi.berlin.de/services/wms/truedop_2024')('truedop_2024'), maxNativeZoom:19 },
       ],
-      src:SRC_RUHR,
+      src:SRC_BER,
+    },
+    {
+      // バイエルンの昔の空中写真は公開の配信が無い。最新の写真と古地図を出す
+      id:'by', name:['ドイツ・バイエルン', 'Germany · Bavaria'], flag:'de', area:BY_AREA,
+      photos:[
+        { id:'by_current', name:'最新', sub:['カラー', 'Color'], start:2026,
+          wms:WMS('https://geoservices.bayern.de/od/wms/dop/v1/dop20')('by_dop20c'), maxNativeZoom:19 },
+      ],
+      maps:[
+        // Uraufnahme は土地ごとの細かい図で、ズーム16以上でだけ配信される
+        { id:'by_map_1808', name:'1808〜53年', sub:['土地の図（Uraufnahme）', 'Cadastral map (Uraufnahme)'], start:1808, end:1853,
+          wms:BY_HIST('by_uraufnahme'), maxNativeZoom:19, blankBytes:1000, minZoom:16 },
+        { id:'by_map_1812', name:'1812〜67年', sub:['地形図 1:50,000（Topographischer Atlas）', 'Topographic atlas 1:50,000'], start:1812, end:1867,
+          wms:BY_HIST('by_topoatlas'), maxNativeZoom:17, blankBytes:1000 },
+        { id:'by_map_1817', name:'1817〜72年', sub:['手描きの地形図 1:25,000（Positionsblätter）', 'Hand-drawn map 1:25,000 (Positionsblätter)'], start:1817, end:1872,
+          wms:BY_HIST('by_positionsblatt'), maxNativeZoom:18, blankBytes:1000 },
+      ],
+      src:SRC_BY, mapSrc:SRC_BY,
+    },
+    {
+      id:'nrw', name:['ドイツ・NRW州', 'Germany · NRW'], flag:'de', area:NRW_AREA,
+      photos:[...NRW_YEARS.map(nrwPhoto), NRW_LATEST],
+      maps:NRW_MAPS,
+      src:SRC_NRW, mapSrc:NRW_SRC,
+    },
+    {
+      id:'vl', name:['ベルギー・フランドル', 'Belgium · Flanders'], flag:'be', area:VL_AREA,
+      photos:[
+        { id:'vl_1971', name:'1971年', sub:BW, start:1971, tile:VL('OKZ', 'okzpan71vl'), maxNativeZoom:21 },
+        { id:'vl_1979', name:'1979〜90年', sub:COLOR, start:1979, end:1990, tile:VL('OKZ', 'okzrgb79_90vl'), maxNativeZoom:21 },
+        { id:'vl_current', name:'最新', sub:COLOR, start:2026, tile:VL('OMWRGBMRVL', 'omwrgbmrvl'), maxNativeZoom:21 },
+      ],
+      src:SRC_VL,
+    },
+    {
+      id:'fr', name:['フランス', 'France'], flag:'fr', area:FR_AREA,
+      photos:[
+        { id:'fr_1950', name:'1950〜65年', sub:['白黒の空中写真', 'Black & white aerial photos'], start:1950, end:1965, tile:IGN('ORTHOIMAGERY.ORTHOPHOTOS.1950-1965','image/png'), maxNativeZoom:18 },
+        { id:'fr_current', name:'最新', sub:'BD ORTHO', start:2026, tile:IGN('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg'), maxNativeZoom:19 },
+      ],
+      // どちらもズーム6より引いた画面の配信は無い
+      maps:[
+        { id:'fr_map_cassini', name:'1756〜1815年', sub:['カッシーニ図（18世紀の全国図）', 'Cassini map (18th-century survey)'], start:1756, end:1815,
+          tile:IGN('BNF-IGNF_GEOGRAPHICALGRIDSYSTEMS.CASSINI', 'image/png', 'PM_6_14'), minNativeZoom:6, maxNativeZoom:14 },
+        { id:'fr_map_etatmajor', name:'1820〜66年', sub:['参謀本部図（État-major）', 'État-major map'], start:1820, end:1866,
+          tile:IGN('GEOGRAPHICALGRIDSYSTEMS.ETATMAJOR40', 'image/jpeg', 'PM_6_15'), minNativeZoom:6, maxNativeZoom:15 },
+      ],
+      src:SRC_IGN, mapSrc:SRC_IGN_MAP,
+    },
+    {
+      // カタルーニャはスペインより先に判定する（州の写真のほうが年代が厚い）
+      id:'cat', name:['スペイン・カタルーニャ', 'Spain · Catalonia'], flag:'es', area:CAT_AREA,
+      photos:[
+        ...[['1945-1946',1945,1946],['1956-1957',1956,1957],['1970-1977',1970,1977],['1983-1989',1983,1989],['1990',1990],['1994-1997',1994,1997],['1998',1998]]
+          .map(([k, s, e]) => ({ id:'cat_'+s, name:e ? `${s}〜${String(e).slice(2)}年` : s+'年', sub:BW, start:s, end:e,
+            wms:ICGC('ortofoto_blanc_i_negre_'+k), maxNativeZoom:19, blankBytes:1000 })),
+        { id:'cat_1993', name:'1993年', sub:['カラー・解像度は粗め', 'Color, low resolution'], start:1993, wms:ICGC('ortofoto_color_1993'), maxNativeZoom:16, blankBytes:1000 },
+        ...[['2000-2003',2000,2003],['2004-2005',2004,2005],['2006-2007',2006,2007],...range(2008, 2025).map(y => [String(y), y])]
+          .map(([k, s, e]) => ({ id:'cat_'+s, name:e ? `${s}〜${String(e).slice(2)}年` : s+'年', sub:COLOR, start:s, end:e,
+            wms:ICGC('ortofoto_color_'+k), maxNativeZoom:19, blankBytes:1000 })),
+        { id:'cat_current', name:'最新', sub:COLOR, start:2026, wms:ICGC('ortofoto_color_vigent'), maxNativeZoom:19 },
+      ].sort((x, y) => x.start - y.start),
+      maps:ES_MAPS,
+      src:SRC_ICGC, mapSrc:SRC_ES_MAP,
+    },
+    {
+      // バスク州はスペインより先に判定する
+      id:'eus', name:['スペイン・バスク州', 'Spain · Basque Country'], flag:'es', area:[box([[42.47,-3.45],[43.46,-1.73]])],
+      photos:[
+        { id:'eus_1945', name:'1945〜46年', sub:['白黒・米軍の撮影', 'Black & white, US Army survey'], start:1945, end:1946, wms:EUS('ORTO_1945_46_AMERICANO'), maxNativeZoom:19, blankBytes:1000 },
+        { id:'eus_1956', name:'1956〜57年', sub:['白黒・米軍の撮影', 'Black & white, US Army survey'], start:1956, end:1957, wms:EUS('ORTO_1956_57_AMERICANO'), maxNativeZoom:19, blankBytes:1000 },
+        { id:'eus_1977', name:'1977〜78年', sub:BW, start:1977, end:1978, wms:EUS('ORTO_INTERMINISTERIAL_1977_78'), maxNativeZoom:19, blankBytes:1000 },
+        { id:'eus_1984', name:'1984〜85年', sub:BW, start:1984, end:1985, wms:EUS('ORTO_1984_85'), maxNativeZoom:19, blankBytes:1000 },
+        ...[1989,1991,1995,2001,2002,2004,2005,...range(2006, 2025)].map(y =>
+          ({ id:'eus_'+y, name:y+'年', sub:y < 2001 ? BW : COLOR, start:y, wms:EUS('ORTO_'+y), maxNativeZoom:19, blankBytes:1000 })),
+        { id:'eus_current', name:'最新', sub:COLOR, start:2026, wms:EUS('ORTO_EGUNERATUENA_MAS_ACTUALIZADA'), maxNativeZoom:19 },
+      ],
+      maps:ES_MAPS,
+      src:SRC_EUS, mapSrc:SRC_ES_MAP,
     },
     {
       // 枠2つで本土・バレアレスを覆う（北側はピレネーより西だけにして、フランス南部を取らない）
       id:'es', name:['スペイン', 'Spain'], flag:'es', area:[box([[35.9,-9.4],[42.3,4.4]]), box([[42.3,-9.4],[43.8,-1.8]])],
-      eras:[
+      photos:[
         { id:'es_1956', name:'1956〜57年', sub:['白黒・米軍の撮影・全国', 'Black & white, US Army survey, nationwide'], start:1956, end:1957, wms:ES_HIST('AMS_1956-1957'), maxNativeZoom:18, blankBytes:1000 },
         { id:'es_1973', name:'1973〜86年', sub:['一部の地域だけ', 'Some areas only'], start:1973, end:1986, wms:ES_HIST('Interministerial_1973-1986'), maxNativeZoom:18, blankBytes:1000 },
         { id:'es_1981', name:'1981〜86年', sub:['一部の地域だけ', 'Some areas only'], start:1981, end:1986, wms:ES_HIST('Nacional_1981-1986'), maxNativeZoom:18, blankBytes:1000 },
@@ -298,19 +488,12 @@
         { id:'es_current', name:'最新', sub:'PNOA', start:2026,
           wms:{ url:'https://www.ign.es/wms-inspire/pnoa-ma', layers:'OI.OrthoimageCoverage' }, maxNativeZoom:19 },
       ],
-      src:SRC_ES,
-    },
-    {
-      id:'fr', name:['フランス', 'France'], flag:'fr', area:FR_AREA,
-      eras:[
-        { id:'fr_1950', name:'1950〜65年', sub:['白黒の空中写真', 'Black & white aerial photos'], start:1950, end:1965, tile:IGN('ORTHOIMAGERY.ORTHOPHOTOS.1950-1965','image/png'), maxNativeZoom:18 },
-        { id:'fr_current', name:'最新', sub:'BD ORTHO', start:2026, tile:IGN('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg'), maxNativeZoom:19 },
-      ],
-      src:SRC_IGN,
+      maps:byStart([...ES_MAPS, ...MADRID_PLANS]),
+      src:SRC_ES, mapSrc:SRC_ES_MAP,
     },
     {
       id:'jp', name:['日本', 'Japan'], flag:'jp', area:[box([[20,122],[46,154]])],
-      eras:[
+      photos:[
         { id:'ort_1928',   name:'1928年頃',     sub:['大阪のみ', 'Osaka only'],             start:1928, circa:true, tile:GSI+'ort_1928/{z}/{x}/{y}.png',   maxNativeZoom:18 },
         { id:'ort_riku10', name:'1936〜42年',   sub:['東京・大阪', 'Tokyo and Osaka'],       start:1936, end:1942, tile:GSI+'ort_riku10/{z}/{x}/{y}.png', maxNativeZoom:17 },
         { id:'ort_USA10',  name:'1945〜50年',   sub:['主要都市', 'Major cities'],            start:1945, end:1950, tile:GSI+'ort_USA10/{z}/{x}/{y}.png',  maxNativeZoom:17 },
@@ -329,30 +512,36 @@
   const TEXT = {
     ja:{
       title:'ImmersaMap ｜ 海外の空中写真（試作）', h1:'海外の空中写真', badge:'試作',
-      lead:'日本とヨーロッパの昔の空中写真を、同じ画面で見比べる試作です。',
-      place:'場所', change:'場所を変える', outside:'対象外の場所', photosOf:(n) => `${n} の写真`, photos:'写真',
+      lead:'日本とヨーロッパの昔の空中写真と古地図を、同じ画面で見比べる試作です。',
+      place:'場所', change:'場所を変える', outside:'対象外の場所', photosOf:(n) => `${n} の写真`, mapsOf:(n) => `${n} の古地図`, photos:'写真',
+      kindPhoto:'空中写真', kindMap:'古地図', kindAria:'空中写真と古地図を切り替える',
       opacity:'濃さ', opacityAria:'写真の濃さ', prev:'ひとつ前の年', next:'ひとつ後の年', era:'年',
       chips:'年を選ぶ', src:'出典', base:'背景地図', sheetOpen:'詳しい操作を開く', sheetClose:'詳しい操作を閉じる',
       lang:'English', langAria:'Switch to English', langCode:'en',
-      areas:'日本・スイス・フランス・ウィーン・ルール地方・スペイン',
+      areas:'日本・スイス・フランス・スペイン・ベルギー（フランドル）・ドイツ（NRW州・ベルリン・バイエルン）・ウィーン',
       msg:{
         outside:(a) => `この試作の対象は${a}だけです。「場所を変える」から移動してください。`,
-        failed:'写真を読み込めませんでした。配信元が混んでいるか、止まっている可能性があります。',
+        failed:'読み込めませんでした。配信元が混んでいるか、止まっている可能性があります。',
         blank:'この場所には、この年の写真がありません。別の年を選ぶか、ズームを変えてみてください。',
+        blankMap:'この場所には、この年の地図がありません。別の年を選ぶか、ズームを変えてみてください。',
+        zoomIn:(z) => `この地図は細かいので、ズーム${z}以上に寄ると出ます（＋で寄る）。`,
       },
     },
     en:{
       title:'ImmersaMap | Historical aerial photos abroad (prototype)', h1:'Historical aerial photos', badge:'Prototype',
-      lead:'A prototype for comparing old aerial photos of Japan and Europe on one map.',
-      place:'Place', change:'Change place', outside:'Outside coverage', photosOf:(n) => `Photos of ${n}`, photos:'Photos',
+      lead:'A prototype for comparing old aerial photos and maps of Japan and Europe on one map.',
+      place:'Place', change:'Change place', outside:'Outside coverage', photosOf:(n) => `Photos of ${n}`, mapsOf:(n) => `Old maps of ${n}`, photos:'Photos',
+      kindPhoto:'Photos', kindMap:'Old maps', kindAria:'Switch between aerial photos and old maps',
       opacity:'Opacity', opacityAria:'Photo opacity', prev:'Previous year', next:'Next year', era:'Year',
       chips:'Choose a year', src:'Source', base:'Base map', sheetOpen:'Show more', sheetClose:'Show less',
       lang:'日本語', langAria:'日本語に切り替える', langCode:'ja',
-      areas:'Japan, Switzerland, France, Vienna, the Ruhr and Spain',
+      areas:'Japan, Switzerland, France, Spain, Flanders (Belgium), NRW, Berlin and Bavaria (Germany), and Vienna',
       msg:{
         outside:(a) => `This prototype covers only ${a}. Use "Change place" to move.`,
-        failed:'Could not load the photos. The provider may be busy or down.',
+        failed:'Could not load the images. The provider may be busy or down.',
         blank:'There is no photo for this year here. Try another year or zoom level.',
+        blankMap:'There is no map for this year here. Try another year or zoom level.',
+        zoomIn:(z) => `This detailed map appears when you zoom in to level ${z} or closer (press +).`,
       },
     },
   };
@@ -381,6 +570,7 @@
     fr:'<svg class="flag" viewBox="0 0 3 2"><rect width="1" height="2" fill="#002654"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ce1126"/></svg>',
     at:'<svg class="flag" viewBox="0 0 3 3"><rect width="3" height="3" fill="#c8102e"/><rect y="1" width="3" height="1" fill="#fff"/></svg>',
     de:'<svg class="flag" viewBox="0 0 5 3"><rect width="5" height="1" fill="#000"/><rect y="1" width="5" height="1" fill="#dd0000"/><rect y="2" width="5" height="1" fill="#ffce00"/></svg>',
+    be:'<svg class="flag sq" viewBox="0 0 15 13" style="width:18px"><rect width="5" height="13" fill="#000"/><rect x="5" width="5" height="13" fill="#fdda24"/><rect x="10" width="5" height="13" fill="#ef3340"/></svg>',
     es:'<svg class="flag" viewBox="0 0 3 2"><rect width="3" height="2" fill="#aa151b"/><rect y=".5" width="3" height="1" fill="#f1bf00"/></svg>',
   };
   const GLOBE = '<svg class="flag sq" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#666" stroke-width="1.4"/><path d="M1 8h14M8 1c-3 3.5-3 10.5 0 14M8 1c3 3.5 3 10.5 0 14" fill="none" stroke="#666" stroke-width="1.2"/></svg>';
@@ -391,8 +581,11 @@
     { flag:'ch', name:['スイス', 'Switzerland'],     places:[{ name:['チューリッヒ', 'Zurich'], center:[47.3769,8.5417] }] },
     { flag:'fr', name:['フランス', 'France'],        places:[{ name:['パリ', 'Paris'],         center:[48.8584,2.2945] }] },
     { flag:'at', name:['オーストリア', 'Austria'],   places:[{ name:['ウィーン', 'Vienna'],     center:[48.2085,16.3731] }] },
-    { flag:'de', name:['ドイツ', 'Germany'],         places:[{ name:['エッセン', 'Essen'],      center:[51.4556,7.0116] }] },
-    { flag:'es', name:['スペイン', 'Spain'],         places:[{ name:['マドリード', 'Madrid'],   center:[40.4169,-3.7035] }, { name:['バルセロナ', 'Barcelona'], center:[41.3870,2.1700] }] },
+    { flag:'de', name:['ドイツ', 'Germany'],         places:[{ name:['エッセン', 'Essen'],      center:[51.4556,7.0116] }, { name:['ケルン', 'Cologne'], center:[50.9413,6.9583] },
+                                                               { name:['ベルリン', 'Berlin'],     center:[52.5163,13.3777] }, { name:['ミュンヘン', 'Munich'], center:[48.1374,11.5755] }] },
+    { flag:'be', name:['ベルギー', 'Belgium'],       places:[{ name:['アントワープ', 'Antwerp'], center:[51.2194,4.4025] }, { name:['ヘント', 'Ghent'], center:[51.0543,3.7174] }] },
+    { flag:'es', name:['スペイン', 'Spain'],         places:[{ name:['マドリード', 'Madrid'],   center:[40.4169,-3.7035] }, { name:['バルセロナ', 'Barcelona'], center:[41.3870,2.1700] },
+                                                               { name:['ビルバオ', 'Bilbao'],     center:[43.2630,-2.9350] }] },
   ];
   const PLACES = PLACE_GROUPS.flatMap(g => g.places.map(p => ({ ...p, zoom:15 })));
 
@@ -425,7 +618,8 @@
 
   // ============ 状態 ============
   const state = {
-    country:null, eras:[], index:0, wantYear:null, opacity:80, msg:null,
+    // kind: 'photo'（空中写真）か 'map'（古地図）。選んだ年は種類ごとに覚える
+    country:null, kind:'photo', eras:[], index:0, want:{ photo:null, map:null }, opacity:80, msg:null,
     overlay:null, retiring:[], tiles:{ok:0, err:0, blank:0},
   };
   const $ = (id) => document.getElementById(id);
@@ -463,7 +657,11 @@
   // スライダーの中身（年の名前）を、今の国と言葉で作る
   function renderEras() {
     const n = state.eras.length;
-    $('country-label').textContent = state.country ? t().photosOf(tr(state.country.name)) : t().photos;
+    const k = kindNow();
+    $('country-label').textContent = !state.country ? t().photos : (k === 'map' ? t().mapsOf : t().photosOf)(tr(state.country.name));
+    // 古地図のある地域だけ、空中写真と古地図の切り替えを出す
+    $('kind').hidden = !state.country?.maps;
+    document.querySelectorAll('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === k)));
     $('era').max = Math.max(n - 1, 0);
     $('era').disabled = n === 0;
     $('ticks').innerHTML = state.eras.map((_, i) => `<i style="left:${n > 1 ? i / (n - 1) * 100 : 0}%"></i>`).join('');
@@ -492,9 +690,14 @@
 
   // 国が変わったら、その国にある年だけでスライダーを作り直す。
   // 選び直す基準は「利用者が最後に選んだ年」（直前の国で自動で選ばれた年ではない。行き来しても年がずれないように）
+  // 古地図の無い地域では、古地図を選んでいても空中写真を出す
+  function kindNow() {
+    return state.kind === 'map' && state.country?.maps ? 'map' : 'photo';
+  }
   function rebuild() {
-    const want = state.wantYear;
-    state.eras = state.country ? state.country.eras : [];
+    const k = kindNow();
+    const want = state.want[k];
+    state.eras = !state.country ? [] : k === 'map' ? state.country.maps : state.country.photos;
     renderEras();
     let idx = state.eras.length - 1;
     if (want !== null) {
@@ -509,14 +712,15 @@
   }
 
   // お知らせは種類だけ覚えておき、言葉を変えたら書き直す
-  function setMessage(key) {
+  function setMessage(key, arg) {
     state.msg = key;
+    state.msgArg = arg;
     renderMessage();
   }
   function renderMessage() {
     const m = state.msg && t().msg[state.msg];
     $('msg').hidden = !m;
-    $('msg').textContent = !m ? '' : typeof m === 'function' ? m(t().areas) : m;
+    $('msg').textContent = !m ? '' : typeof m === 'function' ? m(state.msgArg ?? t().areas) : m;
   }
 
   // 年の表示だけを変える（スライダーを動かしている最中は、写真は読みに行かない）
@@ -546,7 +750,8 @@
   // 利用者が年を選んだ（スライダー・◀▶・チップ）。国を移ったときの基準として覚える
   function choose(i) {
     state.index = Math.min(Math.max(i, 0), state.eras.length - 1);
-    state.wantYear = state.eras[state.index]?.start ?? state.wantYear;
+    const k = kindNow();
+    state.want[k] = state.eras[state.index]?.start ?? state.want[k];
   }
   function select(i) {
     choose(i);
@@ -567,11 +772,11 @@
       return;
     }
     const e = state.eras[state.index];
-    $('src-layer').innerHTML = tr(state.country.src);
+    $('src-layer').innerHTML = tr(srcNow());
     setMessage(null);
 
     const opts = {
-      maxZoom:19, maxNativeZoom:Math.min(e.maxNativeZoom, 19),
+      maxZoom:19, maxNativeZoom:Math.min(e.maxNativeZoom, 19), minNativeZoom:e.minNativeZoom ?? 0,
       bounds:boundsOf(state.country), opacity:overlayOpacity(),
     };
     if (e.blankBytes) opts.blankBytes = e.blankBytes;
@@ -597,11 +802,17 @@
       if (state.overlay !== layer) return;
       dropRetiring();
       const c = state.tiles;
-      if (c.err > 0 && c.ok === 0) setMessage('failed');
-      else if (c.ok > 0 && c.blank === c.ok) setMessage('blank');
+      // 細かい地図は、引いた画面では配信が空。「無い」ではなく「寄ると出る」と伝える
+      if (e.minZoom && map.getZoom() < e.minZoom) setMessage('zoomIn', e.minZoom);
+      else if (c.err > 0 && c.ok === 0) setMessage('failed');
+      else if (c.ok > 0 && c.blank === c.ok) setMessage(kindNow() === 'map' ? 'blankMap' : 'blank');
     });
     state.overlay = layer;
     layer.addTo(map);
+  }
+
+  function srcNow() {
+    return kindNow() === 'map' ? state.country.mapSrc : state.country.src;
   }
 
   function onMove() {
@@ -652,6 +863,12 @@
   // 地図は触れた時点で click を止めることがあるので、触れた瞬間（pointerdown）で外側を判定する
   document.addEventListener('pointerdown', (ev) => { if (!$('where-wrap').contains(ev.target)) setPlaceList(false); }, true);
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') setPlaceList(false); });
+
+  document.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => {
+    if (state.kind === b.dataset.kind) return;
+    state.kind = b.dataset.kind;
+    rebuild();
+  }));
 
   // 指で動かしている間は年の表示だけ変え、離したとき（change）か、止まって 250ms 後に写真を読む
   $('era').addEventListener('input', (ev) => {
@@ -711,7 +928,10 @@
     renderEras();
     updateLabel();
     renderMessage();
-    if (state.country) $('src-layer').innerHTML = tr(state.country.src);
+    if (state.country) $('src-layer').innerHTML = tr(srcNow());
+    $('kind').setAttribute('aria-label', x.kindAria);
+    $('kind-photo').textContent = x.kindPhoto;
+    $('kind-map').textContent = x.kindMap;
   }
   $('lang').addEventListener('click', () => {
     lang = lang === 'ja' ? 'en' : 'ja';
@@ -731,7 +951,7 @@
   // 自動テスト用に、地図と今の状態を読めるようにしておく
   window.__overseasMap = map;
   window.__overseas = () => ({
-    lang, country:state.country?.id ?? null,
+    lang, kind:kindNow(), hasMaps:!!state.country?.maps, country:state.country?.id ?? null,
     stops:state.eras.map(e => e.id), index:state.index,
     layer:state.eras[state.index]?.id ?? null, tiles:{ ...state.tiles },
     loadedLayers:(state.overlay ? 1 : 0) + state.retiring.length,
