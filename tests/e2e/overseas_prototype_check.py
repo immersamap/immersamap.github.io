@@ -38,7 +38,9 @@ def st(page):
 
 
 def go(page, place):
-    page.get_by_role("button", name=place, exact=True).click()
+    """「場所を変える」を開いて、一覧から都市を選ぶ。"""
+    page.click("#where")
+    page.locator("#place-list").get_by_role("menuitem", name=place, exact=True).click()
     page.wait_for_timeout(500)
 
 
@@ -238,12 +240,6 @@ with sync_playwright() as p:
     check("N9 指で動かしている間は途中の年を読まない（止まった年だけ読む）",
           asked == {"1947"} and st(page)["layer"] == "ch_1947", f"{sorted(asked)} {st(page)['layer']}")
 
-    page.dispatch_event("#compare", "pointerdown")
-    op = page.evaluate("() => getComputedStyle(document.querySelector('.leaflet-tile-pane .leaflet-layer:last-child')).opacity")
-    check("N9 「今と比べる」を押している間は写真を消す", float(op) == 0 and st(page)["comparing"], op)
-    page.dispatch_event("#compare", "pointerup")
-    op = page.evaluate("() => getComputedStyle(document.querySelector('.leaflet-tile-pane .leaflet-layer:last-child')).opacity")
-    check("N9 離すと元の濃さ（80%）に戻る", abs(float(op) - 0.8) < 0.01, op)
     check("N9 スクリプトエラーが無い", not page.errors, "; ".join(page.errors))
     page.close()
 
@@ -256,7 +252,7 @@ with sync_playwright() as p:
     check("E1 対象外の国ではお知らせを出す",
           page.is_visible("#msg") and "日本・スイス・フランス" in page.inner_text("#msg"))
     check("E1 対象外の国ではスライダーを止める", page.is_disabled("#era"))
-    check("E1 対象外の国では「今と比べる」を押せない", page.is_disabled("#compare"))
+    check("E1 対象外では場所のボタンに「対象外の場所」と出す", "対象外" in page.inner_text("#where"))
     shot(page, "out_of_area_newyork")
     go(page, "パリ")
     check("E1 対象の国へ戻ると写真が出る", st(page)["layer"] == "fr_current", str(st(page)))
@@ -301,27 +297,44 @@ with sync_playwright() as p:
     box = page.locator("#panel").bounding_box()
     check("E4 スマホで横にはみ出さない", sw <= 390, str(sw))
     check("E4 操作板が画面に収まる", box["x"] >= 0 and box["x"] + box["width"] <= 390 and box["y"] + box["height"] <= 844, str(box))
-    check("M1 畳んだシートは低く、地図が画面の7割以上見える", box["y"] >= 844 * 0.7, str(box))
-    small = [sel for sel in ["#prev", "#next", "#compare", "#sheet-toggle"]
+    check("M1 畳んだシートは低く、地図が画面の8割以上見える", box["y"] >= 844 * 0.8, str(box))
+    small = [sel for sel in ["#prev", "#next"]
              if min(page.locator(sel).bounding_box()["width"], page.locator(sel).bounding_box()["height"]) < 44]
-    check("M2 ◀▶・今と比べる・開くボタンは 44px 以上", not small, str(small))
-    pl = page.locator("#places").bounding_box()
-    heights = {round(b["y"]) for b in [page.locator("#places button").nth(i).bounding_box() for i in range(7)]}
-    check("M3 場所は画面の上に1行で並ぶ（7か所）", pl["y"] < 60 and len(heights) == 1, f"{pl} {heights}")
+    check("M2 ◀▶ は 44px 以上", not small, str(small))
+    wb = page.locator("#where").bounding_box()
     zoom = page.locator(".leaflet-control-zoom").bounding_box()
-    check("M3 場所の行とズームのボタンが重ならない（左右に並ぶ）", zoom["x"] >= pl["x"] + pl["width"], f"{zoom} {pl}")
+    check("M3 場所のボタンは左上で、国旗と国名を出す",
+          wb["y"] < 60 and wb["height"] >= 40 and page.locator("#where svg.flag").count() == 1 and "日本" in page.inner_text("#where"),
+          f"{wb} {page.inner_text('#where')}")
+    check("M3 場所のボタンとズームのボタンが重ならない", zoom["x"] >= wb["x"] + wb["width"], f"{zoom} {wb}")
+    ob = page.locator(".opacity-control").bounding_box()
+    check("M5 濃さの縦スライダーが地図の右側にあり、シートやズームと重ならない",
+          ob["x"] + ob["width"] <= 390 and ob["y"] >= zoom["y"] + zoom["height"] and ob["y"] + ob["height"] <= box["y"], f"{ob} {zoom} {box}")
+    oc = page.locator("#opacity").bounding_box()
+    check("M5 濃さのスライダーは指の効く幅が 40px 以上", oc["width"] >= 40, str(oc))
+    ends = page.locator(".ends").bounding_box()
+    check("M6 畳んでいても両端の年が見える", page.is_visible("#end-old") and ends["y"] + ends["height"] <= 844, str(ends))
     shot(page, "sp_tokyo")
-    page.locator("#places button", has_text="チューリッヒ").click()
+    page.click("#where")
+    check("M3 一覧は国ごと（国旗付きで6か国）", page.locator("#place-list .pl-country svg.flag").count() == 6)
+    check("M3 一覧で今いる国（日本）に印が付く",
+          page.locator("#place-list .pl-group.here").count() == 1 and "日本" in page.inner_text("#place-list .pl-group.here"))
+    lb = page.locator("#place-list").bounding_box()
+    check("M3 一覧が画面内に収まる", lb["x"] >= 0 and lb["x"] + lb["width"] <= 390 and lb["y"] + lb["height"] <= 844, str(lb))
+    shot(page, "sp_place_list")
+    page.locator("#place-list").get_by_role("menuitem", name="チューリッヒ").click()
     page.wait_for_timeout(500)
-    check("M3 押した場所が塗られる", page.locator("#places button", has_text="チューリッヒ").get_attribute("aria-pressed") == "true")
-    check("M4 畳んでいる間は年のチップ・並べ方・濃さを隠す", page.is_hidden("#chips") and page.is_hidden("#opacity"))
+    check("M3 都市を選ぶと一覧が閉じ、ボタンがスイスに変わる",
+          page.is_hidden("#place-list") and "スイス" in page.inner_text("#where") and st(page)["country"] == "ch", page.inner_text("#where"))
+    page.click("#where")
+    page.mouse.click(200, lb["y"] + lb["height"] + 30)   # 一覧のすぐ下の地図
+    check("M3 一覧の外を触ると閉じる", page.is_hidden("#place-list"))
+    check("M4 畳んでいる間は年のチップ・並べ方を隠す", page.is_hidden("#chips") and page.is_hidden("#mode-b"))
     page.click("#sheet-toggle")
-    check("M4 開くと年のチップ・並べ方・濃さが出る", page.is_visible("#chips") and page.is_visible("#mode-b"))
+    check("M4 開くと年のチップ・並べ方が出る", page.is_visible("#chips") and page.is_visible("#mode-b"))
     page.locator("#chips button", has_text="1946年").tap()
     wait_tiles(page)
     check("M4 年のチップを指で叩いて 1946年を選べる", st(page)["layer"] == "ch_1946", st(page)["layer"])
-    cbox = page.locator("#compare").bounding_box()
-    check("M4 開いている間も「今と比べる」が画面内にある", cbox and cbox["y"] >= 0 and cbox["y"] + cbox["height"] <= 844, str(cbox))
     shot(page, "sp_zurich_open")
     page.close()
 
@@ -331,9 +344,8 @@ with sync_playwright() as p:
     mb = page.locator("#mode-b").bounding_box()
     check("E5 小さい画面で開くと、送らなくても並べ方の切替が見える", mb and mb["y"] + mb["height"] <= 640, str(mb))
     shot(page, "sp_small_open")
-    page.locator("#opacity").scroll_into_view_if_needed()
-    ob = page.locator("#opacity").bounding_box()
-    check("E5 小さい画面でも濃さのスライダーまで送れる", ob and 0 <= ob["y"] and ob["y"] + ob["height"] <= 640, str(ob))
+    ob = page.locator(".opacity-control").bounding_box()
+    check("E5 小さい画面でも濃さのスライダーが画面内", ob and 0 <= ob["y"] and ob["y"] + ob["height"] <= 640, str(ob))
     check("E5 横にはみ出さない", page.evaluate("document.documentElement.scrollWidth") <= 360)
     page.close()
 
@@ -341,6 +353,7 @@ with sync_playwright() as p:
     page = new_page(browser, viewport={"width": 844, "height": 390}, is_mobile=True, has_touch=True)
     box = page.locator("#panel").bounding_box()
     check("E6 横画面では操作板が左の幅300pxに収まる", box["x"] == 0 and box["width"] <= 300 and box["height"] <= 390, str(box))
+    check("E6 横画面の帯は中身の高さだけ（下の地図を覆わない）", box["height"] < 300, str(box))
     era = page.locator("#era").bounding_box()
     check("E6 横画面でも年のスライダーが画面内", era["y"] + era["height"] <= 390, str(era))
     check("E6 横にはみ出さない", page.evaluate("document.documentElement.scrollWidth") <= 844)
