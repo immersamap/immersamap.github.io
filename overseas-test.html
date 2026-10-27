@@ -55,13 +55,40 @@
   .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
   .chips button.chip{flex:none;}
   .msg{margin-top:8px;padding:8px 10px;border-radius:8px;font-size:12px;background:var(--warn-bg);color:var(--warn);}
-  button#compare{
-    width:100%;margin-top:10px;padding:9px 8px;border:1px solid var(--accent);border-radius:8px;
-    background:var(--bg);color:var(--text);font:inherit;font-size:13px;cursor:pointer;
-    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;
+  /* 場所: 今いる国の旗と名前のボタン。押すと国ごとの一覧が開く */
+  #where-wrap{position:relative;}
+  button#where{
+    display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 12px;
+    border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);
+    font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:left;
   }
-  button#compare[aria-pressed="true"]{background:var(--accent);color:#fff;}
-  button#compare:disabled{border-color:var(--border);color:var(--off);cursor:default;}
+  button#where .caret{margin-left:auto;color:var(--muted);font-size:11px;font-weight:400;}
+  .flag{flex:none;width:24px;height:16px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.15);display:block;}
+  .flag.sq{width:16px;}
+  #place-list{
+    position:absolute;top:calc(100% + 6px);left:0;z-index:1100;width:320px;max-width:calc(100vw - 16px);
+    max-height:min(60vh,420px);overflow:auto;background:var(--bg);border:1px solid var(--border);
+    border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px 0;
+  }
+  body:not(.compact) #place-list{position:static;width:auto;max-height:none;margin-top:6px;box-shadow:none;}
+  .pl-group{display:flex;align-items:center;gap:8px;padding:5px 12px;}
+  .pl-group + .pl-group{border-top:1px solid var(--border);}
+  .pl-group.here{background:var(--bg-alt);box-shadow:inset 3px 0 0 var(--accent);}
+  .pl-group.here .pl-country{color:var(--text);font-weight:600;}
+  .pl-country{display:flex;align-items:center;gap:8px;flex:none;width:104px;font-size:12px;color:var(--muted);}
+  .pl-cities{display:flex;flex-wrap:wrap;gap:6px;}
+  .pl-cities button.chip{flex:none;min-height:36px;}
+  /* 写真の濃さ: 公開中の地図探索と同じ、地図の右側の縦スライダー */
+  .opacity-control{
+    position:absolute;right:10px;top:96px;z-index:900;width:40px;padding:10px 0;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:rgba(255,255,255,.96);border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,.18);
+  }
+  .opacity-control .eye{font-size:12px;color:var(--muted);}
+  .opacity-slider-wrap{width:40px;height:140px;display:flex;align-items:center;justify-content:center;}
+  /* 回したスライダーの高さが、指の効く横幅になる。枠と同じ 40px にする */
+  .opacity-control input{width:140px;height:40px;flex-shrink:0;transform:rotate(-90deg);transform-origin:center;margin:0;}
+  .opacity-value{font-size:10px;color:var(--muted);min-width:28px;text-align:center;}
   .src{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.5;}
   .src a{color:inherit;}
   #sheet-toggle{display:none;}
@@ -69,7 +96,7 @@
   /* ===== スマホ（縦・横）: 下（横画面は左）に寄せた畳めるシート ===== */
   body.compact #panel{padding:0 16px calc(12px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;}
   body.compact #sheet-toggle{
-    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:28px;
     border:0;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;
   }
   body.compact #sheet-toggle::before{content:"";width:36px;height:4px;border-radius:2px;background:var(--off);}
@@ -79,22 +106,24 @@
   body.compact button.step{width:44px;height:44px;}
   body.compact .ticks{margin:0 60px;}
   body.compact .ends{margin:0 52px;}
-  body.compact #compare{position:absolute;right:12px;top:-56px;width:auto;height:44px;padding:0 16px;margin:0;
-    border-radius:22px;box-shadow:0 4px 12px rgba(0,0,0,.18);}
-  body.compact #panel.open #compare{position:static;width:100%;height:auto;padding:9px 8px;margin-top:10px;border-radius:8px;box-shadow:none;}
+  /* 畳んだシートは「年・スライダー・出典」だけ（国名は上の場所ボタンに出ている） */
+  body.compact #country-label{display:none;}
+  body.compact .now{margin-bottom:2px;}
+  body.compact .now strong{font-size:18px;}
+  body.compact #panel:not(.open) .ends{font-size:10px;line-height:12px;margin-top:-3px;}
   /* 開いたシートでは見出しを一番下へ（小さい画面でも並べ方・濃さが先に見えるように） */
   body.compact #panel{display:flex;flex-direction:column;}
   body.compact .intro{order:8;margin-top:14px;}
   body.compact .src{order:9;}
-  body.compact .src{margin-top:8px;padding-top:6px;}
-  /* 場所は画面の上の1行（横に流す） */
-  body.compact #places-group{
-    position:fixed;top:8px;left:0;right:64px;z-index:1001;margin:0;padding:0 8px;
-  }
+  body.compact .src{margin-top:6px;padding-top:4px;font-size:10px;line-height:1.4;}
+  body.compact .src br{display:none;}
+  /* 場所のボタンは画面の左上に浮かせる */
+  body.compact #places-group{position:fixed;top:8px;left:8px;z-index:1001;margin:0;}
   body.compact #places-group .label{display:none;}
-  body.compact #places{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
-  body.compact #places button.chip{flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15);background:var(--bg);}
-  body.compact #places button.chip[aria-pressed="true"]{background:var(--accent);}
+  body.compact button#where{width:auto;box-shadow:0 2px 6px rgba(0,0,0,.15);border-color:transparent;}
+  body.compact .opacity-control{top:116px;}
+  body.compact .opacity-slider-wrap{height:120px;}
+  body.compact .opacity-control input{width:120px;}
   body.compact .leaflet-touch .leaflet-bar a{width:44px;height:44px;line-height:44px;}
 
   @media (max-width:600px){
@@ -102,14 +131,25 @@
     #panel.open{overflow:auto;}
   }
   @media (max-height:500px) and (orientation:landscape){
-    #panel{top:0;left:0;bottom:0;width:300px;max-height:none;border-radius:0 !important;}
-    body.compact #compare{position:static;width:100%;margin-top:8px;}
-    body.compact #places-group{left:300px;}
+    /* 帯の高さは中身に合わせる（下の空白のぶん地図を広く見せる） */
+    #panel{top:0;left:0;bottom:auto;width:300px;max-height:100vh;border-radius:0 0 16px 0 !important;}
+    body.compact #places-group{left:308px;}
+    body.compact .opacity-control{top:auto;bottom:10px;}
+    body.compact .opacity-slider-wrap{height:90px;}
+    body.compact .opacity-control input{width:90px;}
   }
 </style>
 </head>
 <body>
 <div id="map"></div>
+
+<div class="opacity-control" title="写真の濃さ">
+  <span class="eye" aria-hidden="true">濃さ</span>
+  <div class="opacity-slider-wrap">
+    <input type="range" id="opacity" min="0" max="100" value="80" aria-label="写真の濃さ">
+  </div>
+  <span class="opacity-value" id="opacity-val">80%</span>
+</div>
 
 <div id="panel">
   <button id="sheet-toggle" aria-expanded="false" aria-controls="panel">詳しい操作を開く</button>
@@ -121,7 +161,10 @@
 
   <div class="group" id="places-group">
     <div class="label">場所</div>
-    <div class="row" id="places"></div>
+    <div id="where-wrap">
+      <button id="where" aria-expanded="false" aria-controls="place-list"><span id="where-flag"></span><span id="where-name">—</span><span class="caret">場所を変える ▾</span></button>
+      <div id="place-list" role="menu" hidden></div>
+    </div>
   </div>
 
   <div class="group era">
@@ -135,7 +178,6 @@
     <div class="ticks" id="ticks"></div>
     <div class="ends"><span id="end-old"></span><span id="end-new"></span></div>
     <div class="msg" id="msg" hidden></div>
-    <button id="compare" aria-pressed="false">今と比べる（押している間）</button>
   </div>
 
   <div class="more">
@@ -150,11 +192,6 @@
         <button class="chip" id="mode-a" data-mode="A" aria-pressed="true">A 国ごとの年</button>
         <button class="chip" id="mode-b" data-mode="B" aria-pressed="false">B 年代でそろえる</button>
       </div>
-    </div>
-
-    <div class="group">
-      <div class="label">写真の濃さ <span id="opacity-val">80%</span></div>
-      <input type="range" id="opacity" min="0" max="100" value="80" aria-label="写真の濃さ">
     </div>
   </div>
 
@@ -258,15 +295,32 @@
   ];
   const AREA_NAMES = '日本・スイス・フランス・ウィーン・ルール地方・スペイン';
 
-  const PLACES = [
-    { name:'東京',       center:[35.6812,139.7671], zoom:15 },
-    { name:'チューリッヒ', center:[47.3769,8.5417],   zoom:15 },
-    { name:'パリ',       center:[48.8584,2.2945],   zoom:15 },
-    { name:'ウィーン',    center:[48.2085,16.3731],  zoom:15 },
-    { name:'エッセン',    center:[51.4556,7.0116],   zoom:15 },
-    { name:'マドリード',  center:[40.4169,-3.7035],  zoom:15 },
-    { name:'バルセロナ',  center:[41.3870,2.1700],   zoom:15 },
+  // 国旗は絵文字を使わず SVG で描く（Windows は国旗の絵文字を出せず、「CH」のような文字になる）
+  const FLAGS = {
+    jp:'<svg class="flag" viewBox="0 0 3 2"><rect width="3" height="2" fill="#fff"/><circle cx="1.5" cy="1" r=".6" fill="#bc002d"/></svg>',
+    ch:'<svg class="flag sq" viewBox="0 0 32 32"><rect width="32" height="32" fill="#d52b1e"/><path d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z" fill="#fff"/></svg>',
+    fr:'<svg class="flag" viewBox="0 0 3 2"><rect width="1" height="2" fill="#002654"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ce1126"/></svg>',
+    at:'<svg class="flag" viewBox="0 0 3 3"><rect width="3" height="3" fill="#c8102e"/><rect y="1" width="3" height="1" fill="#fff"/></svg>',
+    de:'<svg class="flag" viewBox="0 0 5 3"><rect width="5" height="1" fill="#000"/><rect y="1" width="5" height="1" fill="#dd0000"/><rect y="2" width="5" height="1" fill="#ffce00"/></svg>',
+    es:'<svg class="flag" viewBox="0 0 3 2"><rect width="3" height="2" fill="#aa151b"/><rect y=".5" width="3" height="1" fill="#f1bf00"/></svg>',
+  };
+  const GLOBE = '<svg class="flag sq" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#666" stroke-width="1.4"/><path d="M1 8h14M8 1c-3 3.5-3 10.5 0 14M8 1c3 3.5 3 10.5 0 14" fill="none" stroke="#666" stroke-width="1.2"/></svg>';
+  COUNTRIES.forEach(c => Object.assign(c, {
+    ch:{ flag:'ch', label:'スイス' }, wien:{ flag:'at', label:'オーストリア・ウィーン' },
+    ruhr:{ flag:'de', label:'ドイツ・ルール地方' }, es:{ flag:'es', label:'スペイン' },
+    fr:{ flag:'fr', label:'フランス' }, jp:{ flag:'jp', label:'日本' },
+  }[c.id]));
+
+  // 場所の一覧は国ごとにまとめる（都市が増えても画面のボタンは増えない）
+  const PLACE_GROUPS = [
+    { flag:'jp', name:'日本',       places:[{ name:'東京',       center:[35.6812,139.7671] }] },
+    { flag:'ch', name:'スイス',     places:[{ name:'チューリッヒ', center:[47.3769,8.5417] }] },
+    { flag:'fr', name:'フランス',   places:[{ name:'パリ',       center:[48.8584,2.2945] }] },
+    { flag:'at', name:'オーストリア', places:[{ name:'ウィーン',    center:[48.2085,16.3731] }] },
+    { flag:'de', name:'ドイツ',     places:[{ name:'エッセン',    center:[51.4556,7.0116] }] },
+    { flag:'es', name:'スペイン',   places:[{ name:'マドリード',  center:[40.4169,-3.7035] }, { name:'バルセロナ', center:[41.3870,2.1700] }] },
   ];
+  const PLACES = PLACE_GROUPS.flatMap(g => g.places.map(p => ({ ...p, zoom:15 })));
 
   // B: 共通の年代。その年代に入る写真のうち、いちばん新しいものを代表にする
   const DECADES = [1920,1930,1940,1950,1960,1970,1980,1990,2000,2010,2020];
@@ -308,7 +362,7 @@
 
   // ============ 状態 ============
   const state = {
-    mode:'A', country:null, stops:[], index:0, opacity:80, comparing:false,
+    mode:'A', country:null, stops:[], index:0, opacity:80,
     overlay:null, retiring:[], tiles:{ok:0, err:0, blank:0},
   };
   const $ = (id) => document.getElementById(id);
@@ -362,8 +416,8 @@
       b.addEventListener('click', () => select(i));
       $('chips').appendChild(b);
     });
-    document.querySelectorAll('#places button').forEach(b =>
-      b.setAttribute('aria-pressed', String(!!state.country && countryAt(L.latLng(b._center)) === state.country)));
+    $('where-flag').innerHTML = state.country ? FLAGS[state.country.flag] : GLOBE;
+    $('where-name').textContent = state.country ? state.country.label : '対象外の場所';
 
     let idx = n - 1;
     if (prevYear !== null && n) {
@@ -389,9 +443,6 @@
     $('era').value = state.index;
     $('prev').disabled = !n || state.index <= 0;
     $('next').disabled = !n || state.index >= n - 1;
-    // 写真が無いとき（対象外・写真の無い年代）は、比べる相手が無いので押せなくする
-    $('compare').disabled = !state.country || !state.stops[state.index]?.era;
-    if ($('compare').disabled && state.comparing) setComparing(false);
     [...$('chips').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === state.index)));
     const chip = $('chips').children[state.index];
     if (chip) chip.scrollIntoView({ block:'nearest', inline:'center' });
@@ -408,7 +459,7 @@
   }
 
   function overlayOpacity() {
-    return state.comparing ? 0 : state.opacity / 100;
+    return state.opacity / 100;
   }
 
   function dropRetiring() {
@@ -432,7 +483,7 @@
     if (!state.country) {
       dropRetiring();
       $('src-layer').textContent = '—';
-      setMessage(`この試作の対象は${AREA_NAMES}だけです。上の「場所」から移動してください。`);
+      setMessage(`この試作の対象は${AREA_NAMES}だけです。「場所を変える」から移動してください。`);
       return;
     }
     if (!stop.era) {
@@ -488,15 +539,45 @@
   }
 
   // ============ 操作 ============
-  PLACES.forEach(p => {
-    const b = document.createElement('button');
-    b.className = 'chip';
-    b.textContent = p.name;
-    b._center = p.center;
-    b.setAttribute('aria-pressed', 'false');
-    b.addEventListener('click', () => map.setView(p.center, p.zoom));
-    $('places').appendChild(b);
+  PLACE_GROUPS.forEach(g => {
+    const head = document.createElement('div');
+    head.className = 'pl-country';
+    head.innerHTML = FLAGS[g.flag] + '<span></span>';
+    head.lastChild.textContent = g.name;
+    const row = document.createElement('div');
+    row.className = 'pl-cities';
+    g.places.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = p.name;
+      b.setAttribute('role', 'menuitem');
+      b.addEventListener('click', () => { setPlaceList(false); map.setView(p.center, 15); });
+      row.appendChild(b);
+    });
+    const group = document.createElement('div');
+    group.className = 'pl-group';
+    group.dataset.flag = g.flag;
+    group.append(head, row);
+    $('place-list').appendChild(group);
   });
+
+  function setPlaceList(open) {
+    $('place-list').hidden = !open;
+    $('where').setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    // 今いる国の行に印を付け、そこまで送る（国が増えても探さずに済むように）
+    let here = null;
+    $('place-list').querySelectorAll('.pl-group').forEach(g => {
+      const on = !!state.country && g.dataset.flag === state.country.flag;
+      g.classList.toggle('here', on);
+      if (on) here = g;
+    });
+    if (here) here.scrollIntoView({ block:'nearest' });
+  }
+  $('where').addEventListener('click', () => setPlaceList($('place-list').hidden));
+  // 地図は触れた時点で click を止めることがあるので、触れた瞬間（pointerdown）で外側を判定する
+  document.addEventListener('pointerdown', (ev) => { if (!$('where-wrap').contains(ev.target)) setPlaceList(false); }, true);
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') setPlaceList(false); });
 
   document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
     state.mode = b.dataset.mode;
@@ -524,17 +605,6 @@
     setOpacityAll();
   });
 
-  // 「今と比べる」: 押している間だけ昔の写真を消して、下の今の地図を見せる
-  function setComparing(on) {
-    state.comparing = on;
-    $('compare').setAttribute('aria-pressed', String(on));
-    setOpacityAll();
-  }
-  $('compare').addEventListener('pointerdown', (ev) => { ev.preventDefault(); setComparing(true); });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => $('compare').addEventListener(t, () => setComparing(false)));
-  $('compare').addEventListener('keydown', (ev) => { if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); setComparing(true); } });
-  $('compare').addEventListener('keyup', () => setComparing(false));
-  $('compare').addEventListener('contextmenu', (ev) => ev.preventDefault());
 
   $('sheet-toggle').addEventListener('click', () => {
     const open = !$('panel').classList.contains('open');
@@ -553,7 +623,7 @@
     mode:state.mode, country:state.country?.id ?? null,
     stops:state.stops.map(s => s.era ? s.era.id : null), index:state.index,
     layer:state.stops[state.index]?.era?.id ?? null, tiles:{ ...state.tiles },
-    loadedLayers:(state.overlay ? 1 : 0) + state.retiring.length, comparing:state.comparing,
+    loadedLayers:(state.overlay ? 1 : 0) + state.retiring.length,
     loading:state.overlay ? state.overlay.isLoading() : false,
   });
 </script>
