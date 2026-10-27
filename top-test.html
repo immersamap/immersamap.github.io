@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- 試作トップ。公開中のトップ（/）は変えない。どこからもリンクせず、検索にも出さない
+     （構造化データ・canonical・OGP は本物のトップと重ならないよう載せない） -->
+<meta name="robots" content="noindex, nofollow" />
+<title>ImmersaMap ｜ 昔の地図と航空写真を今の地図に重ねて見る（試作トップ）</title>
+<meta name="theme-color" content="#0D1015" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet" />
+
+<style>
+  /* デザイン「ノワール」：1936年と現在の航空写真を全面に敷き、境目を動かして見比べる */
+  :root{
+    --bg:#0D1015;
+    --bg-2:#12161D;
+    --ink:#EFE8D8;
+    --ink-soft:rgba(239,232,216,.74);
+    --ink-faint:rgba(239,232,216,.48);
+    --gold:#C9A46A;
+    --gold-hi:#DDBB83;
+    --line:rgba(239,232,216,.18);
+    --vermilion:#C8483A;
+    --serif:'Shippori Mincho B1',serif;
+    --sans:'Noto Sans JP',sans-serif;
+    --latin:'Cormorant Garamond',serif;
+  }
+  [hidden]{display:none !important}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.8;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:2px}
+  svg.heart{width:15px;height:15px;flex:none}
+
+  /* ===== 1画面のステージ（PCではスクロールしない） ===== */
+  .stage{position:relative;height:100vh;height:100svh;min-height:620px;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto}
+
+  /* 写真2枚を重ね、上の「1936年」を境目の位置で切り抜く */
+  .photo{position:absolute;inset:0;z-index:0;user-select:none;-webkit-user-select:none}
+  .photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:60% 50%;pointer-events:none}
+  .photo .now{filter:saturate(.55) brightness(.62) contrast(1.05)}
+  .photo .old{filter:sepia(.45) brightness(.78) contrast(1.12);clip-path:inset(0 calc(100% - var(--x,46%)) 0 0)}
+  .photo::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(90deg,rgba(13,16,21,.92) 0%,rgba(13,16,21,.7) 34%,rgba(13,16,21,.12) 62%,rgba(13,16,21,.35) 100%),
+               linear-gradient(0deg,rgba(13,16,21,.85) 0%,rgba(13,16,21,0) 26%)}
+  .divider{position:absolute;top:0;bottom:0;left:var(--x,46%);width:0;z-index:2;pointer-events:none}
+  .divider::before{content:"";position:absolute;top:0;bottom:0;left:-.5px;width:1px;background:linear-gradient(180deg,transparent,var(--gold) 18%,var(--gold) 82%,transparent)}
+  .handle{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;border:1px solid var(--gold);background:rgba(13,16,21,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:grid;place-items:center;pointer-events:auto;cursor:ew-resize;color:var(--gold);touch-action:none}
+  .handle svg{width:20px;height:20px}
+  .yr-tag{position:absolute;bottom:118px;z-index:2;font-family:var(--latin);font-size:1.05rem;letter-spacing:.2em;color:var(--gold);pointer-events:none;white-space:nowrap}
+  .yr-tag.l{right:calc(100% - var(--x,46%) + 18px)}
+  .yr-tag.r{left:calc(var(--x,46%) + 18px)}
+
+  /* ===== ヘッダー ===== */
+  header{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:26px clamp(20px,4vw,56px)}
+  .brand{display:flex;align-items:center;gap:12px;font-family:var(--serif);font-weight:700;font-size:1.12rem;letter-spacing:.06em}
+  .brand svg{width:26px;height:26px}
+  nav{display:flex;align-items:center;gap:28px;font-size:.84rem;letter-spacing:.08em}
+  nav .lk{color:var(--ink-soft);transition:color .2s}
+  nav .lk:hover{color:var(--ink)}
+  .support-btn{display:inline-flex;align-items:center;gap:7px;color:var(--gold);padding:6px 2px;white-space:nowrap}
+  .support-btn:hover{color:var(--gold-hi)}
+  .cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--gold);color:var(--ink);padding:10px 22px;font-size:.84rem;letter-spacing:.14em;transition:background .25s,color .25s;white-space:nowrap}
+  .cta:hover{background:var(--gold);color:var(--bg)}
+  .cta.solid{background:var(--gold);color:var(--bg)}
+  .cta.solid:hover{background:var(--gold-hi)}
+
+  /* ===== 本文 ===== */
+  .copy{position:relative;z-index:3;align-self:center;padding:0 clamp(20px,4vw,56px);max-width:780px;pointer-events:none}
+  .copy > *{pointer-events:auto}
+  .eyebrow{font-size:.74rem;letter-spacing:.32em;color:var(--gold);display:flex;align-items:center;gap:14px}
+  .eyebrow::before{content:"";width:36px;height:1px;background:var(--gold)}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(1.9rem,3.2vw,2.9rem);line-height:1.45;letter-spacing:.04em;margin:26px 0 22px}
+  h1 .ln{display:inline-block}
+  h1 em{font-style:normal;color:var(--gold)}
+  .lead{color:var(--ink-soft);font-size:.95rem;max-width:30em}
+  .actions{display:flex;gap:16px;margin-top:34px;flex-wrap:wrap}
+  .support-line{display:inline-flex;align-items:center;gap:8px;color:var(--gold);font-size:.8rem;letter-spacing:.06em;border-bottom:1px solid currentColor;padding-bottom:2px;margin-top:22px}
+  .support-line .heart{width:13px;height:13px}
+
+  /* ===== 下帯 ===== */
+  .base{position:relative;z-index:3;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:0 clamp(20px,4vw,56px) 28px;flex-wrap:wrap}
+  .facts{display:flex;gap:clamp(22px,3.4vw,52px)}
+  .fact{border-top:1px solid var(--line);padding-top:12px;min-width:120px}
+  .fact b{display:block;font-family:var(--latin);font-weight:500;font-size:1.7rem;line-height:1.1;letter-spacing:.04em}
+  .fact span{font-size:.74rem;color:var(--ink-faint);letter-spacing:.08em}
+  .credit{font-size:.7rem;color:var(--ink-faint);text-align:right;line-height:1.8}
+  .credit a,.credit button{text-decoration:underline;text-underline-offset:3px}
+
+  /* ===== 詳細パネル ===== */
+  dialog.panel{position:fixed;inset:0 0 0 auto;margin:0;height:100%;max-height:none;width:min(600px,100%);background:var(--bg-2);color:var(--ink);border:none;border-left:1px solid var(--line);padding:0;overflow:auto;overscroll-behavior:contain}
+  dialog.panel::backdrop{background:rgba(5,7,10,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  .panel-top{position:sticky;top:0;z-index:1;background:var(--bg-2);display:flex;justify-content:space-between;align-items:center;gap:12px;padding:26px 38px 14px;border-bottom:1px solid var(--line)}
+  .tabs{display:flex;gap:20px;font-size:.84rem;letter-spacing:.06em;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{color:var(--ink-faint);padding:2px 0 6px;border-bottom:1px solid transparent}
+  .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--gold)}
+  .tabs button[data-tab="support"]{color:var(--gold)}
+  .close{width:36px;height:36px;display:grid;place-items:center;color:var(--ink-soft);flex:none}
+  .pane{padding:26px 38px 56px}
+  .pane h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;line-height:1.5;margin:0 0 14px}
+  .pane h3{font-family:var(--serif);font-weight:600;font-size:1.08rem;margin:0 0 6px}
+  .pane p{color:var(--ink-soft);font-size:.92rem}
+  .pane .tag{font-family:var(--latin);font-size:.9rem;letter-spacing:.24em;color:var(--gold);margin-bottom:6px}
+  .pane .sub{margin-bottom:22px}
+  .capsule{border-left:2px solid var(--gold);padding:4px 0 4px 18px;margin:0 0 28px;font-family:var(--serif);font-size:1rem !important;line-height:1.95;color:var(--ink) !important}
+  .item{display:grid;grid-template-columns:44px 1fr;gap:4px 16px;border-top:1px solid var(--line);padding:18px 0}
+  .item .no{font-family:var(--latin);font-size:1.3rem;color:var(--gold);line-height:1.3}
+  .item.step .no{font-family:var(--serif);font-size:1.15rem}
+  .group{margin-top:34px}
+  .era-label{font-family:var(--serif);font-weight:600;font-size:1rem;margin:26px 0 8px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .era-label small{font-family:var(--sans);font-weight:400;font-size:.76rem;color:var(--ink-faint)}
+  .era{display:grid;grid-template-columns:96px 108px 1fr;gap:12px;border-top:1px solid var(--line);padding:10px 0;font-size:.88rem;align-items:baseline}
+  .era b{font-family:var(--serif);font-weight:600}
+  .era .rng{font-family:var(--latin);font-size:1.05rem;color:var(--gold)}
+  .era .area{color:var(--ink-soft)}
+  .note{font-size:.8rem !important;color:var(--ink-faint) !important;margin-top:18px}
+  details{border-top:1px solid var(--line)}
+  details:last-of-type{border-bottom:1px solid var(--line)}
+  summary{list-style:none;cursor:pointer;padding:16px 28px 16px 0;font-family:var(--serif);font-size:1rem;position:relative}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--gold)}
+  details[open] summary::after{content:"−"}
+  details p{padding:0 0 18px}
+  .meta{display:grid;grid-template-columns:auto 1fr;gap:10px 22px;margin-top:22px;font-size:.9rem}
+  .meta dt{color:var(--gold);font-family:var(--serif)}
+  .meta dd{color:var(--ink-soft)}
+  .meta a{text-decoration:underline;text-underline-offset:3px}
+  .sp-list{list-style:none;margin:18px 0 0;display:grid;gap:10px}
+  .sp-list li{font-size:.9rem;color:var(--ink-soft);display:grid;grid-template-columns:4.5em 1fr;gap:10px}
+  .sp-list b{color:var(--gold);font-weight:500}
+  .sp-cta{margin-top:24px;width:100%;padding:14px 22px;font-size:.9rem}
+  .sp-note{font-size:.76rem !important;margin-top:8px;text-align:center;color:var(--ink-faint) !important}
+
+  /* ===== スマホ：1画面に収めず、縦に流す ===== */
+  @media (max-width:760px){
+    .stage{height:auto;min-height:100svh}
+    header{padding:18px 16px}
+    .brand{font-size:1rem;gap:8px}
+    .brand svg{width:22px;height:22px}
+    nav{gap:14px}
+    nav .lk{display:none}
+    nav .cta{padding:8px 14px;font-size:.78rem;letter-spacing:.08em}
+    .pc-only{display:none}
+    .copy{padding:0 16px;margin-top:22vh}
+    .photo::after{background:linear-gradient(0deg,rgba(13,16,21,.96) 0%,rgba(13,16,21,.7) 55%,rgba(13,16,21,.25) 100%)}
+    .handle{top:150px}
+    .yr-tag{bottom:auto;top:96px}
+    .support-line{font-size:.78rem}
+    .base{padding:28px 16px 24px;flex-direction:column;align-items:stretch}
+    .facts{gap:18px}
+    .fact{min-width:0;flex:1}
+    .fact b{font-size:1.35rem}
+    .credit{text-align:left}
+    .panel-top{padding:18px 16px 10px}
+    .tabs{gap:16px;font-size:.8rem}
+    .pane{padding:22px 20px 48px}
+    .era{grid-template-columns:78px 1fr;gap:2px 12px}
+    .era .area{grid-column:2}
+  }
+  @media (max-height:700px) and (min-width:761px){
+    h1{margin:16px 0 14px}.actions{margin-top:22px}.support-line{margin-top:16px}
+  }
+
+  /* ===== ここから試作トップで足したもの（docs/design/top_test_prototype.md） ===== */
+  /* 言葉に合わない方を隠す。!important が無いと .cta などの display に負けて両方出る */
+  html:not([lang="en"]) [data-lang="en"], html[lang="en"] [data-lang="ja"]{display:none !important}
+  .lang-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:6px 12px;font-size:.8rem;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;flex:none}
+  .lang-btn:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .lang-btn svg{width:15px;height:15px}
+  .lang-btn .short{display:none}
+  .cta .proto{font-size:.66rem;letter-spacing:.08em;border:1px solid currentColor;padding:0 6px;opacity:.8}
+  .map-note{font-size:.76rem;color:var(--ink-faint);margin-top:10px}
+  /* パネルの中の言葉ボタンは短い表示（EN／日本語）にして、タブの幅を取らない */
+  .panel-top .lang-btn{margin-left:auto;padding:6px 10px}
+  .panel-top .lang-btn .long{display:none}
+  .panel-top .lang-btn .short{display:inline}
+  @media (max-width:760px){
+    /* ヘッダーに入りきらないので「地図をひらく」は外す（本文のすぐ下に同じボタンがある） */
+    nav .cta.hdr{display:none}
+    nav{gap:10px}   /* 360px の英語（Support と 日本語）でも入りきるように */
+    /* パネルは画面いっぱいにし、タブは2行目に1行まるごと使う（言葉ボタンと閉じるは上の行） */
+    dialog.panel{max-width:none}
+    .panel-top{flex-wrap:wrap;row-gap:8px}
+    .panel-top .tabs{order:2;flex-basis:100%;gap:12px;font-size:.76rem}   /* 「♡ 応援」は短くして、5つが 360px に収まる */
+    .lang-btn{padding:6px 10px}
+    .lang-btn .long{display:none}
+    .lang-btn .short{display:inline}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="photo" id="photo" style="--x:46%">
+    <img class="now" id="img-now" src="images/hero/marunouchi_now.jpg" srcset="images/hero/marunouchi_now_1280.jpg 1280w, images/hero/marunouchi_now.jpg 1920w" sizes="100vw" alt="東京・丸の内と皇居周辺の現在の航空写真" fetchpriority="high" />
+    <img class="old" id="img-old" src="images/hero/marunouchi_1936.jpg" srcset="images/hero/marunouchi_1936_1280.jpg 1280w, images/hero/marunouchi_1936.jpg 1920w" sizes="100vw" alt="東京・丸の内と皇居周辺の1936年頃の航空写真" fetchpriority="high" />
+    <div class="divider"><button class="handle" id="handle" type="button" role="slider" aria-label="昔と今の境目（左右キーでも動かせます）" aria-valuemin="0" aria-valuemax="100" aria-valuenow="46">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+    </button></div>
+    <span class="yr-tag l" aria-hidden="true">1936</span>
+    <span class="yr-tag r" aria-hidden="true">NOW</span>
+  </div>
+
+  <header>
+    <!-- 試作の間は、ロゴから本物のトップへ飛ばさない（英語の人が日本語だけの画面に移るため） -->
+    <a class="brand" id="brand" href="top-test.html" aria-label="ImmersaMap トップ">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#C9A46A" stroke-width="2.6"><path d="M32 12c10 0 16 7 16 14s-7 14-16 14-16-7-16-14 6-14 16-14z"/><path d="M32 20c6 0 9 4 9 8s-4 8-9 8-9-3-9-8 3-8 9-8z"/></g><circle cx="32" cy="28" r="3" fill="#C8483A"/></svg>
+      ImmersaMap
+    </a>
+    <nav id="nav" aria-label="メニュー">
+      <a class="lk" href="#features" data-open="features"><span data-lang="ja">できること</span><span data-lang="en">Features</span></a>
+      <a class="lk" href="#data" data-open="data"><span data-lang="ja">収録データ</span><span data-lang="en">Data</span></a>
+      <a class="lk" href="#faq" data-open="faq"><span data-lang="ja">よくある質問</span><span data-lang="en">FAQ</span></a>
+      <a class="support-btn" href="#support" data-open="support"><svg class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span data-lang="ja">応援<span class="pc-only">する</span></span><span data-lang="en">Support</span></a>
+      <button type="button" class="lang-btn" data-lang-toggle hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3.2-3 14.8 0 18M12 3c3 3.2 3 14.8 0 18"/></svg><span class="long"></span><span class="short"></span></button>
+      <a class="cta hdr" href="/map/"><span data-lang="ja">地図をひらく</span><span data-lang="en">Open the map</span></a>
+    </nav>
+  </header>
+
+  <main class="copy">
+    <div class="eyebrow">OLD MAPS × AERIAL PHOTOS</div>
+    <h1 data-lang="ja"><span class="ln">昔の地図と航空写真を、</span><br><span class="ln">今の地図に<em>重ねて見る</em>。</span></h1>
+    <h1 data-lang="en"><span class="ln">Old maps and aerial photos,</span><br><span class="ln"><em>laid over</em> today's map.</span></h1>
+    <p class="lead" data-lang="ja">ImmersaMap（イマーサマップ）は、現在の地図の上に、昔の地図や過去の航空写真（空中写真）を重ねて表示できる無料のWeb地図です。見たい場所を開くだけで、そこが昔どんな姿だったかを見比べられます。</p>
+    <p class="lead" data-lang="en">ImmersaMap is a free web map that lays old maps and historical aerial photos over today's map. Open any place in Japan and see what it looked like decades ago.</p>
+    <div class="actions">
+      <a class="cta solid" href="/map/"><span data-lang="ja">地図をひらく　→</span><span data-lang="en">Open the map of Japan　→</span></a>
+      <a class="cta" id="to-overseas" href="overseas-test.html"><span data-lang="ja">海外の空中写真</span><span data-lang="en">Europe &amp; Japan</span><span class="proto"><span data-lang="ja">試作</span><span data-lang="en">prototype</span></span></a>
+      <a class="cta" href="#data" data-open="data"><span data-lang="ja">収録データを見る</span><span data-lang="en">See the data</span></a>
+    </div>
+    <p class="map-note" data-lang="en">The map of Japan has a Japanese interface for now.</p>
+    <a class="support-line" href="#support" data-open="support"><svg class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span data-lang="ja">個人運営・広告なし ─ 応援はこちら</span><span data-lang="en">Independent and ad-free ─ support us</span></a>
+  </main>
+
+  <div class="base">
+    <div class="facts">
+      <div class="fact"><b>1936 —</b><span data-lang="ja">年代別の航空写真</span><span data-lang="en">Aerial photos of Japan by era</span></div>
+      <div class="fact"><b>1896 —</b><span data-lang="ja">明治後期の地形図</span><span data-lang="en">Old maps (Tokyo area)</span></div>
+      <div class="fact"><b>Free</b><span data-lang="ja">登録不要・スマホ対応</span><span data-lang="en">No sign-up, works on phones</span></div>
+    </div>
+    <div class="credit">
+      <span data-lang="ja">東京・丸の内と皇居（左：1936年頃／右：現在）出典：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a></span>
+      <span data-lang="en">Marunouchi and the Imperial Palace, Tokyo (left: c. 1936 / right: today). Source: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">GSI Japan</a></span><br>
+      <a href="#about" data-open="about"><span data-lang="ja">運営者</span><span data-lang="en">About</span></a>　<a href="/legal.html"><span data-lang="ja">利用規約</span><span data-lang="en">Terms (Japanese)</span></a>　<a href="/legal.html#privacy"><span data-lang="ja">プライバシーポリシー</span><span data-lang="en">Privacy (Japanese)</span></a>　© <span id="yr"></span> ImmersaMap
+    </div>
+  </div>
+</div>
+
+<!-- 詳細パネル：今のトップと同じ5つのタブ。文章は日本語・英語の両方を持つ -->
+<dialog class="panel" id="panel" aria-label="ImmersaMap の詳しい情報">
+  <div class="panel-top">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="features"><span data-lang="ja">できること</span><span data-lang="en">Features</span></button>
+      <button type="button" role="tab" data-tab="data"><span data-lang="ja">収録データ</span><span data-lang="en">Data</span></button>
+      <button type="button" role="tab" data-tab="faq"><span data-lang="ja">よくある質問</span><span data-lang="en">FAQ</span></button>
+      <button type="button" role="tab" data-tab="about"><span data-lang="ja">運営者</span><span data-lang="en">About</span></button>
+      <button type="button" role="tab" data-tab="support"><span data-lang="ja">♡ 応援<span class="pc-only">する</span></span><span data-lang="en">♡ Support</span></button>
+    </div>
+    <!-- パネルはモーダルでヘッダーのボタンを押せないので、ここにも言葉ボタンを置く -->
+    <button type="button" class="lang-btn" data-lang-toggle hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3.2-3 14.8 0 18M12 3c3 3.2 3 14.8 0 18"/></svg><span class="long"></span><span class="short"></span></button>
+    <button type="button" class="close" id="close" aria-label="閉じる"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <section class="pane" id="features" data-pane="features" role="tabpanel">
+    <div class="tag">WHAT YOU CAN DO</div>
+    <div data-lang="ja">
+      <h2>重ねて、今と昔を見比べる。</h2>
+      <p class="capsule">ImmersaMap は、現在の地図に、昔の地図や過去の航空写真（空中写真）を重ねて表示できる無料のWeb地図サービスです。航空写真は1936年から現在まで年代別に切り替えられ、首都圏では明治後期（1896年）の古地図まで見比べられます。会員登録もアプリのインストールも不要です。</p>
+      <div class="item"><div class="no">01</div><div><h3>重ねて見比べる</h3><p>昔の地図や航空写真を、現在の地図の上に半透明で重ね合わせ。透明度スライダーを動かすと、「今」と「昔」がなめらかに入れ替わります。</p></div></div>
+      <div class="item"><div class="no">02</div><div><h3>年代を切り替える</h3><p>1936年の航空写真から現在の衛星写真まで、年代別にワンタップで切り替え。同じ場所が百年あまりでどう変わったかが一目でわかります。</p></div></div>
+      <div class="item"><div class="no">03</div><div><h3>現在地・地名から探す</h3><p>現在地ボタンで今いる場所へ一発移動。地名や住所での検索、地形図への切り替えにも対応し、スマホでも軽快に動きます。</p></div></div>
+      <div class="group" id="howto">
+        <div class="tag">HOW TO USE</div>
+        <h2>使い方は、3ステップ。</h2>
+        <div class="item step"><div class="no">壱</div><div><h3>地図をひらく</h3><p>インストール不要。ボタンを押すだけで地図が立ち上がります。</p></div></div>
+        <div class="item step"><div class="no">弐</div><div><h3>場所へ移動する</h3><p>現在地ボタン、地名・住所の検索、ドラッグのいずれかで見たい場所へ移動します。</p></div></div>
+        <div class="item step"><div class="no">参</div><div><h3>年代を重ねる</h3><p>昔の地図や航空写真の年代を切り替え、透明度を調整して今の地図と見比べます。</p></div></div>
+      </div>
+    </div>
+    <div data-lang="en">
+      <h2>Lay the past over the present.</h2>
+      <p class="capsule">ImmersaMap is a free web map that overlays old maps and historical aerial photos on today's map. In Japan you can switch aerial photos by era from 1936 to today, and in the Tokyo area compare maps as old as 1896. No sign-up or app needed.</p>
+      <div class="item"><div class="no">01</div><div><h3>Overlay and compare</h3><p>Old maps and aerial photos sit semi-transparently on today's map. Move the opacity slider to fade smoothly between then and now.</p></div></div>
+      <div class="item"><div class="no">02</div><div><h3>Switch eras</h3><p>Switch with one tap from 1936 aerial photos to today's satellite imagery, and see how a place changed over almost a century.</p></div></div>
+      <div class="item"><div class="no">03</div><div><h3>Find your place</h3><p>Jump to where you are with the location button, or search by place name or address. Topographic maps are available too, and it runs smoothly on phones.</p></div></div>
+      <div class="group">
+        <div class="tag">HOW TO USE</div>
+        <h2>Three simple steps.</h2>
+        <div class="item step"><div class="no">1</div><div><h3>Open the map</h3><p>Nothing to install. Just press the button.</p></div></div>
+        <div class="item step"><div class="no">2</div><div><h3>Go to a place</h3><p>Use the location button, search, or drag the map.</p></div></div>
+        <div class="item step"><div class="no">3</div><div><h3>Choose an era</h3><p>Pick an old map or aerial photo and adjust the opacity to compare with today.</p></div></div>
+      </div>
+      <p class="note">The map of Japan has a Japanese interface for now. For Europe, try the aerial photos prototype.</p>
+    </div>
+    <a class="cta solid sp-cta" href="/map/"><span data-lang="ja">地図をひらく　→</span><span data-lang="en">Open the map of Japan　→</span></a>
+  </section>
+
+  <section class="pane" id="data" data-pane="data" role="tabpanel" hidden>
+    <div class="tag">ARCHIVE</div>
+    <div data-lang="ja">
+      <h2>明治の昔の地図から、現在の衛星写真まで。</h2>
+      <p class="sub">首都圏では明治後期の古地図から、航空写真は1930年代から見られます。年代が古いほど対応地域は限られます。</p>
+      <div class="era-label">昔の地図（古地図）<small>首都圏／1:50000地形図</small></div>
+      <div class="era"><b>明治後期</b><span class="rng">1896–1909</span><span class="area">首都圏</span></div>
+      <div class="era"><b>大正期</b><span class="rng">1917–1924</span><span class="area">首都圏</span></div>
+      <div class="era"><b>昭和戦前</b><span class="rng">1927–1939</span><span class="area">首都圏</span></div>
+      <div class="era"><b>戦後復興</b><span class="rng">1944–1954</span><span class="area">首都圏</span></div>
+      <div class="era-label">航空写真（空中写真）<small>地域により対応範囲が異なります</small></div>
+      <div class="era"><b>1930s</b><span class="rng">1936–1942</span><span class="area">東京・大阪</span></div>
+      <div class="era"><b>1940s</b><span class="rng">1945–1950</span><span class="area">主要都市</span></div>
+      <div class="era"><b>1960s</b><span class="rng">1961–1969</span><span class="area">全国</span></div>
+      <div class="era"><b>1970s</b><span class="rng">1974–1978</span><span class="area">全国</span></div>
+      <div class="era"><b>1980s</b><span class="rng">1979–1990</span><span class="area">大都市圏</span></div>
+      <div class="era"><b>現在</b><span class="rng">2004–</span><span class="area">全国</span></div>
+      <p class="note">航空写真（空中写真）・地形図は国土地理院の地理院タイル、最新の衛星写真は Esri World Imagery、昔の地図は「今昔マップ on the web」（埼玉大学 谷謙二 氏作成）、ベース地図は OpenStreetMap を利用しています。トップページの背景写真は国土地理院の空中写真（1936年頃）と全国最新写真（シームレス）です。</p>
+    </div>
+    <div data-lang="en">
+      <h2>From Meiji-era maps to today's satellite images.</h2>
+      <p class="sub">All of this data covers Japan. Old maps go back to the late Meiji era in the Tokyo area, and aerial photos to the 1930s. The older the era, the smaller the area covered.</p>
+      <div class="era-label">Old maps<small>Tokyo area, 1:50,000 topographic maps</small></div>
+      <div class="era"><b>Late Meiji</b><span class="rng">1896–1909</span><span class="area">Tokyo area</span></div>
+      <div class="era"><b>Taisho</b><span class="rng">1917–1924</span><span class="area">Tokyo area</span></div>
+      <div class="era"><b>Early Showa</b><span class="rng">1927–1939</span><span class="area">Tokyo area</span></div>
+      <div class="era"><b>Post-war</b><span class="rng">1944–1954</span><span class="area">Tokyo area</span></div>
+      <div class="era-label">Aerial photos<small>Coverage varies by area</small></div>
+      <div class="era"><b>1930s</b><span class="rng">1936–1942</span><span class="area">Tokyo and Osaka</span></div>
+      <div class="era"><b>1940s</b><span class="rng">1945–1950</span><span class="area">Major cities</span></div>
+      <div class="era"><b>1960s</b><span class="rng">1961–1969</span><span class="area">Nationwide</span></div>
+      <div class="era"><b>1970s</b><span class="rng">1974–1978</span><span class="area">Nationwide</span></div>
+      <div class="era"><b>1980s</b><span class="rng">1979–1990</span><span class="area">Major metropolitan areas</span></div>
+      <div class="era"><b>Today</b><span class="rng">2004–</span><span class="area">Nationwide</span></div>
+      <p class="note">Aerial photos and topographic maps: GSI Japan (Geospatial Information Authority of Japan) tiles. Latest satellite imagery: Esri World Imagery. Old maps: "Konjaku Map on the Web" by Kenji Tani, Saitama University. Base map: OpenStreetMap. The background of this page uses GSI aerial photos (c. 1936 and the latest seamless photo).</p>
+    </div>
+  </section>
+
+  <section class="pane" id="faq" data-pane="faq" role="tabpanel" hidden>
+    <div class="tag">FAQ</div>
+    <div data-lang="ja">
+      <h2>よくある質問</h2>
+      <details><summary>ImmersaMapとは何ですか？</summary><p>現在の地図に、昔の地図や過去の航空写真（空中写真）を重ねて表示できる無料のWeb地図サービスです。同じ場所の「今」と「昔」を、透明度を変えながら見比べられます。</p></details>
+      <details><summary>昔の地図や航空写真を無料で見られますか？</summary><p>はい。会員登録もアプリのインストールも不要で、Webブラウザから無料でご利用いただけます。</p></details>
+      <details><summary>現在地の昔の様子を見ることはできますか？</summary><p>はい。地図画面の現在地ボタンを押すと今いる場所へ移動します。そのまま年代を切り替えると、その場所の昔の航空写真や地図を見られます。位置情報の利用はブラウザ側で許可・拒否を選べます。</p></details>
+      <details><summary>どの年代の航空写真が見られますか？</summary><p>1930年代（1936〜1942年）から現在（2004年〜）までの航空写真を年代別に切り替えて閲覧できます。古い年代は東京・大阪など対応地域が限られ、1960年代以降は全国を広くカバーしています。最新の年代では衛星写真も選べます。</p></details>
+      <details><summary>昔の地図（古地図）はどの時代・地域が見られますか？</summary><p>首都圏を対象に、明治後期（1896〜1909年）・大正期（1917〜1924年）・昭和戦前（1927〜1939年）・戦後復興期（1944〜1954年）の地形図を、現在の地図に重ねて見比べられます。</p></details>
+      <details><summary>スマートフォンでも使えますか？</summary><p>はい。スマートフォン・タブレット・パソコンのいずれのブラウザでも動作します。</p></details>
+      <details><summary>地図や航空写真のデータはどこのものですか？</summary><p>ベース地図に OpenStreetMap、航空写真（空中写真）・地形図に国土地理院の地理院タイル、最新の衛星写真に Esri World Imagery、明治〜戦後の昔の地図に「今昔マップ on the web」（埼玉大学 谷謙二 氏作成）を利用しています。</p></details>
+    </div>
+    <div data-lang="en">
+      <h2>FAQ</h2>
+      <details><summary>What is ImmersaMap?</summary><p>A free web map that overlays old maps and historical aerial photos on today's map, so you can compare the same place then and now by changing the opacity.</p></details>
+      <details><summary>Is it free?</summary><p>Yes. No account or app is needed. It runs in your web browser for free.</p></details>
+      <details><summary>Can I see what my current location looked like in the past?</summary><p>Yes. On the map screen, press the location button to jump to where you are, then switch eras to see old aerial photos or maps of that place. Your browser asks before sharing your location.</p></details>
+      <details><summary>Which years of aerial photos are available?</summary><p>For Japan, from the 1930s (1936–1942) to today (2004 onward), switchable by era. Older eras cover limited areas such as Tokyo and Osaka; from the 1960s most of the country is covered. Satellite imagery is also available for the latest era. Aerial photos of some European places are in the prototype.</p></details>
+      <details><summary>Which old maps are available?</summary><p>For the Tokyo area: topographic maps from the late Meiji era (1896–1909), the Taisho era (1917–1924), the early Showa era (1927–1939) and the post-war years (1944–1954).</p></details>
+      <details><summary>Does it work on smartphones?</summary><p>Yes. It works in the browser on smartphones, tablets and computers.</p></details>
+      <details><summary>Where does the data come from?</summary><p>Base map: OpenStreetMap. Aerial photos and topographic maps: GSI Japan tiles. Latest satellite imagery: Esri World Imagery. Old maps from the Meiji era to the post-war years: "Konjaku Map on the Web" by Kenji Tani, Saitama University.</p></details>
+    </div>
+  </section>
+
+  <section class="pane" id="about" data-pane="about" role="tabpanel" hidden>
+    <div class="tag">ABOUT</div>
+    <div data-lang="ja">
+      <h2>ImmersaMapについて</h2>
+      <p>ImmersaMapは、「あの場所は昔どうなっていたんだろう」を誰でもすぐ確かめられるようにしたい——そんな思いから生まれた個人運営のWeb地図プロジェクトです。国土地理院の航空写真や明治期の地形図といった資料を、専門知識がなくても扱える形にまとめ、見慣れた街の「これまで」を身近に感じてもらうことを目指しています。</p>
+      <dl class="meta">
+        <dt>運営者</dt><dd>ImmersaMap（個人運営）</dd>
+        <dt>お問い合わせ</dt><dd><a href="https://github.com/immersamap/immersamap.github.io/issues" target="_blank" rel="noopener">GitHub Issues</a></dd>
+        <dt>規約</dt><dd><a href="/legal.html">利用規約</a>／<a href="/legal.html#privacy">プライバシーポリシー</a></dd>
+      </dl>
+    </div>
+    <div data-lang="en">
+      <h2>About ImmersaMap</h2>
+      <p>ImmersaMap is an independent web map project. It began with a simple wish: anyone should be able to check right away what a place looked like in the past. It brings materials such as government aerial photos and Meiji-era topographic maps into a form you can use without expert knowledge, so the history of familiar streets feels close at hand.</p>
+      <dl class="meta">
+        <dt>Run by</dt><dd>ImmersaMap (independent)</dd>
+        <dt>Contact</dt><dd><a href="https://github.com/immersamap/immersamap.github.io/issues" target="_blank" rel="noopener">GitHub Issues</a></dd>
+        <dt>Terms</dt><dd><a href="/legal.html">Terms of use</a> / <a href="/legal.html#privacy">Privacy policy</a> (Japanese)</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="pane" id="support" data-pane="support" role="tabpanel" hidden>
+    <div class="tag">SUPPORT</div>
+    <div data-lang="ja">
+      <h2>ImmersaMap を応援する</h2>
+      <p>ImmersaMapは個人が無料・広告なしで運営しています。気に入っていただけたら、応援していただけると励みになります。</p>
+      <ul class="sp-list">
+        <li><b>使い道</b>見られる地域・年代を増やすこと、新しい機能づくり、運営費</li>
+        <li><b>方法</b>OFUSE（オフセ）から、応援金にメッセージを添えて送れます</li>
+      </ul>
+    </div>
+    <div data-lang="en">
+      <h2>Support ImmersaMap</h2>
+      <p>ImmersaMap is run by one person, free and without ads. If you like it, your support keeps it going.</p>
+      <ul class="sp-list">
+        <li><b>Used for</b>More places and eras, new features, and running costs</li>
+        <li><b>How</b>Send a tip with a message through OFUSE (a Japanese site)</li>
+      </ul>
+    </div>
+    <a class="cta solid sp-cta" href="https://ofuse.me/immersamap" target="_blank" rel="noopener"><svg class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23 8.6 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg><span data-lang="ja">OFUSE で応援する</span><span data-lang="en">Support on OFUSE</span></a>
+    <p class="sp-note"><span data-lang="ja">OFUSE のページが新しいタブで開きます</span><span data-lang="en">Opens OFUSE (in Japanese) in a new tab</span></p>
+    <div class="group" data-lang="ja">
+      <h3>お金以外の応援も嬉しいです</h3>
+      <p>地図画面の「共有」ボタンで見つけた場所を紹介していただくことや、「この地域も見たい」などの感想も大きな励みになります。</p>
+    </div>
+    <div class="group" data-lang="en">
+      <h3>Other ways to help</h3>
+      <p>Sharing places you found with the map's Share button, or telling us which areas you would like to see, also means a lot.</p>
+    </div>
+  </section>
+</dialog>
+
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  // ===== 言葉（日本語・英語）。長い文章は HTML に両方あり、CSS で片方を隠す。短い文言はここで書き換える =====
+  const TEXT = {
+    ja:{
+      title:'ImmersaMap ｜ 昔の地図と航空写真を今の地図に重ねて見る（試作トップ）',
+      brand:'ImmersaMap トップ', nav:'メニュー', close:'閉じる', panel:'ImmersaMap の詳しい情報',
+      handle:'昔と今の境目（左右キーでも動かせます）',
+      altNow:'東京・丸の内と皇居周辺の現在の航空写真', altOld:'東京・丸の内と皇居周辺の1936年頃の航空写真',
+      langLong:'English', langShort:'EN', langAria:'Switch to English', langCode:'en',
+    },
+    en:{
+      title:'ImmersaMap | Old maps and aerial photos over today\'s map (prototype top page)',
+      brand:'ImmersaMap home', nav:'Menu', close:'Close', panel:'More about ImmersaMap',
+      handle:'Divider between then and now (arrow keys also work)',
+      altNow:'Today\'s aerial photo of Marunouchi and the Imperial Palace, Tokyo', altOld:'Aerial photo of Marunouchi and the Imperial Palace, Tokyo, c. 1936',
+      langLong:'日本語', langShort:'日本語', langAria:'日本語に切り替える', langCode:'ja',
+    },
+  };
+  // 最初の言葉: ?lang= があればそれ、無ければブラウザの言葉（日本語以外は英語）。試作だけの決め方（設計書 §4）
+  function initialLang() {
+    const q = new URLSearchParams(location.search).get('lang');
+    if (q === 'ja' || q === 'en') return q;
+    const nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'ja';
+    return nav.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+  }
+  let lang = initialLang();
+  const $ = (id) => document.getElementById(id);
+  function applyLang() {
+    const x = TEXT[lang];
+    document.documentElement.lang = lang;
+    document.title = x.title;
+    $('brand').setAttribute('aria-label', x.brand);
+    $('brand').href = 'top-test.html?lang=' + lang;
+    $('nav').setAttribute('aria-label', x.nav);
+    $('close').setAttribute('aria-label', x.close);
+    $('panel').setAttribute('aria-label', x.panel);
+    $('handle').setAttribute('aria-label', x.handle);
+    $('img-now').alt = x.altNow;
+    $('img-old').alt = x.altOld;
+    $('to-overseas').href = 'overseas-test.html?lang=' + lang;
+    document.querySelectorAll('[data-lang-toggle]').forEach(b => {
+      b.querySelector('.long').textContent = x.langLong;
+      b.querySelector('.short').textContent = x.langShort;
+      b.lang = x.langCode;
+      b.setAttribute('aria-label', x.langAria);
+      b.hidden = false;   // JavaScript が動かないときは押しても何も起きないので、出さない
+    });
+  }
+  document.querySelectorAll('[data-lang-toggle]').forEach(b => b.addEventListener('click', () => {
+    lang = lang === 'ja' ? 'en' : 'ja';
+    // 再読み込み・共有しても同じ言葉で開くよう、アドレスに残す（開いているパネルの #faq 等もそのまま）
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('lang', lang);
+      history.replaceState(null, '', u);
+    } catch (_) { /* file:// などで残せなくても、画面の切り替えは済んでいる */ }
+    applyLang();
+  }));
+  applyLang();
+
+  // ===== 昔／今の境目：つまみのドラッグ・キーボードで動かす =====
+  const photo = document.getElementById('photo');
+  const handle = document.getElementById('handle');
+  const HOME = 46;
+  let current = HOME;
+  const setX = (p) => {
+    current = Math.max(4, Math.min(96, p));
+    photo.style.setProperty('--x', current + '%');
+    handle.setAttribute('aria-valuenow', Math.round(current));
+  };
+  const fromEvent = (e) => (e.clientX - photo.getBoundingClientRect().left) / photo.clientWidth * 100;
+  let dragging = false;
+  handle.addEventListener('pointerdown', (e) => { dragging = true; handle.setPointerCapture(e.pointerId); stopIntro(); });
+  handle.addEventListener('pointermove', (e) => { if (dragging) setX(fromEvent(e)); });
+  handle.addEventListener('pointerup', () => { dragging = false; });
+  handle.addEventListener('pointercancel', () => { dragging = false; });
+  handle.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); stopIntro(); setX(current - 4); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stopIntro(); setX(current + 4); }
+  });
+
+  // 最初に一度だけ、ゆっくり左右に動いて「動かせる」ことを見せる（演出なので裏タブで止まってもよい）
+  let intro = null;
+  const stopIntro = () => { if (intro) { cancelAnimationFrame(intro); intro = null; } };
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    setTimeout(() => {
+      const t0 = performance.now();
+      const step = (t) => {
+        const k = (t - t0) / 2600;
+        if (k >= 1) { setX(HOME); intro = null; return; }
+        setX(HOME + Math.sin(k * Math.PI * 2) * 14 * (1 - k));
+        intro = requestAnimationFrame(step);
+      };
+      intro = requestAnimationFrame(step);
+    }, 700);
+  }
+
+  // ===== 詳細パネル =====
+  const panel = document.getElementById('panel');
+  const TABS = ['features', 'data', 'faq', 'about', 'support'];
+  const showTab = (name) => {
+    panel.querySelectorAll('[data-pane]').forEach(s => { s.hidden = s.dataset.pane !== name; });
+    panel.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    panel.scrollTop = 0;
+  };
+  const openPanel = (name) => {
+    showTab(name);
+    if (!panel.open) panel.showModal();
+    history.replaceState(null, '', '#' + name);
+  };
+  const closePanel = () => { if (panel.open) panel.close(); };
+  panel.addEventListener('close', () => history.replaceState(null, '', location.pathname + location.search));
+  document.querySelectorAll('[data-open]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); openPanel(a.dataset.open); }));
+  panel.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => openPanel(b.dataset.tab)));
+  document.getElementById('close').addEventListener('click', closePanel);
+  panel.addEventListener('click', (e) => { if (e.target === panel) closePanel(); });
+
+  // /#faq などで、該当のタブを開く
+  const fromHash = () => {
+    const h = location.hash.slice(1);
+    const name = h === 'howto' ? 'features' : h;
+    if (TABS.includes(name)) openPanel(name);
+  };
+  fromHash();
+  window.addEventListener('hashchange', fromHash);
+</script>
+</body>
+</html>
